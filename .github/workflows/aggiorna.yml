@@ -1,0 +1,60 @@
+name: Aggiorna dati
+
+on:
+  schedule:
+    # Dal martedì al sabato alle 05:17 UTC (06:17 in Italia d'inverno, 07:17 d'estate).
+    # A quell'ora tutte le borse seguite hanno chiuso la seduta del giorno prima.
+    - cron: "17 5 * * 2-6"
+  workflow_dispatch:   # avvio manuale da Actions -> Aggiorna dati -> Run workflow
+
+permissions:
+  contents: write      # per salvare docs/data.json nel repository
+  pages: write         # per pubblicare il sito
+  id-token: write
+
+concurrency:
+  group: aggiorna-dati
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblica.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installa le librerie
+        run: pip install -r requirements.txt
+
+      - name: Controlla i calcoli
+        run: python tests/test_calcoli.py
+
+      - name: Scarica le chiusure e ricalcola
+        run: python scripts/aggiorna_dati.py --out docs/data.json
+
+      - name: Salva i dati nel repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          if git diff --cached --quiet; then
+            echo "Nessun cambiamento nei dati"
+          else
+            git commit -m "Dati aggiornati $(date -u +%Y-%m-%d)"
+            git push || (git pull --rebase && git push)
+          fi
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - id: pubblica
+        uses: actions/deploy-pages@v5

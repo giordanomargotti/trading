@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mercati e code</title>
+<meta name="description" content="Chiusure giornaliere, volatilità e distribuzione dei rendimenti di indici e commodities">
+<meta name="theme-color" content="#184f95">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mercati">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f9f9f7;--surface:#fcfcfb;--surface2:#f1f0ec;--text:#0b0b0b;--text2:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--neg:#e34948;
+  --up:#006300;--down:#d03b3b;--chip-bg:rgba(250,178,25,.24);--chip-text:#6b4a00;
+  --accent:#184f95;
+}
+@media (prefers-color-scheme:dark){:root{
+  color-scheme:dark;
+  --bg:#0d0d0d;--surface:#1a1a19;--surface2:#242422;--text:#f0efec;--text2:#c3c2b7;--muted:#898781;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--neg:#e66767;
+  --up:#0ca30c;--down:#e66767;--chip-bg:rgba(250,178,25,.18);--chip-text:#fab219;
+  --accent:#6da7ec;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-size:20px;font-weight:500;margin:0}
+h2{font-size:13px;font-weight:500;color:var(--text2);margin:20px 4px 6px}
+h3{font-size:16px;font-weight:500;margin:0 0 2px}
+p{margin:0}
+button{font:inherit;color:inherit}
+.testa{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 2px}
+.meta{font-size:13px;color:var(--text2)}
+.azioni{display:flex;gap:6px}
+.btn{background:transparent;border:.5px solid var(--axis);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;min-height:36px}
+.btn:active{transform:scale(.98)}
+.avviso{background:var(--chip-bg);color:var(--chip-text);border-radius:10px;padding:10px 12px;font-size:13px;margin:12px 0}
+.errore{background:rgba(227,73,72,.12);color:var(--down);border-radius:10px;padding:10px 12px;font-size:13px;margin:12px 0}
+.lista{background:var(--surface);border:.5px solid var(--border);border-radius:12px;overflow:hidden}
+.riga{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:transparent;border:0;border-bottom:.5px solid var(--border);text-align:left;cursor:pointer;min-height:56px}
+.riga:last-child{border-bottom:0}
+.riga:active{background:var(--surface2)}
+.r-sx{flex:1;min-width:0;display:flex;flex-direction:column}
+.r-nome{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-sub{font-size:12px;color:var(--text2);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.r-dx{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.r-prezzo{font-size:15px}
+.su{color:var(--up)}.giu{color:var(--down)}
+.spark{flex:0 0 64px;height:24px}
+.chip{display:inline-flex;align-items:center;gap:3px;background:var(--chip-bg);color:var(--chip-text);border-radius:6px;padding:0 6px;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.chip svg{width:10px;height:10px}
+.indietro{background:none;border:0;color:var(--accent);padding:8px 0;font-size:15px;cursor:pointer;min-height:44px}
+.hero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 2px}
+.hero .prezzo{font-size:28px;font-weight:500}
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:14px 14px 12px;margin:12px 0}
+.nota{font-size:13px;color:var(--text2);margin:2px 0 10px}
+.piccolo{font-size:12px;color:var(--text2)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px}
+.tile{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.tile .l{font-size:12px;color:var(--text2)}
+.tile .v{font-size:20px;font-weight:500}
+.tile .s{font-size:12px;color:var(--text2)}
+.grafico{position:relative;width:100%}
+.legenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin:6px 0}
+.legenda span{display:inline-flex;align-items:center;gap:5px}
+.q{display:inline-block;width:10px;height:10px;border-radius:2px}
+.lin{display:inline-block;width:16px;height:0;border-top:2px solid}
+.lin.tr{border-top-style:dashed}
+.seg{display:inline-flex;background:var(--surface2);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:6px;padding:6px 10px;font-size:13px;color:var(--text2);cursor:pointer;min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 0 0 .5px var(--border)}
+.controlli{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{font-weight:500;color:var(--text2);text-align:right;padding:6px 4px;border-bottom:.5px solid var(--border)}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:6px 4px;border-bottom:.5px solid var(--border)}
+tr:last-child td{border-bottom:0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px;margin-top:8px}
+.kv dt{color:var(--text2)}.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+details{margin-top:8px;font-size:13px}
+summary{cursor:pointer;color:var(--accent);padding:6px 0}
+.sezione-testo p{font-size:14px;margin:0 0 10px}
+.sezione-testo b{font-weight:500}
+.vuoto{text-align:center;color:var(--text2);padding:48px 12px}
+.piede{font-size:12px;color:var(--muted);margin-top:16px}
+</style>
+</head>
+<body>
+<main id="app"><p class="vuoto">Carico i dati…</p></main>
+<script src="vendor/chart.umd.min.js"></script>
+<script>
+"use strict";
+const app = document.getElementById("app");
+const stato = {dati: null, modo: "grezzi", scala: "lin", grafici: [], scrollElenco: 0};
+
+window.addEventListener("error", e => mostraErrore(e.message || String(e)));
+window.addEventListener("unhandledrejection", e => mostraErrore(String(e.reason && e.reason.message || e.reason)));
+function mostraErrore(msg) {
+  const d = document.createElement("div");
+  d.className = "errore";
+  d.textContent = "Errore: " + msg;
+  app.prepend(d);
+}
+
+/* ---------- formattazione ---------- */
+const MENO = "−";
+const nf = (x, d) => Number(x).toLocaleString("it-IT", {minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: "always"});
+function conSegno(x, d) {
+  const s = nf(Math.abs(x), d);
+  if (!/[1-9]/.test(s)) return s;                  /* niente "−0,0" */
+  return (x > 0 ? "+" : MENO) + s;
+}
+const pct = (x, d = 2) => x == null ? "–" : conSegno(x * 100, d) + "%";
+const pctNoSegno = (x, d = 2) => x == null ? "–" : nf(x * 100, d) + "%";
+const volp = x => x == null ? "–" : nf(x, 1) + "%";
+const sigma = z => z == null ? "–" : conSegno(z, 1) + "σ";
+function decimaliPrezzo(p) { const a = Math.abs(p); return a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : 3; }
+const prezzo = p => p == null ? "–" : nf(p, decimaliPrezzo(p));
+const tickPrezzo = v => Number(v).toLocaleString("it-IT", {maximumFractionDigits: 3, useGrouping: "always"});
+function dataIt(s, opz) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("it-IT", opz || {weekday: "short", day: "numeric", month: "short", year: "numeric"});
+}
+const dataBreve = s => dataIt(s, {day: "numeric", month: "short", year: "numeric"});
+function rapporto(x) {
+  if (!isFinite(x)) return "–";
+  return "×" + (x < 10 ? nf(x, 1) : nf(Math.round(x), 0));
+}
+/* "una seduta ogni N": più leggibile delle percentuali piccolissime */
+function ogni(p) {
+  if (!(p > 0)) return "mai";
+  const n = 1 / p;
+  if (n < 10) return nf(n, 1);
+  if (n < 1e4) return nf(Math.round(n), 0);
+  if (n < 1e6) return nf(Math.round(n / 1e3), 0) + " mila";
+  if (n < 1e9) return nf(n / 1e6, 1) + " mln";
+  return nf(n / 1e9, 1) + " mld";
+}
+const potenzaDi10 = v => v > 0 && Math.abs(Math.log10(v) - Math.round(Math.log10(v))) < 1e-9;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+/* ---------- densità ---------- */
+function lnGamma(z) {
+  const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+const normPdf = x => Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+function tPdf(x, nu) {
+  return Math.exp(lnGamma((nu + 1) / 2) - lnGamma(nu / 2) - 0.5 * Math.log(nu * Math.PI)
+    - (nu + 1) / 2 * Math.log(1 + x * x / nu));
+}
+/* t con varianza unitaria, come nel GARCH */
+function tStdPdf(x, nu) { const s = Math.sqrt((nu - 2) / nu); return tPdf(x / s, nu) / s; }
+
+/* ---------- colori e Chart.js ---------- */
+function colori() {
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  return {text: v("--text"), text2: v("--text2"), muted: v("--muted"), grid: v("--grid"), axis: v("--axis"),
+    surface: v("--surface"), s1: v("--s1"), s2: v("--s2"), s3: v("--s3"), neg: v("--neg")};
+}
+function alfa(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+function impostaChart() {
+  const c = colori();
+  Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = c.muted;
+  Chart.defaults.animation = false;
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.legend.display = false;
+  Object.assign(Chart.defaults.plugins.tooltip, {backgroundColor: c.text, titleColor: c.surface, bodyColor: c.surface,
+    padding: 8, cornerRadius: 6, displayColors: false, titleFont: {weight: "500"}});
+  return c;
+}
+function assi(c, extra = {}) {
+  const base = {grid: {color: c.grid, drawTicks: false}, border: {color: c.axis}, ticks: {padding: 6}};
+  return {x: {...base, grid: {display: false}, ...extra.x}, y: {...base, ...extra.y}};
+}
+function nuovoGrafico(id, config) {
+  const g = new Chart(document.getElementById(id), config);
+  stato.grafici.push(g);
+  return g;
+}
+function distruggi() { stato.grafici.forEach(g => g.destroy()); stato.grafici = []; }
+
+/* etichette per gli assi temporali: un mese sì e uno no, l'anno sotto gennaio */
+function tickMese(date) {
+  return function (val, i) {
+    const d = date[i];
+    if (!d || i === 0 || i > date.length - 8 || date[i - 1].slice(0, 7) === d.slice(0, 7)) return "";
+    const m = Number(d.slice(5, 7));
+    if (m % 2 === 0) return "";
+    const lab = dataIt(d, {month: "short"});
+    return m === 1 ? [lab, d.slice(0, 4)] : lab;
+  };
+}
+
+/* ---------- caricamento ---------- */
+async function carica() {
+  const r = await fetch("data.json", {cache: "no-store"});
+  if (r.status === 404) throw new Error("NODATA");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+async function avvia() {
+  try {
+    stato.dati = await carica();
+    rotta();
+  } catch (e) {
+    distruggi();
+    app.innerHTML = e.message === "NODATA"
+      ? `<p class="vuoto">I dati non sono ancora stati generati.<br>Avvia il workflow «Aggiorna dati» dalla scheda Actions del repository.</p>`
+      : `<p class="vuoto">Non riesco a caricare i dati (${esc(e.message)}).<br><button class="btn" onclick="avvia()">Riprova</button></p>`;
+  }
+}
+
+/* ---------- navigazione ---------- */
+function rotta() {
+  if (!stato.dati) return;
+  const h = decodeURIComponent(location.hash.slice(1));
+  distruggi();
+  if (h.startsWith("m=")) dettaglio(h.slice(2));
+  else if (h === "metodo") metodo();
+  else elenco();
+}
+window.addEventListener("hashchange", () => {
+  const h = location.hash;
+  rotta();
+  if (!h || h === "#") window.scrollTo(0, stato.scrollElenco); else window.scrollTo(0, 0);
+});
+function apri(sim) { stato.scrollElenco = window.scrollY; location.hash = "m=" + encodeURIComponent(sim); }
+function indietro() { if (history.length > 1) history.back(); else location.hash = ""; }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => rotta());
+
+/* ---------- elenco ---------- */
+function sparkline(valori) {
+  const v = valori.filter(x => x != null).slice(-60);
+  if (v.length < 2) return "";
+  const min = Math.min(...v), max = Math.max(...v), w = 64, h = 24, k = max - min || 1;
+  const pts = v.map((y, i) => `${(i / (v.length - 1) * w).toFixed(1)},${(h - 2 - (y - min) / k * (h - 4)).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 64 24" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+const ICONA_ALLERTA = `<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9.5 9h-9z" fill="currentColor"/></svg>`;
+function chipZ(z) {
+  if (z == null || Math.abs(z) < 2) return "";
+  return `<span class="chip" title="Movimento di ieri oltre 2σ">${ICONA_ALLERTA}${sigma(z)}</span>`;
+}
+function rigaAsset(a) {
+  if (a.stato === "errore") {
+    return `<button class="riga" disabled><span class="r-sx"><span class="r-nome">${esc(a.nome)}</span>
+      <span class="r-sub">Dati non disponibili</span></span></button>`;
+  }
+  const u = a.ultimo, cl = u.var > 0 ? "su" : u.var < 0 ? "giu" : "";
+  const volG = a.vol.garch_domani != null ? a.vol.garch_domani : a.vol.ewma;
+  const vecchio = a.stato === "vecchio" ? `<span class="chip">dati del ${dataIt(u.data, {day: "numeric", month: "short"})}</span>` : "";
+  return `<button class="riga" onclick="apri('${esc(a.simbolo)}')" aria-label="${esc(a.nome)}: ${prezzo(u.chiusura)}, ${pct(u.var)}">
+    <span class="r-sx"><span class="r-nome">${esc(a.nome)}</span>
+      <span class="r-sub">vol ${volp(volG)} · z ${sigma(u.z)} ${chipZ(u.z)}${vecchio}</span></span>
+    ${sparkline(a.serie.chiusura)}
+    <span class="r-dx"><span class="r-prezzo">${prezzo(u.chiusura)}</span><span class="${cl}" style="font-size:13px">${pct(u.var)}</span></span>
+  </button>`;
+}
+function elenco() {
+  const d = stato.dati;
+  const date = d.asset.filter(a => a.ultimo).map(a => a.ultimo.data).sort();
+  const ultima = date.length ? date[date.length - 1] : null;
+  const gen = new Date(d.generato).toLocaleString("it-IT", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+  const gruppi = [...new Set(d.asset.map(a => a.gruppo))];
+  app.innerHTML = `
+    <header class="testa"><div><h1>Mercati e code</h1>
+      <p class="meta">${ultima ? "Chiusure fino a " + dataIt(ultima) : ""}<br>Aggiornato ${gen}</p></div>
+      <div class="azioni"><button class="btn" onclick="location.hash='metodo'">Metodo</button>
+      <button class="btn" onclick="avvia()" aria-label="Ricarica i dati">Ricarica</button></div></header>
+    ${d.demo ? `<div class="avviso">Dati simulati per provare l'app. Al primo aggiornamento automatico arrivano le chiusure vere.</div>` : ""}
+    ${gruppi.map(g => `<h2>${esc(g)}</h2><div class="lista">${d.asset.filter(a => a.gruppo === g).map(rigaAsset).join("")}</div>`).join("")}
+    <p class="piede">Fonte: ${esc(d.fonte)}. La vol è la previsione GARCH annualizzata per la prossima seduta; z è il movimento dell'ultima seduta in deviazioni standard previste.</p>`;
+}
+
+/* ---------- dettaglio ---------- */
+function dettaglio(sim) {
+  const d = stato.dati, a = d.asset.find(x => x.simbolo === sim);
+  if (!a || !a.ultimo) { location.hash = ""; return; }
+  const u = a.ultimo, cl = u.var > 0 ? "su" : u.var < 0 ? "giu" : "";
+  app.innerHTML = `
+    <button class="indietro" onclick="indietro()">‹ Mercati</button>
+    <h1>${esc(a.nome)}</h1>
+    <p class="meta">${esc(a.simbolo)} · chiusura di ${dataIt(u.data)}</p>
+    <div class="hero"><span class="prezzo">${prezzo(u.chiusura)}</span><span class="${cl}">${pct(u.var)}</span>
+      <span class="piccolo">z ${sigma(u.z)}</span>${chipZ(u.z)}</div>
+    ${a.stato === "vecchio" ? `<div class="avviso">Oggi il download non è riuscito: questi sono i dati dell'ultimo aggiornamento riuscito.</div>` : ""}
+    ${sezioneDomani(a)}
+    ${sezioneVol(a)}
+    ${sezioneDistribuzione(a)}
+    ${sezioneZ(a)}
+    ${sezionePrezzo(a)}
+    <p class="piede">Fonte: ${esc(d.fonte)}. Campione dal ${dataBreve(a.distribuzione.dal)}, ${nf(a.distribuzione.n, 0)} sedute.
+    ${a.gruppo !== "Indici azionari" ? "Serie del future più vicino senza rettifica per il cambio di contratto: i giorni di roll aggiungono salti che non sono rendimenti veri." : ""}</p>`;
+  const c = impostaChart();
+  graficoDomani(a, c);
+  graficoVol(a, c);
+  graficoDistribuzione(a, c);
+  graficoZ(a, c);
+  graficoPrezzo(a, c);
+}
+
+function sezioneDomani(a) {
+  const f = a.domani, q = f.t || f.n;
+  const conT = !!f.t;
+  return `<section class="card"><h3>La chiusura di domani</h3>
+    <p class="nota">${conT
+      ? `Distribuzione prevista dal GARCH per la prossima seduta, senza drift: t di Student con ν = ${nf(f.nu, 1)}.`
+      : `Il GARCH non è stato stimato: distribuzione gaussiana con la σ EWMA, senza drift.`} σ giornaliera ${pctNoSegno(f.sigma)}.</p>
+    <div class="legenda">${conT ? `<span><i class="lin" style="border-color:var(--s2)"></i>t di Student</span>` : ""}
+      <span><i class="lin tr" style="border-color:var(--text2)"></i>Gaussiana</span>
+      <span><i class="q" style="background:${conT ? "var(--s2)" : "var(--text2)"};opacity:.25"></i>90% centrale</span></div>
+    <div class="grafico" style="height:180px"><canvas id="gDomani" role="img" aria-label="Densità prevista della chiusura di domani"></canvas></div>
+    <dl class="kv">
+      <dt>Al 90%</dt><dd>${prezzo(q["5"])} – ${prezzo(q["95"])}</dd>
+      <dt>Al 98%</dt><dd>${prezzo(q["1"])} – ${prezzo(q["99"])}</dd>
+      ${conT ? `<dt>Al 98% con la gaussiana</dt><dd>${prezzo(f.n["1"])} – ${prezzo(f.n["99"])}</dd>` : ""}
+    </dl></section>`;
+}
+function graficoDomani(a, c) {
+  const f = a.domani, P = f.prezzo, s = f.sigma, nu = f.nu, conT = !!f.t;
+  const xs = [], dt = [], dn = [], area = [];
+  const lo = conT ? Math.log(f.t["5"] / P) / s : -1.6449, hi = conT ? Math.log(f.t["95"] / P) / s : 1.6449;
+  for (let i = 0; i <= 240; i++) {
+    const x = -5 + i * 10 / 240, p = P * Math.exp(x * s);
+    const jac = 1 / (s * p);
+    const vt = conT ? tStdPdf(x, nu) * jac : null, vn = normPdf(x) * jac;
+    xs.push(p);
+    dt.push({x: p, y: vt});
+    dn.push({x: p, y: vn});
+    area.push({x: p, y: x >= lo && x <= hi ? (conT ? vt : vn) : null});
+  }
+  const ds = [
+    {data: area, borderWidth: 0, pointRadius: 0, fill: "origin", backgroundColor: alfa(conT ? c.s2 : c.text2, 0.18), spanGaps: false},
+    {data: dn, borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0},
+  ];
+  if (conT) ds.push({data: dt, borderColor: c.s2, borderWidth: 2, pointRadius: 0});
+  ds.push({data: [{x: P, y: 0}, {x: P, y: Math.max(...dn.map(p => p.y)) * 1.15}], borderColor: c.axis, borderWidth: 1, pointRadius: 0});
+  nuovoGrafico("gDomani", {type: "line", data: {datasets: ds},
+    options: {parsing: false, plugins: {tooltip: {enabled: false}},
+      scales: assi(c, {x: {type: "linear", min: xs[0], max: xs[xs.length - 1], ticks: {callback: v => prezzo(v)},
+          afterBuildTicks: ax => { ax.ticks = [P * Math.exp(lo * s), P, P * Math.exp(hi * s)].map(value => ({value})); }},
+        y: {beginAtZero: true, ticks: {display: false}, grid: {display: false}}})}});
+}
+
+function sezioneVol(a) {
+  const v = a.vol, g = a.garch, im = a.implicita;
+  const tile = (l, val, s) => `<div class="tile"><div class="l">${l}</div><div class="v">${val}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`;
+  let html = `<section class="card"><h3>Volatilità</h3><p class="nota">Annualizzata. La realizzata guarda indietro, EWMA e GARCH sono previsioni.</p>
+    <div class="tiles">
+      ${tile("Realizzata 21 sedute", volp(v.realizzata))}
+      ${tile("EWMA, λ 0,94", volp(v.ewma))}
+      ${g ? tile("GARCH domani", volp(v.garch_domani)) : ""}
+      ${g ? tile("GARCH prossime 21 sedute", volp(v.garch_mese)) : ""}
+      ${g ? tile("GARCH di lungo periodo", volp(v.garch_lungo), g.emivita ? `emivita ${nf(g.emivita, 0)} sedute` : "") : ""}
+      ${im ? tile(`Implicita ${esc(im.nome)}`, volp(im.valore), im.differenza != null ? `${conSegno(im.differenza, 1)} punti sul GARCH a 21 sedute` : "") : ""}
+    </div>
+    <div class="legenda">${g ? `<span><i class="lin" style="border-color:var(--s1)"></i>GARCH</span>` : ""}
+      <span><i class="lin" style="border-color:var(--s2)"></i>EWMA</span>
+      <span><i class="lin" style="border-color:var(--s3)"></i>Realizzata 21 sedute</span></div>
+    <div class="grafico" style="height:200px"><canvas id="gVol" role="img" aria-label="Volatilità annualizzata nell'ultimo anno"></canvas></div>`;
+  if (g) {
+    html += `<details><summary>Parametri GJR-GARCH(1,1) t</summary><dl class="kv">
+      <dt>ω (varianza base, %²)</dt><dd>${nf(g.omega, 4)}</dd>
+      <dt>α (reazione allo shock)</dt><dd>${nf(g.alpha, 3)}</dd>
+      <dt>γ (shock negativi in più)</dt><dd>${conSegno(g.gamma, 3)}</dd>
+      <dt>β (memoria)</dt><dd>${nf(g.beta, 3)}</dd>
+      <dt>ν (gradi di libertà della t)</dt><dd>${nf(g.nu, 1)}</dd>
+      <dt>Persistenza α + γ/2 + β</dt><dd>${nf(g.persistenza, 3)}</dd>
+      <dt>Emivita di uno shock</dt><dd>${g.emivita ? nf(g.emivita, 0) + " sedute" : "–"}</dd>
+      <dt>Stima convergente</dt><dd>${g.convergenza ? "sì" : "no"}</dd></dl>
+      <p class="piccolo" style="margin-top:6px">${g.gamma < 0 ? "γ negativo: qui sono i rialzi ad alzare di più la volatilità." : "γ positivo: i ribassi alzano la volatilità più dei rialzi."}</p></details>`;
+  }
+  return html + `</section>`;
+}
+function graficoVol(a, c) {
+  const s = a.serie, ds = [];
+  if (s.garch) ds.push({label: "GARCH", data: s.garch, borderColor: c.s1, borderWidth: 2, pointRadius: 0});
+  ds.push({label: "EWMA", data: s.ewma, borderColor: c.s2, borderWidth: 2, pointRadius: 0});
+  ds.push({label: "Realizzata", data: s.realizzata, borderColor: c.s3, borderWidth: 2, pointRadius: 0});
+  nuovoGrafico("gVol", {type: "line", data: {labels: s.date, datasets: ds},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => dataBreve(it[0].label), label: it => `${it.dataset.label} ${volp(it.raw)}`}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
+        y: {beginAtZero: true, ticks: {callback: v => nf(v, 0) + "%", maxTicksLimit: 5}}})}});
+}
+
+function sezioneDistribuzione(a) {
+  const dist = a.distribuzione, haGarch = !!dist.garch;
+  const modo = haGarch ? stato.modo : "grezzi";
+  const blocco = dist[modo], n = modo === "grezzi" ? dist.n : dist.garch.n;
+  const gc = stato.dati.gaussiana_code;
+  const nuTxt = modo === "grezzi" ? nf(dist.grezzi.t.df, 1) : nf(dist.garch.nu, 1);
+  const righe = [];
+  for (const lato of ["sinistra", "destra"]) {
+    blocco.code.forEach((cc, i) => {
+      const oss = cc[lato], pOss = oss / n, pG = gc[String(cc.k)];
+      const pT = blocco.code_t ? blocco.code_t[i][lato] : null;
+      righe.push(`<tr><td>${lato === "sinistra" ? "Sotto " + MENO : "Sopra +"}${cc.k}σ</td><td>${ogni(pOss)}</td>
+        <td>${pT == null ? "–" : ogni(pT)}</td><td>${ogni(pG)}</td><td>${rapporto(pOss / pG)}</td></tr>`);
+    });
+  }
+  const hill = dist.hill, h = lato => {
+    const v = hill[lato], vals = [v.q1, v.q25, v.q5].filter(x => x != null);
+    if (v.q25 == null) return "–";
+    return `${nf(v.q25, 1)} <span class="piccolo">(${nf(Math.min(...vals), 1)}–${nf(Math.max(...vals), 1)})</span>`;
+  };
+  const sottoQuattro = ["sinistra", "destra"].filter(l => hill[l].q25 != null && hill[l].q25 < 4);
+  const ms = dist.max_somma;
+  const fuori = blocco.sotto + blocco.sopra;
+  return `<section class="card"><h3>Distribuzione dei rendimenti giornalieri</h3>
+    <p class="nota">Barre: quanto spesso è successo. Linee: cosa prevedono la gaussiana e la t di Student. In scala logaritmica si vedono le code.</p>
+    <div class="controlli">
+      ${haGarch ? `<div class="seg" role="group" aria-label="Standardizzazione">
+        <button aria-pressed="${modo === "grezzi"}" onclick="cambia('modo','grezzi')">Grezzi</button>
+        <button aria-pressed="${modo === "garch"}" onclick="cambia('modo','garch')">Divisi per σ GARCH</button></div>` : ""}
+      <div class="seg" role="group" aria-label="Scala verticale">
+        <button aria-pressed="${stato.scala === "lin"}" onclick="cambia('scala','lin')">Lineare</button>
+        <button aria-pressed="${stato.scala === "log"}" onclick="cambia('scala','log')">Logaritmica</button></div>
+    </div>
+    <div class="legenda"><span><i class="q" style="background:var(--s1);opacity:.55"></i>Osservati</span>
+      <span><i class="lin tr" style="border-color:var(--text2)"></i>Gaussiana</span>
+      <span><i class="lin" style="border-color:var(--s2)"></i>t di Student, ν ${nuTxt}</span></div>
+    <div class="grafico" style="height:240px"><canvas id="gDist" role="img" aria-label="Istogramma dei rendimenti standardizzati con gaussiana e t di Student"></canvas></div>
+    <p class="piccolo" style="margin-top:4px">${modo === "grezzi"
+      ? `Rendimenti divisi per la deviazione standard di tutto il campione (${pctNoSegno(dist.dev_std)} al giorno).`
+      : `Ogni rendimento diviso per la σ che il GARCH prevedeva quel giorno: resta la coda che il GARCH non spiega.`}
+      ${fuori ? ` Oltre ±8σ, fuori dal grafico: ${nf(fuori, 0)} sedute.` : ""}</p>
+    <h3 style="margin-top:14px;font-size:14px">Le code</h3>
+    <table><thead><tr><th rowspan="2" style="vertical-align:bottom">Soglia</th><th colspan="3" style="text-align:center;border-bottom:0;padding-bottom:0">Una seduta ogni…</th><th rowspan="2" style="vertical-align:bottom">Volte</th></tr>
+      <tr><th>osservata</th><th>t</th><th>gaussiana</th></tr></thead>
+      <tbody>${righe.join("")}</tbody></table>
+    <p class="piccolo" style="margin-top:6px">Quanto spesso il rendimento ha superato la soglia, contro quanto spesso dovrebbe con la t di Student e con la gaussiana. «Volte» è la frequenza osservata divisa per quella della gaussiana.</p>
+    <dl class="kv" style="margin-top:12px">
+      <dt>Indice di coda α (Hill), ribassi</dt><dd>${h("sinistra")}</dd>
+      <dt>Indice di coda α (Hill), rialzi</dt><dd>${h("destra")}</dd>
+      <dt>Asimmetria</dt><dd>${conSegno(dist.asimmetria, 2)}</dd>
+      <dt>Curtosi in eccesso</dt><dd>${nf(dist.curtosi, 1)}</dd>
+      <dt>VaR storico 1%, un giorno</dt><dd>${pctNoSegno(dist.var1)}</dd>
+      <dt>Perdita media oltre il VaR (ES)</dt><dd>${pctNoSegno(dist.es1)}</dd>
+    </dl>
+    ${sottoQuattro.length ? `<div class="avviso">α sotto 4 sulla coda dei ${sottoQuattro.map(l => l === "sinistra" ? "ribassi" : "rialzi").join(" e dei ")}: il momento quarto non è finito e, secondo Taleb, la varianza stimata dal campione è instabile. Prendi la curtosi qui sopra come indicativa.</div>` : ""}
+    <p class="piccolo" style="margin-top:8px">Il giorno più estremo del campione (${dataBreve(ms.data)}, ${pct(ms.rendimento)}) da solo vale il ${pctNoSegno(ms.quota, 0)} della somma dei rendimenti alla quarta, cioè della curtosi.</p>
+    <details><summary>Tabella dell'istogramma</summary><table><thead><tr><th>Classe</th><th>Sedute</th></tr></thead><tbody>
+      ${blocco.conteggi.map((k, i) => k ? `<tr><td>${conSegno(stato.dati.bordi[i], 2)} / ${conSegno(stato.dati.bordi[i + 1], 2)}σ</td><td>${nf(k, 0)}</td></tr>` : "").join("")}
+    </tbody></table></details>
+  </section>`;
+}
+function cambia(chiave, valore) {
+  stato[chiave] = valore;
+  const y = window.scrollY;
+  rotta();
+  window.scrollTo(0, y);
+}
+function graficoDistribuzione(a, c) {
+  const dist = a.distribuzione, modo = dist.garch ? stato.modo : "grezzi";
+  const blocco = dist[modo], n = modo === "grezzi" ? dist.n : dist.garch.n;
+  const bordi = stato.dati.bordi, larg = bordi[1] - bordi[0], log = stato.scala === "log";
+  const barre = blocco.conteggi.map((k, i) => ({x: (bordi[i] + bordi[i + 1]) / 2, y: k ? k / (n * larg) : (log ? null : 0), k}));
+  const lim = log ? 8 : 5, gauss = [], tt = [];
+  let pdfT;
+  if (modo === "grezzi") { const t = dist.grezzi.t; pdfT = x => tPdf((x - t.loc) / t.scala, t.df) / t.scala; }
+  else { pdfT = x => tStdPdf(x, dist.garch.nu); }
+  for (let i = 0; i <= 320; i++) {
+    const x = -lim + i * 2 * lim / 320;
+    gauss.push({x, y: normPdf(x)});
+    tt.push({x, y: pdfT(x)});
+  }
+  const ymin = 1e-5;
+  const fmtLog = v => {
+    const e = Math.round(Math.log10(v));
+    if (Math.abs(Math.log10(v) - e) > 1e-9) return "";
+    return e >= -2 ? nf(v, Math.max(0, -e)) : "10" + String(e).replace("-", "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  };
+  nuovoGrafico("gDist", {data: {datasets: [
+      {type: "bar", label: "Osservati", data: barre, backgroundColor: alfa(c.s1, 0.55), barPercentage: 1, categoryPercentage: 0.88, borderRadius: 0},
+      {type: "line", label: "Gaussiana", data: gauss, borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0},
+      {type: "line", label: "t di Student", data: tt, borderColor: c.s2, borderWidth: 2, pointRadius: 0},
+    ]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {
+        title: it => { const x = it[0].raw.x; return `Tra ${conSegno(x - larg / 2, 2)} e ${conSegno(x + larg / 2, 2)}σ`; },
+        label: it => `${nf(it.raw.k, 0)} sedute, ${pctNoSegno(it.raw.k / n, it.raw.k / n < 0.001 ? 3 : 2)}`}}},
+      scales: assi(c, {x: {type: "linear", min: -lim, max: lim, ticks: {stepSize: 2, callback: v => v === 0 ? "0" : conSegno(v, 0) + "σ"}},
+        y: log ? {type: "logarithmic", min: ymin, max: 1, ticks: {callback: fmtLog, autoSkip: false},
+                  grid: {color: ctx => ctx.tick && potenzaDi10(ctx.tick.value) ? c.grid : "transparent", drawTicks: false}}
+               : {beginAtZero: true, ticks: {maxTicksLimit: 5, callback: v => nf(v, 1)}}})}});
+}
+
+function sezioneZ(a) {
+  const s = a.serie;
+  if (!s.z) return "";
+  const n = s.z.filter(z => z != null).length;
+  const oltre = s.z.map((z, i) => ({z, i})).filter(o => o.z != null && Math.abs(o.z) >= 2);
+  const g = stato.dati.gaussiana_code["2"] * 2 * n;
+  const ct = a.distribuzione.garch && a.distribuzione.garch.code_t;
+  const t = ct ? (ct[0].sinistra + ct[0].destra) * n : null;
+  return `<section class="card"><h3>Movimenti dell'ultimo anno in σ</h3>
+    <p class="nota">Ogni barra è il rendimento di una seduta diviso per la σ che il GARCH prevedeva per quella seduta.</p>
+    <div class="legenda"><span><i class="q" style="background:var(--s1)"></i>Rialzo</span><span><i class="q" style="background:var(--neg)"></i>Ribasso</span>
+      <span><i class="lin tr" style="border-color:var(--text2)"></i>±2σ</span></div>
+    <div class="grafico" style="height:170px"><canvas id="gZ" role="img" aria-label="Rendimenti giornalieri dell'ultimo anno in deviazioni standard"></canvas></div>
+    <p class="piccolo" style="margin-top:6px">Sedute oltre ±2σ: ${oltre.length} su ${n}. La gaussiana ne aspetta ${nf(g, 1)}${t != null ? `, la t di Student ${nf(t, 1)}` : ""}.</p>
+    ${oltre.length ? `<details><summary>Elenco delle sedute oltre ±2σ</summary><table><thead><tr><th>Seduta</th><th>z</th><th>Rendimento</th></tr></thead><tbody>
+      ${oltre.reverse().map(o => `<tr><td>${dataBreve(s.date[o.i])}</td><td>${sigma(o.z)}</td><td>${pct(s.rendimento[o.i])}</td></tr>`).join("")}
+    </tbody></table></details>` : ""}</section>`;
+}
+function graficoZ(a, c) {
+  const s = a.serie;
+  if (!s.z) return;
+  const col = s.z.map(z => z == null ? "transparent" : alfa(z >= 0 ? c.s1 : c.neg, Math.abs(z) >= 2 ? 1 : 0.45));
+  const lim = Math.max(4, Math.ceil(Math.max(...s.z.filter(z => z != null).map(Math.abs))));
+  nuovoGrafico("gZ", {data: {labels: s.date, datasets: [
+      {type: "bar", data: s.z, backgroundColor: col, barPercentage: 1, categoryPercentage: 0.9},
+      {type: "line", data: s.date.map(() => 2), borderColor: c.text2, borderDash: [4, 4], borderWidth: 1, pointRadius: 0},
+      {type: "line", data: s.date.map(() => -2), borderColor: c.text2, borderDash: [4, 4], borderWidth: 1, pointRadius: 0},
+    ]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {
+        title: it => dataBreve(it[0].label), label: it => `${sigma(it.raw)}, ${pct(s.rendimento[it.dataIndex])}`}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
+        y: {min: -lim, max: lim, ticks: {stepSize: 2, callback: v => v === 0 ? "0" : conSegno(v, 0) + "σ"}}})}});
+}
+
+function sezionePrezzo(a) {
+  return `<section class="card"><h3>Prezzo nell'ultimo anno</h3>
+    <div class="grafico" style="height:180px;margin-top:8px"><canvas id="gPrezzo" role="img" aria-label="Chiusure dell'ultimo anno"></canvas></div></section>`;
+}
+function graficoPrezzo(a, c) {
+  const s = a.serie;
+  nuovoGrafico("gPrezzo", {type: "line", data: {labels: s.date, datasets: [
+      {data: s.chiusura, borderColor: c.s1, borderWidth: 2, pointRadius: 0, fill: "origin", backgroundColor: alfa(c.s1, 0.08)}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => dataBreve(it[0].label), label: it => prezzo(it.raw)}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
+        y: {ticks: {maxTicksLimit: 5, callback: tickPrezzo}}})}});
+}
+
+/* ---------- metodo ---------- */
+function metodo() {
+  const p = stato.dati.parametri;
+  app.innerHTML = `<button class="indietro" onclick="indietro()">‹ Mercati</button>
+  <h1>Come sono fatti i conti</h1>
+  <section class="card sezione-testo">
+    <p><b>Rendimenti.</b> Logaritmici tra chiusure consecutive, dal ${dataBreve(stato.dati.inizio)} o dall'inizio della serie su Yahoo. Le chiusure negative o nulle non vengono scavalcate, e i giorni fermi con volume zero sono esclusi.</p>
+    <p><b>Volatilità realizzata.</b> Radice della media dei rendimenti al quadrato delle ultime ${p.finestra_realizzata} sedute, moltiplicata per √${p.giorni_anno}. Guarda indietro.</p>
+    <p><b>EWMA.</b> Media esponenziale dei rendimenti al quadrato con λ = ${nf(p.lambda_ewma, 2)}, come in RiskMetrics. Reagisce in fretta e non ha un livello di lungo periodo verso cui tornare.</p>
+    <p><b>GJR-GARCH(1,1) con t di Student.</b> La varianza di domani dipende da una base (ω), dallo shock di oggi (α), da un termine in più quando lo shock è negativo (γ) e dalla varianza di oggi (β). Gli shock seguono una t di Student con ν gradi di libertà stimati. Persistenza = α + γ/2 + β; l'emivita è il numero di sedute in cui uno shock di volatilità si dimezza. γ può uscire negativo: sulle commodity spesso sono i rialzi ad alzare la volatilità.</p>
+    <p><b>z.</b> Rendimento dell'ultima seduta diviso per la σ che il GARCH prevedeva per quella seduta.</p>
+    <p><b>Distribuzione grezza.</b> Rendimenti divisi per la deviazione standard di tutto il campione: è la distribuzione incondizionata, quella su cui ragiona Taleb. La t di Student è stimata su questi dati.</p>
+    <p><b>Divisi per σ GARCH.</b> Ogni rendimento diviso per la σ prevista per quel giorno. Toglie l'effetto dei periodi agitati: la coda che resta è quella che il GARCH non spiega.</p>
+    <p><b>Indice di coda α (Hill).</b> Stimato sul ${nf(p.quote_hill.q25 * 100, 1)}% delle sedute più estreme; tra parentesi l'intervallo usando l'1% e il 5%. Più è basso, più la coda è spessa. Sotto 4 il momento quarto non è finito e la varianza stimata dal campione è instabile.</p>
+    <p><b>Quota del giorno più estremo.</b> Peso della seduta più estrema sulla somma dei rendimenti alla quarta. Se una sola seduta pesa molto, la curtosi del campione dipende da quella seduta.</p>
+    <p><b>VaR ed ES all'1%.</b> Perdita giornaliera superata nell'1% delle sedute e perdita media in quelle sedute, dalla storia.</p>
+    <p><b>La chiusura di domani.</b> Quantili con la σ GARCH della prossima seduta e la t di Student stimata, senza drift.</p>
+    <p><b>Volatilità implicita.</b> VIX, VXN, OVX e GVZ sono volatilità implicite a 30 giorni (OVX e GVZ dalle opzioni sugli ETF USO e GLD). La differenza con la previsione GARCH a ${p.orizzonte_mese} sedute è una misura approssimata del premio per il rischio di varianza.</p>
+    <p><b>Limiti.</b> Le commodity usano la serie del future più vicino senza rettifica per il cambio di contratto: nei giorni di roll compaiono salti che non sono rendimenti veri, soprattutto sul gas. I dati di Yahoo possono contenere errori o arrivare in ritardo.</p>
+  </section>`;
+}
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+avvia();
+</script>
+</body>
+</html>
