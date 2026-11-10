@@ -1,3 +1,5 @@
+# storico del laboratorio: rigenerato a ogni giro e pubblicato solo su Pages
+docs/storia/
 __pycache__/
 *.pyc
 *.tmp

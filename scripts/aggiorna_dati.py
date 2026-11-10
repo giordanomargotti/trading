@@ -22,6 +22,7 @@ import argparse
 import datetime as dt
 import json
 import math
+import re
 import sys
 import time
 import warnings
@@ -273,7 +274,8 @@ def previsione(prezzo: float, sigma: float, nu: float | None) -> dict:
 # ---------------------------------------------------------------------------
 # Analisi di un mercato
 # ---------------------------------------------------------------------------
-def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> dict:
+def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> tuple[dict, dict]:
+    """Restituisce la voce per data.json e lo storico completo per il laboratorio."""
     r = rendimenti_log(df)
     if len(r) < 500:
         raise ValueError(f"storico troppo corto ({len(r)} rendimenti)")
@@ -321,6 +323,23 @@ def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> dict:
         "z": lista(z.loc[coda].to_numpy(), 2) if z is not None else None,
     }
 
+    # Storico completo per il laboratorio di strategie. Tutto è allineato alle date
+    # dei rendimenti: z[t] è il rendimento del giorno t diviso per la σ prevista per
+    # quel giorno; s[t] è la σ prevista per la seduta DOPO t, nota alla chiusura di t.
+    # Così chi entra alla chiusura di t usa solo informazioni disponibili in quel momento.
+    storia = {
+        "simbolo": cfg["simbolo"],
+        "date": [d.strftime("%Y-%m-%d") for d in r.index],
+        "c": [sig(v) for v in df["Close"].reindex(r.index).to_numpy()],
+        "ze": lista(x / np.sqrt(v_ewma[:-1]), 2),
+        "se": lista(np.sqrt(v_ewma[1:]) * 100, 3),            # % giornaliera
+        "zg": None, "sg": None,
+    }
+    if garch is not None:
+        cv = cond_vol.to_numpy()                                # σ GARCH del giorno t, in %
+        storia["zg"] = lista(z.to_numpy(), 2)
+        storia["sg"] = lista(np.append(cv[1:], math.sqrt(var_futura[0])), 3)
+
     return {
         "simbolo": cfg["simbolo"], "nome": cfg["nome"], "gruppo": cfg["gruppo"],
         "stato": "ok", "errore": None,
@@ -339,7 +358,11 @@ def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> dict:
         "domani": previsione(chiusura, sigma1, nu),
         "distribuzione": statistiche(r, z, nu),
         "serie": serie,
-    }
+    }, storia
+
+
+def nome_file_storia(simbolo: str) -> str:
+    return "storia/" + re.sub(r"[^A-Za-z0-9]+", "_", simbolo).strip("_") + ".json"
 
 
 # ---------------------------------------------------------------------------
@@ -416,7 +439,12 @@ def main() -> int:
                     impl = implicita_demo(df, i) if args.demo else pulisci(scarica(cfg["implicita"], "3mo"))
                 except Exception as e:
                     print(f"    implicita {cfg['implicita']} non disponibile: {e}", file=sys.stderr)
-            voce = analizza(cfg, df, impl)
+            voce, storia = analizza(cfg, df, impl)
+            # lo storico del laboratorio va in un file a parte, letto solo quando serve
+            voce["storia"] = nome_file_storia(cfg["simbolo"])
+            file_storia = out.parent / voce["storia"]
+            file_storia.parent.mkdir(parents=True, exist_ok=True)
+            file_storia.write_text(json.dumps(storia, separators=(",", ":"), allow_nan=False), "utf-8")
             aggiornati += 1
             print(f"ok   {cfg['simbolo']:<11} {voce['ultimo']['data']}  chiusura {voce['ultimo']['chiusura']}")
         except Exception as e:
@@ -425,6 +453,7 @@ def main() -> int:
             voce = dict(precedenti.get(cfg["simbolo"], {}))
             voce["stato"] = "vecchio" if voce else "errore"
             voce["errore"] = msg
+            voce.pop("storia", None)   # lo storico di oggi non c'è: il laboratorio resta spento
         voce.update({k: cfg[k] for k in ("simbolo", "nome", "gruppo")})
         risultati.append(voce)
 

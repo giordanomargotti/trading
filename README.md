@@ -7,7 +7,8 @@ Web app da installare sul telefono. Ogni mattina mostra le chiusure del giorno p
 - **code**: quanto spesso il prezzo ha superato 2, 3, 4 e 5σ, confrontato con la gaussiana e con la t; indice di coda α di Hill; peso del giorno più estremo sulla curtosi;
 - **domani**: distribuzione prevista della prossima chiusura, con gli intervalli al 90% e al 98%;
 - **movimenti in σ** dell'ultimo anno e l'elenco delle sedute oltre ±2σ;
-- **volatilità implicita** (VIX, VXN, OVX, GVZ) confrontata con la previsione GARCH a 21 sedute.
+- **volatilità implicita** (VIX, VXN, OVX, GVZ) confrontata con la previsione GARCH a 21 sedute;
+- **laboratorio di strategie**: contrarian o trend following con ingresso oltre una soglia in σ, stop, trailing, target, durata massima e costi regolabili. Mostra la distribuzione dei risultati in R delle operazioni passate e un Monte Carlo di 200 operazioni future ricampionate dalla storia.
 
 Un workflow di GitHub Actions scarica i dati da Yahoo Finance dal martedì al sabato alle 05:17 UTC, ricalcola tutto e pubblica il sito su GitHub Pages. È tutto gratuito con un repository pubblico.
 
@@ -48,7 +49,8 @@ Senza `--demo` lo script scarica i dati veri da Yahoo. I dati simulati sono segn
 |---|---|
 | `scripts/aggiorna_dati.py` | download, pulizia, volatilità, statistiche, scrittura di `docs/data.json` |
 | `tests/test_calcoli.py` | controlli su dati con proprietà note (GARCH, Hill, code, EWMA, pulizia) |
-| `docs/index.html` | l'app: legge `data.json` e disegna tutto |
+| `docs/index.html` | l'app: legge `data.json` e disegna tutto, compreso il laboratorio |
+| `docs/storia/*.json` | storico completo per il laboratorio, uno per mercato: rigenerato a ogni giro e pubblicato solo su Pages, non salvato nel repository |
 | `docs/sw.js`, `docs/manifest.webmanifest` | installazione e funzionamento offline |
 | `docs/vendor/chart.umd.min.js` | Chart.js 4.6.1 (licenza MIT) |
 | `.github/workflows/aggiorna.yml` | aggiornamento giornaliero e pubblicazione |

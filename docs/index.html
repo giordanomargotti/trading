@@ -20,7 +20,7 @@
   --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
   --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--neg:#e34948;
   --up:#006300;--down:#d03b3b;--chip-bg:rgba(250,178,25,.24);--chip-text:#6b4a00;
-  --accent:#184f95;
+  --accent:#184f95;--on-accent:#ffffff;
 }
 @media (prefers-color-scheme:dark){:root{
   color-scheme:dark;
@@ -28,7 +28,7 @@
   --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
   --s1:#3987e5;--s2:#d95926;--s3:#199e70;--neg:#e66767;
   --up:#0ca30c;--down:#e66767;--chip-bg:rgba(250,178,25,.18);--chip-text:#fab219;
-  --accent:#6da7ec;
+  --accent:#6da7ec;--on-accent:#0d0d0d;
 }}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -92,6 +92,14 @@ summary{cursor:pointer;color:var(--accent);padding:6px 0}
 .sezione-testo p{font-size:14px;margin:0 0 10px}
 .sezione-testo b{font-weight:500}
 .vuoto{text-align:center;color:var(--text2);padding:48px 12px}
+.azione{display:block;width:100%;text-align:center;background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;padding:12px;font-size:15px;font-weight:500;margin:12px 0;cursor:pointer;min-height:44px}
+.cursore{display:grid;grid-template-columns:112px minmax(0,1fr) 64px;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+.cursore label{color:var(--text2)}
+.cursore output{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:32px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.chip-btn{background:var(--surface2);border:0;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;min-height:32px}
+.regola{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:13px;margin:10px 0 4px}
 .piede{font-size:12px;color:var(--muted);margin-top:16px}
 </style>
 </head>
@@ -124,6 +132,7 @@ const pct = (x, d = 2) => x == null ? "–" : conSegno(x * 100, d) + "%";
 const pctNoSegno = (x, d = 2) => x == null ? "–" : nf(x * 100, d) + "%";
 const volp = x => x == null ? "–" : nf(x, 1) + "%";
 const sigma = z => z == null ? "–" : conSegno(z, 1) + "σ";
+const sgm = v => (Number.isInteger(v) ? nf(v, 0) : nf(v, 2)) + "σ";
 function decimaliPrezzo(p) { const a = Math.abs(p); return a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : 3; }
 const prezzo = p => p == null ? "–" : nf(p, decimaliPrezzo(p));
 const tickPrezzo = v => Number(v).toLocaleString("it-IT", {maximumFractionDigits: 3, useGrouping: "always"});
@@ -238,6 +247,7 @@ function rotta() {
   const h = decodeURIComponent(location.hash.slice(1));
   distruggi();
   if (h.startsWith("m=")) dettaglio(h.slice(2));
+  else if (h.startsWith("lab=")) laboratorio(h.slice(4));
   else if (h === "metodo") metodo();
   else elenco();
 }
@@ -306,6 +316,7 @@ function dettaglio(sim) {
     <div class="hero"><span class="prezzo">${prezzo(u.chiusura)}</span><span class="${cl}">${pct(u.var)}</span>
       <span class="piccolo">z ${sigma(u.z)}</span>${chipZ(u.z)}</div>
     ${a.stato === "vecchio" ? `<div class="avviso">Oggi il download non è riuscito: questi sono i dati dell'ultimo aggiornamento riuscito.</div>` : ""}
+    ${a.storia ? `<button class="azione" onclick="location.hash='lab=' + encodeURIComponent('${esc(a.simbolo)}')">Simula strategie su questo mercato</button>` : ""}
     ${sezioneDomani(a)}
     ${sezioneVol(a)}
     ${sezioneDistribuzione(a)}
@@ -557,6 +568,345 @@ function graficoPrezzo(a, c) {
         y: {ticks: {maxTicksLimit: 5, callback: tickPrezzo}}})}});
 }
 
+/* ---------- laboratorio di strategie ---------- */
+const PRESET = {
+  "Contrarian con trailing": {strategia: "contrarian", lato: "long", k: 2, S: 2, T: 2, G: 0, H: 0},
+  "Contrarian classico": {strategia: "contrarian", lato: "long", k: 2, S: 4, T: 0, G: 1, H: 10},
+  "Trend following": {strategia: "trend", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+};
+stato.lab = {...PRESET["Contrarian con trailing"], sigma: "garch", periodo: "tutto", costo: 0.10, rischio: 1};
+stato.storie = {};
+stato.labGrafici = null;
+let timerLab = null;
+
+/* motore: ingressi e uscite alle chiusure giornaliere, una posizione alla volta */
+function simulaStrategia(st, p) {
+  const usaG = p.sigma === "garch" && st.zg;
+  const z = usaG ? st.zg : st.ze, sg = usaG ? st.sg : st.se, n = st.c.length;
+  let i0 = 0, i1 = n - 1;
+  if (p.periodo !== "tutto") {
+    const meta = (Date.parse(st.date[0]) + Date.parse(st.date[n - 1])) / 2;
+    const k = st.date.findIndex(d => Date.parse(d) >= meta);
+    if (p.periodo === "prima") i1 = k - 1; else i0 = k;
+  }
+  const lnc = new Float64Array(n);
+  for (let t = 0; t < n; t++) lnc[t] = Math.log(st.c[t]);
+  const costo = p.costo / 100, ops = [];
+  let pos = 0, ie = 0, se = 0, best = 0;
+  for (let t = i0; t <= i1; t++) {
+    if (pos !== 0) {
+      const x = pos * (lnc[t] - lnc[ie]);                   /* risultato in log dal prezzo d'ingresso */
+      const livStop = -p.S * se, livTrail = p.T > 0 ? best - p.T * se : -Infinity;
+      let motivo = null;
+      if (x <= Math.max(livStop, livTrail)) motivo = livTrail > livStop ? "trailing" : "stop";
+      else if (p.G > 0 && x >= p.G * se) motivo = "target";
+      else if (p.H > 0 && t - ie >= p.H) motivo = "durata";
+      else if (t === i1) motivo = "fine periodo";
+      if (motivo) {
+        const pct = (pos === 1 ? Math.exp(x) - 1 : 1 - Math.exp(-x)) - costo;
+        ops.push({ie, iu: t, lato: pos, R: (x - costo) / (p.S * se), pct, durata: t - ie, motivo});
+        pos = 0;
+        continue;                                           /* niente nuovo ingresso nella stessa seduta */
+      }
+      if (x > best) best = x;
+      continue;
+    }
+    if (t === i1) break;
+    const zt = z[t], s = sg[t];
+    if (zt == null || s == null || !(s > 0)) continue;
+    let d = p.strategia === "contrarian" ? (zt <= -p.k ? 1 : zt >= p.k ? -1 : 0)
+                                         : (zt >= p.k ? 1 : zt <= -p.k ? -1 : 0);
+    if ((d === 1 && p.lato === "short") || (d === -1 && p.lato === "long")) d = 0;
+    if (d) { pos = d; ie = t; se = s / 100; best = 0; }
+  }
+  const anni = (Date.parse(st.date[i1]) - Date.parse(st.date[i0])) / (365.25 * 864e5);
+  return {ops, i0, i1, anni};
+}
+
+function statisticheOps(ops, anni) {
+  const n = ops.length;
+  if (!n) return null;
+  const R = ops.map(o => o.R), somma = a => a.reduce((x, y) => x + y, 0);
+  const vinc = R.filter(r => r > 0), perd = R.filter(r => r <= 0);
+  const media = somma(R) / n;
+  const sd = Math.sqrt(somma(R.map(r => (r - media) ** 2)) / Math.max(1, n - 1));
+  const skew = n > 2 && sd > 0 ? somma(R.map(r => ((r - media) / sd) ** 3)) * n / ((n - 1) * (n - 2)) : null;
+  const sV = somma(vinc), sP = -somma(perd);
+  let cum = 0, picco = 0, dd = 0;
+  const curva = R.map(r => { cum += r; picco = Math.max(picco, cum); dd = Math.max(dd, picco - cum); return cum; });
+  return {n, perAnno: anni > 0 ? n / anni : null, vincenti: vinc.length / n, media, mediaPct: somma(ops.map(o => o.pct)) / n,
+    mediaV: vinc.length ? sV / vinc.length : 0, mediaP: perd.length ? -sP / perd.length : 0,
+    pf: sP > 0 ? sV / sP : Infinity, peggiore: Math.min(...R), migliore: Math.max(...R),
+    durata: somma(ops.map(o => o.durata)) / n, skew, ddR: dd, curva};
+}
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const quantile = (ordinati, p) => ordinati[Math.min(ordinati.length - 1, Math.max(0, Math.round(p * (ordinati.length - 1))))];
+
+/* 200 operazioni future: ricampionamento con reinserimento delle operazioni passate */
+function montecarlo(R, f, nOp = 200, nPerc = 4000) {
+  const rng = mulberry32(20261110), m = R.length, w = nOp + 1;
+  const eq = new Float32Array(nPerc * w), finali = new Float64Array(nPerc), dd = new Float64Array(nPerc);
+  let meta = 0;
+  for (let p = 0; p < nPerc; p++) {
+    let E = 1, picco = 1, maxdd = 0, minE = 1;
+    eq[p * w] = 1;
+    for (let k = 1; k <= nOp; k++) {
+      E *= 1 + f * R[Math.floor(rng() * m)];
+      if (E < 0) E = 0;
+      if (E > picco) picco = E;
+      maxdd = Math.max(maxdd, picco > 0 ? 1 - E / picco : 1);
+      minE = Math.min(minE, E);
+      eq[p * w + k] = E;
+    }
+    finali[p] = E; dd[p] = maxdd;
+    if (minE <= 0.5) meta++;
+  }
+  const bande = {p5: [], p25: [], p50: [], p75: [], p95: []}, col = new Float64Array(nPerc);
+  for (let k = 0; k < w; k++) {
+    for (let p = 0; p < nPerc; p++) col[p] = eq[p * w + k];
+    col.sort();
+    for (const [nome, q] of [["p5", .05], ["p25", .25], ["p50", .5], ["p75", .75], ["p95", .95]]) bande[nome].push(quantile(col, q) * 100);
+  }
+  let perdita = 0;
+  for (const e of finali) if (e < 1) perdita++;
+  finali.sort(); dd.sort();
+  return {bande, finali, dd, pMeta: meta / nPerc, pPerdita: perdita / nPerc};
+}
+
+/* istogramma con classi di larghezza "tonda", al massimo una quarantina */
+function classi(valori, larghezze) {
+  let lo = Infinity, hi = -Infinity;
+  for (const v of valori) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const w = larghezze.find(l => (hi - lo) / l <= 40) || larghezze[larghezze.length - 1];
+  const inizio = Math.floor(lo / w) * w, nb = Math.max(1, Math.floor((hi - inizio) / w) + 1);
+  const conteggi = new Array(nb).fill(0);
+  for (const v of valori) conteggi[Math.min(nb - 1, Math.floor((v - inizio) / w))]++;
+  return conteggi.map((k, i) => ({x: inizio + (i + 0.5) * w, y: k, da: inizio + i * w, a: inizio + (i + 1) * w}));
+}
+
+function descriviRegole(p) {
+  const verso = (lato, dir) => (lato === 1 ? "Compra" : "Vendi allo scoperto") + ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`;
+  const ingressi = [];
+  const cLong = p.strategia === "contrarian" ? "giu" : "su", cShort = p.strategia === "contrarian" ? "su" : "giu";
+  if (p.lato !== "short") ingressi.push(verso(1, cLong));
+  if (p.lato !== "long") ingressi.push(verso(-1, cShort));
+  const uscite = [`se perdi ${sgm(p.S)} dall'ingresso`];
+  if (p.T > 0) uscite.push(`se il prezzo torna indietro di ${sgm(p.T)} dal punto migliore`);
+  if (p.G > 0) uscite.push(`se guadagni ${sgm(p.G)}`);
+  if (p.H > 0) uscite.push(`dopo ${p.H} sedute`);
+  return `${ingressi.join(". ")}. Esci alla chiusura ${uscite.join(", ").replace(/, ([^,]*)$/, " o $1")}. σ è quella prevista per la seduta dopo l'ingresso e resta fissa; 1R è la perdita allo stop iniziale.`;
+}
+
+const CURSORI = [
+  {id: "k", label: "Ingresso oltre", min: 1, max: 4, step: 0.25, fmt: sgm},
+  {id: "S", label: "Stop iniziale", min: 0.5, max: 6, step: 0.25, fmt: sgm},
+  {id: "T", label: "Trailing stop", min: 0, max: 8, step: 0.25, fmt: v => v ? sgm(v) : "spento"},
+  {id: "G", label: "Target", min: 0, max: 10, step: 0.25, fmt: v => v ? sgm(v) : "nessuno"},
+  {id: "H", label: "Durata massima", min: 0, max: 120, step: 1, fmt: v => v ? v + " sedute" : "nessuna"},
+  {id: "costo", label: "Costo per operazione", min: 0, max: 1, step: 0.05, fmt: v => nf(v, 2) + "%"},
+  {id: "rischio", label: "Rischio sul capitale", min: 0.25, max: 3, step: 0.25, fmt: v => nf(v, 2) + "%"},
+];
+function seg(chiave, opzioni, etichetta) {
+  return `<div class="seg" role="group" aria-label="${etichetta}">${opzioni.map(([v, t]) =>
+    `<button aria-pressed="${stato.lab[chiave] === v}" onclick="impostaLab('${chiave}','${v}')">${t}</button>`).join("")}</div>`;
+}
+function impostaLab(chiave, valore) {
+  stato.lab[chiave] = valore;
+  const y = window.scrollY; rotta(); window.scrollTo(0, y);
+}
+function presetLab(nome) {
+  Object.assign(stato.lab, PRESET[nome]);
+  const y = window.scrollY; rotta(); window.scrollTo(0, y);
+}
+function cursore(id, valore) {
+  stato.lab[id] = Number(valore);
+  const c = CURSORI.find(x => x.id === id);
+  document.getElementById("o-" + id).textContent = c.fmt(stato.lab[id]);
+  clearTimeout(timerLab);
+  timerLab = setTimeout(ricalcolaLab, 80);
+}
+
+async function laboratorio(sim) {
+  const a = stato.dati.asset.find(x => x.simbolo === sim);
+  if (!a || !a.storia) { location.hash = ""; return; }
+  const p = stato.lab;
+  if (p.sigma === "garch" && a.garch == null) p.sigma = "ewma";
+  app.innerHTML = `
+    <button class="indietro" onclick="indietro()">‹ ${esc(a.nome)}</button>
+    <h1>Laboratorio: ${esc(a.nome)}</h1>
+    <p class="meta">Simulazione sulle chiusure giornaliere. Non è una previsione.</p>
+    <section class="card">
+      <p class="piccolo">Esempi da cui partire</p><div class="chips">${Object.keys(PRESET).map(n => `<button class="chip-btn" onclick="presetLab('${n}')">${n}</button>`).join("")}</div>
+      <div class="controlli">
+        ${seg("strategia", [["contrarian", "Contrarian"], ["trend", "Trend following"]], "Strategia")}
+        ${seg("lato", [["long", "Long"], ["short", "Short"], ["entrambi", "Entrambi"]], "Lato")}
+        ${seg("sigma", a.garch ? [["garch", "σ GARCH"], ["ewma", "σ EWMA"]] : [["ewma", "σ EWMA"]], "Volatilità")}
+        ${seg("periodo", [["tutto", "Tutto"], ["prima", "Prima metà"], ["seconda", "Seconda metà"]], "Periodo")}
+      </div>
+      ${CURSORI.map(c => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
+        <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
+        <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`).join("")}
+      <div class="regola" id="lab-regola"></div>
+    </section>
+    <div id="lab-avvisi"></div>
+    <section class="card"><h3>Le operazioni passate</h3>
+      <p class="nota" id="lab-periodo"></p>
+      <div class="tiles" id="lab-tiles"></div>
+      <h3 style="font-size:14px;margin-top:4px">Distribuzione dei risultati, in R</h3>
+      <div class="legenda"><span><i class="q" style="background:var(--s1)"></i>Guadagni</span><span><i class="q" style="background:var(--neg)"></i>Perdite</span>
+        <span><i class="lin tr" style="border-color:var(--text)"></i>Media</span></div>
+      <div class="grafico" style="height:200px"><canvas id="gR" role="img" aria-label="Istogramma dei risultati delle operazioni in R"></canvas></div>
+      <h3 style="font-size:14px;margin-top:14px">Risultato cumulato, in R</h3>
+      <div class="grafico" style="height:170px;margin-top:6px"><canvas id="gEq" role="img" aria-label="Somma dei risultati in R operazione dopo operazione"></canvas></div>
+      <details><summary>Ultime operazioni</summary><div id="lab-ops"></div></details>
+    </section>
+    <section class="card"><h3>Le prossime 200 operazioni</h3>
+      <p class="nota" id="lab-mc-nota"></p>
+      <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Mediana</span>
+        <span><i class="q" style="background:var(--s1);opacity:.35"></i>50% centrale</span>
+        <span><i class="q" style="background:var(--s1);opacity:.15"></i>90% centrale</span></div>
+      <div class="grafico" style="height:200px"><canvas id="gFan" role="img" aria-label="Ventaglio del capitale in 200 operazioni simulate"></canvas></div>
+      <h3 style="font-size:14px;margin-top:14px">Capitale dopo 200 operazioni</h3>
+      <div class="grafico" style="height:180px;margin-top:6px"><canvas id="gFin" role="img" aria-label="Distribuzione del capitale finale nelle simulazioni"></canvas></div>
+      <dl class="kv" id="lab-mc"></dl>
+    </section>
+    <p class="piede">Ingressi e uscite alle chiusure: lo stop scatta alla prima chiusura oltre il livello, quindi una perdita può superare 1R, come con un gap. Il costo è lo spread in % per operazione; il finanziamento overnight non è incluso. Con σ GARCH i parametri sono stimati su tutto lo storico, quindi gli ingressi usano un po' di informazione dal futuro; con σ EWMA no. Il Monte Carlo rimescola le operazioni passate come se fossero indipendenti: non può produrre una perdita peggiore della peggiore già vista e sottostima le serie di perdite consecutive.</p>`;
+  document.getElementById("lab-regola").textContent = descriviRegole(p);
+  let st = stato.storie[a.storia];
+  if (!st) {
+    document.getElementById("lab-avvisi").innerHTML = `<p class="vuoto" style="padding:16px">Carico lo storico…</p>`;
+    try {
+      const r = await fetch(a.storia, {cache: "no-store"});
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      st = stato.storie[a.storia] = await r.json();
+    } catch (e) {
+      document.getElementById("lab-avvisi").innerHTML = `<div class="errore">Lo storico di questo mercato oggi non è disponibile (${esc(e.message)}).</div>`;
+      return;
+    }
+    if (decodeURIComponent(location.hash.slice(1)) !== "lab=" + sim) return;   /* nel frattempo hai cambiato pagina */
+  }
+  stato.labStoria = st;
+  creaGraficiLab();
+  ricalcolaLab();
+}
+
+function creaGraficiLab() {
+  const c = impostaChart();
+  const g = {};
+  g.R = nuovoGrafico("gR", {data: {datasets: [
+      {type: "bar", data: [], backgroundColor: [], barPercentage: 1, categoryPercentage: 0.88},
+      {type: "line", data: [], borderColor: c.text, borderDash: [4, 3], borderWidth: 1.5, pointRadius: 0}]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {
+        title: it => `Tra ${conSegno(it[0].raw.da, 2)} e ${conSegno(it[0].raw.a, 2)}R`,
+        label: it => `${nf(it.raw.y, 0)} operazioni`}}},
+      scales: assi(c, {x: {type: "linear", ticks: {maxTicksLimit: 7, callback: v => conSegno(v, 0) + "R"}},
+        y: {beginAtZero: true, ticks: {maxTicksLimit: 5, precision: 0}}})}});
+  g.Eq = nuovoGrafico("gEq", {type: "line", data: {labels: [], datasets: [
+      {data: [], borderColor: c.s1, borderWidth: 2, pointRadius: 0}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => it[0].label, label: it => `cumulato ${conSegno(it.raw, 1)}R`}}},
+      scales: assi(c, {x: {ticks: {maxTicksLimit: 4, maxRotation: 0, callback: function (v) { const l = this.getLabelForValue(v); return l ? l.slice(-4) : ""; }}},
+        y: {ticks: {maxTicksLimit: 5, callback: v => conSegno(v, 0) + "R"}}})}});
+  const banda = (alfaF, riemp) => ({data: [], borderWidth: 0, pointRadius: 0, fill: riemp, backgroundColor: alfa(c.s1, alfaF)});
+  g.Fan = nuovoGrafico("gFan", {type: "line", data: {labels: Array.from({length: 201}, (_, i) => i), datasets: [
+      banda(0, false), banda(0.15, "-1"), banda(0, false), banda(0.35, "-1"),
+      {data: [], borderColor: c.s1, borderWidth: 2, pointRadius: 0},
+      {data: Array(201).fill(100), borderColor: c.text2, borderDash: [4, 4], borderWidth: 1, pointRadius: 0}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 4, callbacks: {title: it => `Dopo ${it[0].label} operazioni`,
+        label: it => { const b = g.Fan.$bande, i = it.dataIndex; return [`mediana ${nf(b.p50[i] - 100, 1)}%`, `90% tra ${nf(b.p5[i] - 100, 1)}% e ${nf(b.p95[i] - 100, 1)}%`]; }}}},
+      scales: assi(c, {x: {title: {display: true, text: "operazioni", color: c.muted, font: {size: 11}}, ticks: {autoSkip: false, maxRotation: 0, callback: v => v % 50 === 0 ? String(v) : ""}},
+        y: {ticks: {maxTicksLimit: 6, callback: v => conSegno(v - 100, 0) + "%"}}})}});
+  g.Fin = nuovoGrafico("gFin", {data: {datasets: [
+      {type: "bar", data: [], backgroundColor: [], barPercentage: 1, categoryPercentage: 0.88}]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => `Tra ${conSegno(it[0].raw.da, 0)}% e ${conSegno(it[0].raw.a, 0)}%`,
+        label: it => `${pctNoSegno(it.raw.y / 4000, 1)} delle simulazioni`}}},
+      scales: assi(c, {x: {type: "linear", ticks: {maxTicksLimit: 6, callback: v => conSegno(v, 0) + "%"}},
+        y: {beginAtZero: true, ticks: {display: false}, grid: {display: false}}})}});
+  g.colori = c;
+  stato.labGrafici = g;
+}
+
+function ricalcolaLab() {
+  const st = stato.labStoria, g = stato.labGrafici, p = stato.lab;
+  if (!st || !g || !document.getElementById("gR")) return;
+  const c = g.colori;
+  document.getElementById("lab-regola").textContent = descriviRegole(p);
+  const {ops, i0, i1, anni} = simulaStrategia(st, p);
+  const s = statisticheOps(ops, anni);
+  document.getElementById("lab-periodo").textContent =
+    `Dal ${dataBreve(st.date[i0])} al ${dataBreve(st.date[i1])}, ${nf(i1 - i0 + 1, 0)} sedute.`;
+  const avvisi = [];
+  if (!s) avvisi.push(`<div class="avviso">Nessuna operazione con queste regole. Abbassa la soglia di ingresso.</div>`);
+  else if (s.n < 30) avvisi.push(`<div class="avviso">Solo ${s.n} operazioni: troppo poche per giudicare. Abbassa la soglia di ingresso o usa tutto il periodo.</div>`);
+  document.getElementById("lab-avvisi").innerHTML = avvisi.join("");
+  const tile = (l, v, sub) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>`;
+  if (!s) {
+    document.getElementById("lab-tiles").innerHTML = "";
+    document.getElementById("lab-ops").innerHTML = "";
+    document.getElementById("lab-mc").innerHTML = "";
+    document.getElementById("lab-mc-nota").textContent = "";
+    [g.R, g.Eq, g.Fan, g.Fin].forEach(ch => { ch.data.datasets.forEach((d, i) => { if (!(ch === g.Fan && i === 5)) d.data = []; }); ch.update("none"); });
+    return;
+  }
+  document.getElementById("lab-tiles").innerHTML =
+    tile("Operazioni", nf(s.n, 0), s.perAnno != null ? `${nf(s.perAnno, 1)} l'anno` : "") +
+    tile("Vincenti", pctNoSegno(s.vincenti, 0), `media ${conSegno(s.mediaV, 2)}R / ${conSegno(s.mediaP, 2)}R`) +
+    tile("Media per operazione", conSegno(s.media, 2) + "R", `${pct(s.mediaPct)} del prezzo`) +
+    tile("Profit factor", isFinite(s.pf) ? nf(s.pf, 2) : "–", "guadagni / perdite") +
+    tile("Peggiore / migliore", `${conSegno(s.peggiore, 1)}R`, `migliore ${conSegno(s.migliore, 1)}R`) +
+    tile("Asimmetria", s.skew != null ? conSegno(s.skew, 2) : "–", s.skew == null ? "" : s.skew < 0 ? "coda sinistra: corto sulle code" : "coda destra: lungo sulle code") +
+    tile("Durata media", nf(s.durata, 1) + " sedute") +
+    tile("Discesa massima", `${conSegno(-s.ddR, 1)}R`, "sul cumulato storico");
+  /* istogramma dei risultati */
+  const R = ops.map(o => o.R), bin = classi(R, [0.1, 0.2, 0.25, 0.5, 1, 2, 5]);
+  g.R.data.datasets[0].data = bin;
+  g.R.data.datasets[0].backgroundColor = bin.map(b => alfa(b.x >= 0 ? c.s1 : c.neg, 0.85));
+  g.R.data.datasets[1].data = [{x: s.media, y: 0}, {x: s.media, y: Math.max(...bin.map(b => b.y)) * 1.08}];
+  g.R.update("none");
+  /* cumulato */
+  g.Eq.data.labels = ops.map(o => dataBreve(st.date[o.iu]));
+  g.Eq.data.datasets[0].data = s.curva;
+  g.Eq.update("none");
+  /* Monte Carlo */
+  const f = p.rischio / 100, mc = montecarlo(R, f), b = mc.bande;
+  g.Fan.$bande = b;
+  [b.p5, b.p95, b.p25, b.p75, b.p50].forEach((serie, i) => { g.Fan.data.datasets[i].data = serie; });
+  g.Fan.update("none");
+  const fin = Array.from(mc.finali, e => (e - 1) * 100), binF = classi(fin, [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000, 5000]);
+  g.Fin.data.datasets[0].data = binF;
+  g.Fin.data.datasets[0].backgroundColor = binF.map(x => alfa(x.x >= 0 ? c.s1 : c.neg, 0.85));
+  g.Fin.update("none");
+  const anniMc = s.perAnno ? 200 / s.perAnno : null;
+  document.getElementById("lab-mc-nota").textContent =
+    `4.000 percorsi da 200 operazioni pescate a caso, con reinserimento, dalle ${s.n} operazioni passate, rischiando ${nf(p.rischio, 2)}% del capitale per operazione.` +
+    (anniMc ? ` Al ritmo storico 200 operazioni sono circa ${nf(anniMc, anniMc < 10 ? 1 : 0)} anni.` : "");
+  const qf = q => pct(quantile(mc.finali, q) - 1, 0), qd = q => pctNoSegno(quantile(mc.dd, q), 0);
+  document.getElementById("lab-mc").innerHTML = `
+    <dt>Capitale finale, 5% peggiore</dt><dd>${qf(0.05)}</dd>
+    <dt>Capitale finale, mediana</dt><dd>${qf(0.5)}</dd>
+    <dt>Capitale finale, 5% migliore</dt><dd>${qf(0.95)}</dd>
+    <dt>Probabilità di chiudere in perdita</dt><dd>${pctNoSegno(mc.pPerdita, 0)}</dd>
+    <dt>Discesa massima, mediana</dt><dd>${qd(0.5)}</dd>
+    <dt>Discesa massima, 5% peggiore</dt><dd>${qd(0.95)}</dd>
+    <dt>Probabilità di perdere metà del capitale</dt><dd>${pctNoSegno(mc.pMeta, 1)}</dd>`;
+  /* ultime operazioni */
+  const ultime = ops.slice(-30).reverse();
+  document.getElementById("lab-ops").innerHTML = `<table><thead><tr><th>Ingresso</th><th>Lato</th><th>Sedute</th><th>R</th><th>Uscita</th></tr></thead><tbody>${
+    ultime.map(o => `<tr><td>${dataBreve(st.date[o.ie])}</td><td>${o.lato === 1 ? "long" : "short"}</td><td>${o.durata}</td>
+      <td>${conSegno(o.R, 2)}</td><td>${o.motivo}</td></tr>`).join("")}</tbody></table>`;
+}
+
 /* ---------- metodo ---------- */
 function metodo() {
   const p = stato.dati.parametri;
@@ -575,6 +925,7 @@ function metodo() {
     <p><b>VaR ed ES all'1%.</b> Perdita giornaliera superata nell'1% delle sedute e perdita media in quelle sedute, dalla storia.</p>
     <p><b>La chiusura di domani.</b> Quantili con la σ GARCH della prossima seduta e la t di Student stimata, senza drift.</p>
     <p><b>Volatilità implicita.</b> VIX, VXN, OVX e GVZ sono volatilità implicite a 30 giorni (OVX e GVZ dalle opzioni sugli ETF USO e GLD). La differenza con la previsione GARCH a ${p.orizzonte_mese} sedute è una misura approssimata del premio per il rischio di varianza.</p>
+    <p><b>Laboratorio.</b> Simula una regola su tutto lo storico del mercato, una posizione alla volta. Ingressi e uscite avvengono alle chiusure: si entra quando la seduta chiude oltre la soglia in σ e si esce alla prima chiusura che tocca stop, trailing, target o durata massima. σ è quella prevista per la seduta dopo l'ingresso. Il risultato di ogni operazione è in R, cioè in multipli della perdita allo stop iniziale, al netto del costo. Le 200 operazioni future sono pescate a caso, con reinserimento, da quelle passate. Per evitare di scegliere parametri fortunati, guarda se la regola tiene in entrambe le metà del periodo e con soglie vicine.</p>
     <p><b>Limiti.</b> Le commodity usano la serie del future più vicino senza rettifica per il cambio di contratto: nei giorni di roll compaiono salti che non sono rendimenti veri, soprattutto sul gas. I dati di Yahoo possono contenere errori o arrivare in ritardo.</p>
   </section>`;
 }

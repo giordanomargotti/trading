@@ -94,5 +94,23 @@ p = ad.previsione(100.0, 0.01, 4.0)
 controlla("Previsione: t più larga della gaussiana all'1%", p["t"]["1"] < p["n"]["1"], f"t {p['t']['1']} n {p['n']['1']}")
 controlla("Previsione: t più stretta della gaussiana al 5%", p["t"]["5"] > p["n"]["5"], f"t {p['t']['5']} n {p['n']['5']}")
 
+# 8. Storico del laboratorio: niente informazioni dal futuro negli ingressi
+cfg = {"simbolo": "TEST", "nome": "Test", "gruppo": "Energia", "implicita": None}
+df = ad.simula(cfg, 3)
+voce, st = ad.analizza(cfg, df, None)
+rr = ad.rendimenti_log(df)
+info, var_futura, cond_vol, z = ad.stima_garch(rr)
+cv = cond_vol.to_numpy()
+v = ad.varianza_ewma(rr.to_numpy())
+controlla("Storico: tutte le serie della stessa lunghezza",
+          len({len(st[k]) for k in ("date", "c", "zg", "sg", "ze", "se")}) == 1, f"{len(st['date'])} sedute")
+controlla("Storico: σ GARCH è quella della seduta dopo",
+          np.allclose(st["sg"][:-1], np.round(cv[1:], 3)) and abs(st["sg"][-1] - round(math.sqrt(var_futura[0]), 3)) < 1e-9)
+controlla("Storico: σ EWMA è quella della seduta dopo", np.allclose(st["se"], np.round(np.sqrt(v[1:]) * 100, 3)))
+controlla("Storico: z EWMA usa la σ prevista per quel giorno",
+          np.allclose(st["ze"], np.round(rr.to_numpy() / np.sqrt(v[:-1]), 2)))
+controlla("Storico: nome del file", ad.nome_file_storia("TTF=F") == "storia/TTF_F.json" and
+          ad.nome_file_storia("^GSPC") == "storia/GSPC.json")
+
 print("\nTutto ok" if not errori else f"\n{len(errori)} controlli falliti: {errori}")
 sys.exit(1 if errori else 0)
