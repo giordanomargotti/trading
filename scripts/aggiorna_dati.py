@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from serie_rollate import ROLLATE, confronto_rendimenti, serie_rinnovata
+from serie_rollate import ROLLATE, completa_spread, confronto_rendimenti, serie_rinnovata
 from serie_rollate import demo as rinnovo_demo
 
 warnings.filterwarnings("ignore")
@@ -465,9 +465,10 @@ def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None, rinnovo: di
         sp = rinnovo["spread"].reindex(r.index).to_numpy(dtype=float) * 100
         storia["sp"] = lista(sp, 3)
         storia["rinnovo"] = True
+        storia["fine_eia"] = rinnovo.get("fine_eia")
         ultimo_sp = sp[np.isfinite(sp)]
-        rettifica = {k: rinnovo.get(k) for k in ("fonte", "regola", "anticipo", "contratto", "prossimo_roll",
-                                                   "verifica", "buchi", "confronto")}
+        rettifica = {k: rinnovo.get(k) for k in ("fonte", "regola", "anticipo", "fine_eia", "contratto", "prossimo_roll",
+                                                   "verifica", "dopo_eia", "buchi", "confronto")}
         rettifica["spread_oggi"] = num(ultimo_sp[-1], 3) if len(ultimo_sp) else None
         rettifica["roll_anno"] = num(len(giorni_roll & set(r.index)) / max(1e-9, (r.index[-1] - r.index[0]).days / 365.25), 1)
 
@@ -556,6 +557,13 @@ def main() -> int:
         except Exception as e:
             print(f"File precedente illeggibile, si riparte da zero: {e}", file=sys.stderr)
 
+    storico_curve = {}
+    if not args.demo and (out.parent / "curve.json").exists():
+        try:
+            storico_curve = json.loads((out.parent / "curve.json").read_text("utf-8"))
+        except Exception:
+            pass
+
     risultati, aggiornati, fonti = [], 0, {"Yahoo Finance"}
     for i, cfg in enumerate(ASSET):
         try:
@@ -565,6 +573,11 @@ def main() -> int:
                 if i:
                     time.sleep(PAUSA)
                 df = pulisci(scarica(cfg["simbolo"]))
+            punti = None
+            if cfg["simbolo"] in CURVE:
+                ultima = df.index[-1]
+                punti = (curva_demo(cfg["simbolo"], float(df["Close"].iloc[-1]), ultima) if args.demo
+                         else scarica_curva(cfg["simbolo"], ultima))
             rinnovo = None
             if cfg["simbolo"] in ROLLATE:
                 try:
@@ -574,6 +587,11 @@ def main() -> int:
                         df_r, rinnovo = serie_rinnovata(cfg["simbolo"], df, scarica_rapido, pulisci, df.index[-1])
                         df_r = df_r[df_r.index >= pd.Timestamp(INIZIO)]
                         rinnovo["confronto"] = confronto_rendimenti(df, df_r)
+                        # dopo l'EIA lo spread tra i due contratti viene dalle curve salvate ogni giorno
+                        istantanee = {v["data"]: v["punti"] for v in storico_curve.get(cfg["simbolo"], [])}
+                        if punti:
+                            istantanee[df.index[-1].strftime("%Y-%m-%d")] = [[x["mese"], x["prezzo"]] for x in punti]
+                        rinnovo["spread"] = completa_spread(rinnovo["spread"], istantanee)
                         df = df_r
                         fonti.add("EIA")
                     print(f"     rinnovo {cfg['simbolo']}: {rinnovo['fonte']}; contratto {rinnovo['contratto']['simbolo']}; "
@@ -591,9 +609,6 @@ def main() -> int:
                     print(f"    implicita {cfg['implicita']} non disponibile: {e}", file=sys.stderr)
             voce, storia = analizza(cfg, df, impl, rinnovo)
             if cfg["simbolo"] in CURVE:
-                ultima = pd.Timestamp(voce["ultimo"]["data"])
-                punti = (curva_demo(cfg["simbolo"], voce["ultimo"]["chiusura"], ultima) if args.demo
-                         else scarica_curva(cfg["simbolo"], ultima))
                 voce["curva"] = metriche_curva(punti, voce["ultimo"]["data"]) if punti else None
                 if punti:
                     print(f"     curva {cfg['simbolo']}: {len(punti)} contratti, {voce['curva']['struttura']}")

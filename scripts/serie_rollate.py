@@ -254,67 +254,106 @@ def verifica_calendario(df: pd.DataFrame) -> dict:
     return out
 
 
+def _quota(x: pd.Series):
+    v = float(x.mean()) if len(x) else float("nan")
+    return round(v, 3) if math.isfinite(v) else None
+
+
+def confronto_yahoo(yahoo: pd.DataFrame, base: pd.DataFrame, eventi: list) -> dict:
+    """Sulle date in comune: quante volte la serie continua di Yahoo è più vicina al primo contratto
+    dell'EIA che al secondo, in tutti i giorni, nel giorno di scadenza e nel giorno dopo, su tutto il
+    periodo e negli ultimi tre anni. Se Yahoo cambia contratto il giorno dopo la scadenza, come
+    l'EIA, le quote sono vicine al 100%; se cambiasse prima, il giorno di scadenza lo mostrerebbe."""
+    y = yahoo["Close"].reindex(base.index)
+    ok = y.notna() & (y > 0) & (base["c1"] > 0) & (base["c2"] > 0)
+    distinti = ok & (np.abs(np.log(base["c2"] / base["c1"])) > 0.01)
+    vicino = np.abs(np.log(y / base["c1"])) < np.abs(np.log(y / base["c2"]))
+    scad = pd.Series(base.index.isin([ev["scadenza"] for ev in eventi]), index=base.index)
+    recenti = pd.Series(base.index >= base.index[-1] - pd.Timedelta(days=3 * 365), index=base.index)
+    out = {"giorni": int(ok.sum())}
+    for nome, filtro in (("tutti", distinti), ("scadenza", distinti & scad), ("dopo", distinti & base["rietichetta"]),
+                         ("tutti_recenti", distinti & recenti), ("scadenza_recenti", distinti & scad & recenti),
+                         ("dopo_recenti", distinti & base["rietichetta"] & recenti)):
+        out[nome] = _quota(vicino[filtro])
+    return out
+
+
 def serie_rinnovata(simbolo: str, yahoo: pd.DataFrame, scarica_rapido, pulisci, ieri: pd.Timestamp) -> tuple:
-    """Restituisce (DataFrame con Close rettificato, informazioni) oppure solleva un'eccezione."""
+    """Restituisce (DataFrame con Close rettificato, informazioni) oppure solleva un'eccezione.
+
+    Dopo l'ultimo dato EIA (l'EIA non pubblica più i futures NYMEX dopo il 5 aprile 2024) si usa la
+    serie continua di Yahoo, che segue il primo contratto e cambia il giorno dopo la scadenza; il
+    confronto sulle date in comune lo controlla. In quel giorno la serie continua salta della
+    differenza tra i due contratti: il rendimento vero di chi rinnova si prende dalla storia del
+    contratto su Yahoo se è ancora quotato, altrimenti si mette a zero (si perde il movimento di
+    quella seduta, ma non si aggiunge il salto)."""
     cfg = ROLLATE[simbolo]
     c1 = scarica_eia(cfg["eia"].format(n=1))
     c2 = scarica_eia(cfg["eia"].format(n=2))
     comuni = c1.index.intersection(c2.index)
-    giorni = giorni_di_borsa(comuni, ieri + pd.Timedelta(days=120))
+    ultima_eia = comuni[-1]
+    dopo = [d for d in yahoo.index if d > ultima_eia]
+    giorni = giorni_di_borsa(list(comuni) + dopo, ieri + pd.Timedelta(days=120))
     eventi = calendario(giorni, cfg["scadenza"], cfg["anticipo"])
     base = rendimenti_rinnovati(c1, c2, eventi)
     controllo = verifica_calendario(base)
-    ultima_eia = base.index[-1]
+    controllo["yahoo"] = cy = confronto_yahoo(yahoo, base, eventi)
+    soglie = {"tutti": 0.9, "scadenza": 0.8, "dopo": 0.8, "tutti_recenti": 0.9, "scadenza_recenti": 0.8, "dopo_recenti": 0.8}
+    if any((cy[k] if cy[k] is not None else 0) < v for k, v in soglie.items()):
+        raise RuntimeError(f"la serie continua di Yahoo non cambia contratto come l'EIA: {cy}")
 
-    # contratto tenuto dopo la chiusura di t: il primo il cui CFD si chiude dopo t
-    def tenuto_dopo(t):
+    scadenza_di = {ev["consegna"]: ev["scadenza"] for ev in eventi}
+
+    def tenuto_dopo(t):                         # contratto tenuto dopo la chiusura di t
         return next(ev["consegna"] for ev in eventi if ev["roll"] > t)
 
-    def primo_secondo(t):                       # C1 e C2 secondo le etichette EIA
-        vivi = [ev["consegna"] for ev in eventi if ev["scadenza"] >= t]
-        return vivi[0], vivi[1]
+    def primo(t):                               # primo contratto secondo le etichette EIA
+        return next(ev["consegna"] for ev in eventi if ev["scadenza"] >= t)
 
-    coda = [d for d in yahoo.index if d > ultima_eia]
-    tenuti = {tenuto_dopo(ultima_eia)} | {tenuto_dopo(d) for d in coda}
-    per_spread = set()
-    for d in coda:
-        per_spread |= set(primo_secondo(d))
-    prezzi = {}
-    for consegna in sorted(tenuti | per_spread):
-        sim = simbolo_yahoo(cfg, consegna)
-        df = scarica_rapido(sim, "3mo")
-        time.sleep(0.4)
-        if df is not None:
-            prezzi[consegna] = pulisci(df)["Close"]
-        elif consegna in tenuti:
-            raise RuntimeError(f"contratto {sim} non disponibile su Yahoo")
+    ultima = yahoo.index[-1]
+    vivi = {}
 
-    def prezzo(consegna, d, serve=True):
-        s = prezzi.get(consegna)
-        if s is None or d not in s.index:
-            if serve:
-                raise RuntimeError(f"manca la chiusura di {simbolo_yahoo(cfg, consegna)} del {d:%Y-%m-%d}")
+    def storia_viva(consegna):
+        """Chiusure Yahoo di un contratto ancora quotato oggi (quelli scaduti Yahoo non li ha)."""
+        if scadenza_di[consegna] < ultima:
             return None
-        return float(s.loc[d])
+        if consegna not in vivi:
+            df = scarica_rapido(simbolo_yahoo(cfg, consegna), "2y")
+            time.sleep(0.4)
+            vivi[consegna] = pulisci(df)["Close"] if df is not None else None
+        return vivi[consegna]
 
-    righe = []
-    prec = ultima_eia
-    for d in coda:
-        x = tenuto_dopo(prec)
-        f1, f2 = primo_secondo(d)
-        righe.append({"data": d, "r": _ln(prezzo(x, d), prezzo(x, prec)),
-                      "sp": _ln(prezzo(f2, d, False), prezzo(f1, d, False)),   # lo spread è facoltativo
-                      "roll": any(ev["roll"] == d for ev in eventi)})
+    Y = yahoo["Close"]
+    righe, prec, conti = [], ultima_eia, {"contratto": 0, "continua": 0, "zero": 0, "primo_per_secondo": 0}
+    for d in dopo:
+        x, f, fp = tenuto_dopo(prec), primo(d), primo(prec)
+        r = None
+        sv = storia_viva(x)
+        if sv is not None and d in sv.index and prec in sv.index:
+            r, modo = _ln(float(sv.loc[d]), float(sv.loc[prec])), "contratto"
+        elif f != fp:
+            r, modo = 0.0, "zero"                    # la continua salta da un contratto all'altro
+        elif x == f:
+            r, modo = _ln(float(Y.loc[d]), float(Y.loc[prec])), "continua"
+        else:
+            # CFD già passato al secondo contratto prima della scadenza del primo (petrolio): si usa
+            # il movimento del primo, che nei due giorni prima della scadenza è quasi lo stesso
+            r, modo = _ln(float(Y.loc[d]), float(Y.loc[prec])), "primo_per_secondo"
+        conti[modo] += 1
+        righe.append({"data": d, "r": r, "roll": any(ev["roll"] == d for ev in eventi)})
         prec = d
-    ultima = coda[-1] if coda else ultima_eia
+
     tenuto = tenuto_dopo(ultima)
-    if coda:
-        ancora = prezzo(tenuto, ultima)
+    sv = storia_viva(tenuto)
+    if sv is not None and ultima in sv.index:
+        ancora = float(sv.loc[ultima])
+    elif dopo:
+        ancora = float(Y.loc[ultima])               # stesso contratto della continua, salvo i giorni prima della scadenza
     else:
         ancora = float(base["c2"].iloc[-1] if base["dopo2"].iloc[-1] else base["c1"].iloc[-1])
 
     r = pd.concat([base["r"], pd.Series({x["data"]: x["r"] for x in righe}, dtype=float)])
-    sp = pd.concat([base["sp"], pd.Series({x["data"]: x["sp"] for x in righe}, dtype=float)])
+    sp = pd.concat([base["sp"], pd.Series(np.nan, index=pd.DatetimeIndex([x["data"] for x in righe]), dtype=float)])
     roll = pd.concat([base["roll"], pd.Series({x["data"]: x["roll"] for x in righe}, dtype=bool)])
     buchi = int(r.iloc[1:].isna().sum())
     r = r.fillna(0.0)
@@ -325,19 +364,33 @@ def serie_rinnovata(simbolo: str, yahoo: pd.DataFrame, scarica_rapido, pulisci, 
 
     prossimo = next((ev for ev in eventi if ev["roll"] > ultima), None)
     info = {
-        "fonte": f"EIA (regolamenti NYMEX) fino al {ultima_eia:%Y-%m-%d}" + (f", poi contratti Yahoo" if coda else ""),
+        "fonte": f"EIA (regolamenti NYMEX) fino al {ultima_eia:%Y-%m-%d}" + (", poi Yahoo" if dopo else ""),
         "regola": cfg["regola"],
         "anticipo": cfg["anticipo"],
+        "fine_eia": ultima_eia.strftime("%Y-%m-%d"),
         "contratto": {"consegna": tenuto, "simbolo": simbolo_yahoo(cfg, tenuto)},
         "prossimo_roll": ({"data": prossimo["roll"].strftime("%Y-%m-%d"), "consegna": prossimo["consegna"],
                            "nuovo": next(ev["consegna"] for ev in eventi if ev["roll"] > prossimo["roll"])}
                           if prossimo else None),
         "verifica": controllo,
+        "dopo_eia": conti,
         "buchi": buchi,
         "roll_date": [d for d, v in roll.items() if v],
         "spread": sp,
     }
     return out, info
+
+
+def completa_spread(spread: pd.Series, istantanee: dict) -> pd.Series:
+    """Riempie lo spread dove manca con le curve salvate ogni giorno (data -> [[mese, prezzo], ...])."""
+    sp = spread.copy()
+    for data, punti in istantanee.items():
+        d = pd.Timestamp(data)
+        if d in sp.index and not np.isfinite(sp.loc[d]) and len(punti) >= 2:
+            p = sorted(punti)
+            if p[0][1] > 0 and p[1][1] > 0:
+                sp.loc[d] = math.log(p[1][1] / p[0][1])
+    return sp
 
 
 def confronto_rendimenti(yahoo: pd.DataFrame, rinnovata: pd.DataFrame) -> dict | None:

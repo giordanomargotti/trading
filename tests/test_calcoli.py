@@ -169,9 +169,10 @@ controlla("Calendario CL: maggio 2020 scade il 21/04/2020, CFD chiuso il 17/04",
           {ev["consegna"]: ev for ev in sr.calendario(sr.giorni_di_borsa([], pd.Timestamp("2020-06-30")), "cl", 2)}["2020-05"]["roll"]
           == pd.Timestamp("2020-04-17"))
 
-# coda con i contratti di Yahoo dopo l'ultimo dato EIA: stesso risultato della serie tutta EIA
+# dopo l'ultimo dato EIA: serie continua di Yahoo, con il giorno del cambio di contratto preso dalla
+# storia del contratto se è ancora quotato, altrimenti messo a zero
 giorni, spot, eventi, prezzo, c1, c2 = contratti_sintetici("ng", 0, 5)
-taglio = giorni[-40]
+taglio = giorni[-70]
 originale = sr.scarica_eia
 sr.scarica_eia = lambda url: (c1 if "C1d" in url else c2)[lambda s: s.index <= taglio]
 yahoo = pd.DataFrame({"Close": c1})
@@ -182,12 +183,23 @@ try:
 finally:
     sr.scarica_eia = originale
 r_r = np.diff(np.log(df_r["Close"].to_numpy()))
+atteso = np.diff(np.log(spot))
+scad = {ev["consegna"]: ev["scadenza"] for ev in eventi}
+dopo_scad = [giorni.index(ev["scadenza"]) + 1 for ev in eventi if taglio <= ev["scadenza"] < giorni[-1]]
+azzerati = [i for i in dopo_scad if scad[next(e["consegna"] for e in eventi if e["scadenza"] >= giorni[i])] < giorni[-1]]
+for i in azzerati:
+    atteso[i - 1] = 0.0
 tenuto = info["contratto"]["consegna"]
-controlla("Rinnovo con coda Yahoo: rendimenti uguali allo spot", np.allclose(r_r, np.diff(np.log(spot)), atol=1e-10))
-controlla("Rinnovo con coda Yahoo: l'ultimo valore è il prezzo del contratto tenuto",
+controlla("Dopo l'EIA: rendimenti dello spot, zero nei cambi di contratti non più quotati",
+          np.allclose(r_r, atteso, atol=1e-10), f"cambi {len(dopo_scad)}, azzerati {len(azzerati)}, {info['dopo_eia']}")
+controlla("Dopo l'EIA: Yahoo segue il primo contratto", info["verifica"]["yahoo"]["tutti"] == 1.0 and info["verifica"]["yahoo"]["dopo"] == 1.0,
+          str(info["verifica"]["yahoo"]))
+controlla("Dopo l'EIA: l'ultimo valore è il prezzo del contratto tenuto",
           abs(df_r["Close"].iloc[-1] - prezzo[tenuto].iloc[-1]) < 1e-9, f"{tenuto}")
-controlla("Rinnovo con coda Yahoo: date di chiusura del CFD nella coda",
+controlla("Dopo l'EIA: date di chiusura del CFD",
           sum(1 for d in info["roll_date"] if d > taglio) == sum(1 for ev in eventi if taglio < ev["roll"] <= giorni[-1]))
+sp2 = sr.completa_spread(info["spread"], {giorni[-1].strftime("%Y-%m-%d"): [["2013-02", 4.0], ["2013-01", 3.0]]})
+controlla("Spread completato con la curva salvata", abs(sp2.iloc[-1] - math.log(4 / 3)) < 1e-12 and np.isnan(info["spread"].iloc[-1]))
 
 print("\nTutto ok" if not errori else f"\n{len(errori)} controlli falliti: {errori}")
 sys.exit(1 if errori else 0)

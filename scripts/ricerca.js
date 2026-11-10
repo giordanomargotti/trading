@@ -119,8 +119,10 @@ function main() {
     try {
       const st = storie[s] = JSON.parse(fs.readFileSync(fileStoria(s), "utf8"));
       const [, i1p] = intervallo(st, "prima");
+      const quotaSp = per => { if (!st.sp) return 0; const [a, b] = intervallo(st, per); let k = 0; for (let t = a; t <= b; t++) if (st.sp[t] != null) k++; return arr(k / (b - a + 1), 3); };
       mercati[s] = {nome: NOMI[s], dal: st.date[0], al: st.date[st.date.length - 1], meta: st.date[i1p + 1],
-        sedute: st.date.length, rinnovata: !!st.rinnovo, curva: !!st.sp, scadenze: (st.roll || []).length, costo: COSTO[s]};
+        sedute: st.date.length, rinnovata: !!st.rinnovo, fineEia: st.fine_eia || null, curva: !!st.sp,
+        spreadPrima: quotaSp("prima"), spreadSeconda: quotaSp("seconda"), scadenze: (st.roll || []).length, costo: COSTO[s]};
     } catch (e) {
       console.error(`storico mancante per ${s}: ${e.message}`);
     }
@@ -193,7 +195,8 @@ function main() {
   const log = (...x) => { const t = x.join(" "); righeLog.push(t); console.log(t); };
   log(`Regole: ${configs.length}, ammesse: ${ammesse.length}`);
   for (const [s, m] of Object.entries(mercati))
-    log(`${s} ${m.dal}..${m.al}, metà ${m.meta}, ${m.rinnovata ? `serie rinnovata, ${m.scadenze} scadenze` : "serie continua NON rinnovata"}${m.curva ? ", spread di curva" : ""}`);
+    log(`${s} ${m.dal}..${m.al}, metà ${m.meta}, ${m.rinnovata ? `serie rinnovata (EIA fino al ${m.fineEia}), ${m.scadenze} scadenze` : "serie continua NON rinnovata"}` +
+      (m.curva ? `, spread di curva nel ${Math.round(m.spreadPrima * 100)}% della prima metà e nel ${Math.round(m.spreadSeconda * 100)}% della seconda` : ""));
   log("\nRiferimenti, % annuo (annuo | vol | rapporto | discesa massima):");
   for (const [s, per] of Object.entries(riferimenti)) for (const [nomePer, r] of Object.entries(per)) for (const [k, v] of Object.entries(r))
     log(`${s.padEnd(6)} ${nomePer.padEnd(7)} ${k.padEnd(6)} ${p1(v.annuo)} ${p1(v.vol)} ${f2(v.rapporto)} ${p1(-v.discesa)}  investito ${Math.round(v.investito * 100)}%`);
