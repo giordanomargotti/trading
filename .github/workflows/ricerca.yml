@@ -54,6 +54,18 @@ jobs:
             git push || (git pull --rebase && git push)
           fi
 
+      - name: Salva gli storici usati nel ramo dati-ricerca
+        # gli storici non stanno nel ramo principale (si rigenerano ogni giorno): qui restano quelli
+        # della ricerca, per poterla rifare o controllare con gli stessi dati
+        run: |
+          mkdir -p /tmp/dati-ricerca
+          cp docs/ricerca.json docs/storia/NG_F.json docs/storia/CL_F.json docs/storia/BZ_F.json docs/storia/TTF_F.json /tmp/dati-ricerca/
+          cd /tmp/dati-ricerca
+          git init -q -b dati-ricerca
+          git add .
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Storici della ricerca $(date -u +%Y-%m-%d)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" dati-ricerca
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs
