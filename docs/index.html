@@ -434,8 +434,8 @@ function sezioneCurva(a) {
     <dl class="kv">
       <dt>Struttura</dt><dd>${cv.struttura}</dd>
       <dt>Dal primo al secondo contratto</dt><dd>${pct(cv.spread12)}</dd>
-      <dt>Roll annualizzato per chi è long</dt><dd>${pct(cv.roll_annuo, 1)}</dd>
       <dt>Dal primo all'ultimo, ${cv.mesi_pendenza} mesi</dt><dd>${pct(cv.pendenza, 1)}</dd>
+      <dt>Roll per chi è long, media annua sulla curva</dt><dd>${pct(cv.roll_annuo, 1)}</dd>
     </dl>
     <p class="piccolo" style="margin-top:8px">Un CFD su future passa al contratto successivo a ogni scadenza. In contango il long paga la differenza e lo short la incassa; in backwardation succede il contrario. ${cv.struttura === "contango" ? "Oggi il roll pesa sui long." : "Oggi il roll favorisce i long."} Sul gas la curva ha anche un andamento stagionale: i mesi invernali costano di più.</p>
   </section>`;
@@ -899,7 +899,7 @@ function aggiornaOggi(res, st, a) {
   let html = "", sigma = null;
   if (ult && ult.motivo === "aperta") {
     sigma = ult.se;
-    html += `<p class="nota">Posizione ${ult.lato === 1 ? "long" : "short"} aperta dal ${dataBreve(st.date[ult.ie])} a ${prezzo(st.c[ult.ie])}.</p>
+    html += `<p class="nota">Posizione ${ult.lato === 1 ? "long" : "short"} aperta dal ${dataBreve(st.date[ult.ie])} a ${prezzo(st.c[ult.ie])}${st.rinnovo ? ", prezzo riportato al contratto di oggi" : ""}${ult.rinnovi ? `, rinnovata ${ult.rinnovi} ${ult.rinnovi === 1 ? "volta" : "volte"} a scadenza` : ""}. Se non eri dentro dall'inizio, aspetta il prossimo ingresso: lo stop e la dimensione sono stati fissati con la σ di quel giorno.</p>
       <dl class="kv"><dt>Chiusura del ${oggi}</dt><dd>${prezzo(P)}</dd>
       <dt>Esci se una chiusura va ${ult.lato === 1 ? "sotto" : "sopra"}</dt><dd>${prezzo(ult.livello)}</dd>
       ${ult.target ? `<dt>Target</dt><dd>${prezzo(ult.target)}</dd>` : ""}
@@ -933,7 +933,7 @@ function aggiornaOggi(res, st, a) {
   }
   const rt = a.rettifica;
   if (rt && rt.prossimo_roll) html += `<p class="piccolo" style="margin-top:8px">Il CFD sul contratto di ${meseIt(rt.prossimo_roll.consegna)} si chiude d'ufficio il ${dataBreve(rt.prossimo_roll.data)}: chi è dentro deve riaprire sul contratto successivo e paga di nuovo lo spread.</p>`;
-  if (a.curva) html += `<p class="piccolo" style="margin-top:8px">Curva dei futures: ${a.curva.struttura}, quindi il passaggio al contratto successivo ${a.curva.struttura === "contango" ? "paga chi è short" : "paga chi è long"}. Vale ${pct(a.curva.roll_annuo, 1)} l'anno per chi è long, e lo stesso con il segno opposto per chi è short.</p>`;
+  if (a.curva) html += `<p class="piccolo" style="margin-top:8px">Curva dei futures: ${a.curva.struttura}, quindi il passaggio al contratto successivo ${a.curva.struttura === "contango" ? "favorisce chi è short" : "favorisce chi è long"}: il secondo contratto costa ${pct(a.curva.spread12, 1)} rispetto al primo. Su tutta la curva, ${a.curva.mesi_pendenza} mesi, il roll vale in media ${pct(a.curva.roll_annuo, 1)} l'anno per chi è long e lo stesso con il segno opposto per chi è short.</p>`;
   el.innerHTML = html;
 }
 
@@ -1082,6 +1082,7 @@ async function ricerca() {
       <div class="regola">${giudizio}</div>
       <button class="azione" onclick="provaRicerca()">Apri la regola nel laboratorio del gas</button>
     </section>` : ""}
+    ${R.esempi ? sezioneEsempi(R) : ""}
     <section class="card"><h3>Quanto conta la scelta</h3>
       <p class="nota">${fraseRho} Fuori campione è positiva ${pctNoSegno(R.quotaRegoleConOOSPositivo, 0)} delle ${nf(R.regoleAmmesse, 0)} regole con abbastanza operazioni, e ${R.topOOSpositive} delle 10 migliori dentro il campione.</p>
       <details><summary>Le 10 migliori dentro il campione</summary>
@@ -1097,14 +1098,31 @@ async function ricerca() {
     </section>
     <p class="piede">Il t statistico è il risultato medio diviso per il suo errore standard: sotto 2 un risultato può uscire anche per caso. Su ${nf(P.regole, 0)} regole provate, qualcuna supera 2 dentro il campione anche se nessuna ha un vantaggio: per questo conta solo la verifica fuori. Le operazioni di una stessa regola si sovrappongono nel tempo tra un mercato e l'altro, quindi le due metà non sono campioni del tutto indipendenti.</p>`;
 }
-function provaRicerca() {
-  const R = stato.ricerca, c = R.scelta.cfg;
+function sezioneEsempi(R) {
+  const m = R.mercati, prove = [["NG=F", "prima"], ["NG=F", "seconda"]];
+  const altre = [["CL=F", "prima"], ["CL=F", "seconda"], ["BZ=F", "tutto"], ["TTF=F", "tutto"]];
+  const cella = v => v && v.n ? `${conSegno(v.media, 2)}R` : "–";
+  const righe = R.esempi.map((e, i) => {
+    const alt = altre.map(([s, per]) => e.ris[s + ":" + per]).filter(v => v && v.n >= R.protocollo.minOperazioni);
+    const tutte = e.prove > 0 && e.positive === e.prove;
+    return `<tr onclick="provaEsempio(${i})" style="cursor:pointer${tutte ? ";font-weight:600" : ""}"><td>${esc(e.nome)}, ${LATI[e.lato]}</td>
+      ${prove.map(([s, per]) => `<td>${cella(e.ris[s + ":" + per])}</td>`).join("")}<td>${alt.filter(v => v.media > 0).length} su ${alt.length}</td></tr>`;
+  }).join("");
+  return `<section class="card"><h3>Gli esempi del laboratorio</h3>
+    <p class="nota">Le cinque regole di esempio esistevano prima della ricerca, quindi provarle non è una scelta fatta sui risultati. Scegliere il lato guardando questa tabella invece lo è: anche la riga migliore resta un'ipotesi da seguire senza soldi veri prima di crederci. R medio per operazione sul gas Henry Hub nelle due metà, e in quante delle altre prove (WTI nelle due metà, Brent, TTF) è positivo. In grassetto le righe positive in tutte le prove. Tocca una riga per aprirla nel laboratorio.</p>
+    <table><thead><tr><th>Regola</th><th>Gas 1ª metà</th><th>Gas 2ª metà</th><th>Altre prove positive</th></tr></thead><tbody>${righe}</tbody></table>
+  </section>`;
+}
+function apriInLaboratorio(c) {
+  const R = stato.ricerca;
   Object.assign(stato.lab, {strategia: c.strategia, ingresso: c.ingresso, lato: c.lato, k: c.k, Nr: c.Nr ?? 55, S: c.S, T: c.T, G: c.G, H: c.H,
     indicatore: c.indicatore ?? "forza", N: c.N ?? 60, fase: "tutte", dirTrend: "tutte", sigma: "ewma", periodo: "tutto",
     finanz: R.protocollo.finanzLong, finanzShort: R.protocollo.finanzShort});
   stato.labMercato = null;                       /* così il laboratorio riprende lo spread del mercato */
   location.hash = "lab=" + encodeURIComponent("NG=F");
 }
+function provaEsempio(i) { apriInLaboratorio(stato.ricerca.esempi[i].cfg); }
+function provaRicerca() { apriInLaboratorio(stato.ricerca.scelta.cfg); }
 
 /* ---------- metodo ---------- */
 function metodo() {

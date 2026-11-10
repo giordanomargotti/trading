@@ -191,7 +191,10 @@ def metriche_curva(punti: list, data: str) -> dict:
         "data": data, "punti": p,
         "struttura": "backwardation" if f1 > f2 else "contango",
         "spread12": num(f2 / f1 - 1, 5),                      # dal primo al secondo contratto
-        "roll_annuo": num(math.log(f1 / f2) * 12 / d12, 4),    # rendimento del roll per chi è long, annualizzato
+        # roll per chi è long in media annua su tutta la curva: sul gas lo spread di un solo mese,
+        # annualizzato, sarebbe dominato dalla stagione (novembre-dicembre contro gennaio)
+        "roll_annuo": num(math.log(f1 / fl) * 12 / dl, 4),
+        "roll_prossimo": num(math.log(f1 / f2), 5),          # al prossimo cambio, per chi è long
         "pendenza": num(fl / f1 - 1, 4), "mesi_pendenza": dl,
     }
 

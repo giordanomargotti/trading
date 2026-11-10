@@ -169,6 +169,24 @@ function main() {
     mediaVerifica: Object.fromEntries(VERIFICA.map(s => [s, f.nV[s] ? arr(f.sV[s] / f.nV[s]) : null]))}))
     .sort((a, b) => b.tOOS - a.tOOS);
 
+  /* Gli esempi del laboratorio, definiti prima di questa ricerca: valutarli non è una scelta fatta sui
+     risultati. Scegliere poi il lato guardando questa tabella lo è, e va dichiarato. */
+  const ESEMPI = {
+    "Contrarian con trailing": {strategia: "contrarian", ingresso: "shock", k: 2, S: 2, T: 2, G: 0, H: 0},
+    "Contrarian classico": {strategia: "contrarian", ingresso: "shock", k: 2, S: 4, T: 0, G: 1, H: 10},
+    "Trend following": {strategia: "trend", ingresso: "shock", k: 2, S: 2, T: 3, G: 0, H: 0},
+    "Trend su rottura": {strategia: "trend", ingresso: "rottura", Nr: 55, k: 2, S: 2, T: 4, G: 0, H: 0},
+    "Combinata": {strategia: "combinata", ingresso: "shock", k: 2, S: 2, T: 3, G: 0, H: 0},
+  };
+  const prove = [["NG=F", "prima"], ["NG=F", "seconda"], ["CL=F", "prima"], ["CL=F", "seconda"], ["BZ=F", "tutto"], ["TTF=F", "tutto"]];
+  const esempi = [];
+  for (const [nome, cfg] of Object.entries(ESEMPI)) for (const lato of ["long", "short", "entrambi", "curva"]) {
+    const ris = {};
+    for (const [s, per] of prove) if (storie[s] && (lato !== "curva" || storie[s].sp)) ris[s + ":" + per] = compatto(valuta(storie[s], {...cfg, lato}, s, per));
+    const v = Object.values(ris).filter(x => x.n >= MIN_OPS);
+    esempi.push({nome, lato, cfg: {...cfg, lato}, ris, prove: v.length, positive: v.filter(x => x.media > 0).length});
+  }
+
   const riassunto = r => ({cfg: r.cfg, punteggioIS: arr(r.punteggioIS, 2), punteggioOOS: arr(r.punteggioOOS, 2),
     is: Object.fromEntries(Object.entries(r.is).map(([k, v]) => [k, compatto(v)])),
     oos: Object.fromEntries(Object.entries(r.oos).map(([k, v]) => [k, compatto(v)])),
@@ -183,6 +201,7 @@ function main() {
     mercati, riferimenti, regoleAmmesse: ammesse.length, correlazioneSpearman: arr(rho, 3),
     quotaRegoleConOOSPositivo: arr(ammesse.filter(r => r.punteggioOOS > 0).length / Math.max(1, ammesse.length), 3),
     migliori, topOOSpositive: migliori.filter(m => m.punteggioOOS > 0).length, famiglie: tabFamiglie, scelta: migliori[0] || null,
+    esempi,
   };
   fs.writeFileSync(path.join(DOCS, "ricerca.json"), JSON.stringify(esito));
 
@@ -210,6 +229,9 @@ function main() {
   log("\nFamiglie (t medio IS | t medio OOS | quota OOS positivi | R medio OOS NG | CL | Brent | TTF):");
   for (const f of tabFamiglie)
     log(`${f2(f.tIS)} | ${f2(f.tOOS)} | ${String(Math.round(f.quotaPositiveOOS * 100)).padStart(3)}% | ${f2(f.mediaOOS["NG=F"])} | ${f2(f.mediaOOS["CL=F"])} | ${f2(f.mediaVerifica["BZ=F"])} | ${f2(f.mediaVerifica["TTF=F"])}  ${f.famiglia}, ${f.lato}`);
+  log("\nEsempi del laboratorio (R medio: NG prima | NG seconda | CL prima | CL seconda | Brent | TTF; positivi):");
+  for (const e of esempi)
+    log(prove.map(([s, per]) => { const v = e.ris[s + ":" + per]; return v && v.n ? f2(v.media) : "     –"; }).join(" | ") + `  ${e.positive}/${e.prove}  ${e.nome}, ${e.lato}`);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, "```\n" + righeLog.join("\n") + "\n```\n");
 }
 
