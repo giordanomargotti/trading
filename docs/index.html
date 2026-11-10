@@ -573,8 +573,73 @@ const PRESET = {
   "Contrarian con trailing": {strategia: "contrarian", lato: "long", k: 2, S: 2, T: 2, G: 0, H: 0},
   "Contrarian classico": {strategia: "contrarian", lato: "long", k: 2, S: 4, T: 0, G: 1, H: 10},
   "Trend following": {strategia: "trend", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  "Combinata": {strategia: "combinata", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
 };
-stato.lab = {...PRESET["Contrarian con trailing"], sigma: "garch", periodo: "tutto", costo: 0.10, rischio: 1};
+stato.lab = {...PRESET["Contrarian con trailing"], sigma: "garch", periodo: "tutto", costo: 0.10, rischio: 1,
+  N: 60, fase: "tutte", dirTrend: "tutte", indicatore: "forza"};
+
+/* Forza del trend: rendimento delle ultime N sedute diviso per quello che farebbe in media
+   una passeggiata casuale con la stessa volatilità (σ stimata dalla media dei |rendimenti|).
+   Usa solo dati fino alla chiusura del giorno. Su una passeggiata casuale |F| è circa |N(0,1)|:
+   un terzo delle sedute sotto 0,5, un terzo tra 0,5 e 1, un terzo sopra 1. */
+const SOGLIA_LATERALE = 0.5, SOGLIA_TREND = 1;
+const nomiFase = p => p.indicatore === "autocorrelazione"
+  ? {laterale: "Ritorno alla media", intermedia: "Neutra", trend: "Persistenza"}
+  : {laterale: "Laterale", intermedia: "Intermedia", trend: "Trend"};
+function forzaTrend(st, N) {
+  if (st._forza && st._forza.N === N) return st._forza.F;
+  const n = st.c.length, F = new Array(n).fill(null), r = new Float64Array(n);
+  for (let t = 1; t < n; t++) r[t] = Math.log(st.c[t] / st.c[t - 1]);
+  let s = 0, a = 0;
+  for (let t = 1; t < n; t++) {
+    s += r[t]; a += Math.abs(r[t]);
+    if (t > N) { s -= r[t - N]; a -= Math.abs(r[t - N]); }
+    if (t >= N && a > 0) F[t] = s / (a / N * Math.sqrt(Math.PI / 2) * Math.sqrt(N));
+  }
+  st._forza = {N, F};
+  return F;
+}
+const faseDi = f => f == null ? null : Math.abs(f) < SOGLIA_LATERALE ? "laterale" : Math.abs(f) < SOGLIA_TREND ? "intermedia" : "trend";
+
+/* Autocorrelazione con il variance ratio di Lo e MacKinlay: varianza dei rendimenti a Q sedute
+   divisa per Q volte la varianza giornaliera, sulle ultime W sedute. Sotto 1 i movimenti tendono
+   a rientrare, sopra 1 a proseguire. Le soglie sono i terzili che si ottengono su una passeggiata
+   casuale gaussiana con la stessa finestra: fisse, non scelte guardando il mercato. */
+const Q_VR = 5, cacheSoglieVR = {};
+function serieVR(P, W) {
+  const n = P.length, V = new Array(n).fill(null), q = Q_VR;
+  for (let t = W; t < n; t++) {
+    const mu = (P[t] - P[t - W]) / W;
+    let v1 = 0, vq = 0, m = 0;
+    for (let i = t - W + 1; i <= t; i++) { const d = P[i] - P[i - 1] - mu; v1 += d * d; }
+    for (let j = t - W + q; j <= t; j++) { const d = P[j] - P[j - q] - q * mu; vq += d * d; m++; }
+    v1 /= W; vq /= m;
+    V[t] = v1 > 0 ? vq / (q * v1) : null;
+  }
+  return V;
+}
+function soglieVR(W) {
+  if (cacheSoglieVR[W]) return cacheSoglieVR[W];
+  const rng = mulberry32(99 + W), n = 30000, P = new Float64Array(n);
+  for (let t = 1; t < n; t++) { let u = 0; while (!u) u = rng(); P[t] = P[t - 1] + Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
+  const V = serieVR(P, W).filter(v => v != null).sort((a, b) => a - b);
+  return (cacheSoglieVR[W] = [quantile(V, 1 / 3), quantile(V, 2 / 3)]);
+}
+function fasiSerie(st, p) {
+  const chiave = p.indicatore + ":" + p.N;
+  if (st._fasi && st._fasi.chiave === chiave) return st._fasi.fasi;
+  let fasi;
+  if (p.indicatore === "autocorrelazione") {
+    const n = st.c.length, P = new Float64Array(n);
+    for (let t = 1; t < n; t++) P[t] = P[t - 1] + Math.log(st.c[t] / st.c[t - 1]);
+    const V = serieVR(P, p.N), [s1, s2] = soglieVR(p.N);
+    fasi = V.map(v => v == null ? null : v < s1 ? "laterale" : v > s2 ? "trend" : "intermedia");
+  } else {
+    fasi = forzaTrend(st, p.N).map(faseDi);
+  }
+  st._fasi = {chiave, fasi};
+  return fasi;
+}
 stato.storie = {};
 stato.labGrafici = null;
 let timerLab = null;
@@ -592,7 +657,10 @@ function simulaStrategia(st, p) {
   const lnc = new Float64Array(n);
   for (let t = 0; t < n; t++) lnc[t] = Math.log(st.c[t]);
   const costo = p.costo / 100, ops = [];
-  let pos = 0, ie = 0, se = 0, best = 0;
+  const F = forzaTrend(st, p.N || 60), FS = fasiSerie(st, {...p, N: p.N || 60});
+  const filtraFase = p.strategia !== "combinata" && p.fase && p.fase !== "tutte";
+  const filtraDir = p.dirTrend && p.dirTrend !== "tutte";
+  let pos = 0, ie = 0, se = 0, best = 0, fIn = null, faseIn = null;
   for (let t = i0; t <= i1; t++) {
     if (pos !== 0) {
       const x = pos * (lnc[t] - lnc[ie]);                   /* risultato in log dal prezzo d'ingresso */
@@ -604,7 +672,7 @@ function simulaStrategia(st, p) {
       else if (t === i1) motivo = "fine periodo";
       if (motivo) {
         const pct = (pos === 1 ? Math.exp(x) - 1 : 1 - Math.exp(-x)) - costo;
-        ops.push({ie, iu: t, lato: pos, R: (x - costo) / (p.S * se), pct, durata: t - ie, motivo});
+        ops.push({ie, iu: t, lato: pos, R: (x - costo) / (p.S * se), pct, durata: t - ie, motivo, f: fIn, fase: faseIn});
         pos = 0;
         continue;                                           /* niente nuovo ingresso nella stessa seduta */
       }
@@ -614,10 +682,17 @@ function simulaStrategia(st, p) {
     if (t === i1) break;
     const zt = z[t], s = sg[t];
     if (zt == null || s == null || !(s > 0)) continue;
-    let d = p.strategia === "contrarian" ? (zt <= -p.k ? 1 : zt >= p.k ? -1 : 0)
-                                         : (zt >= p.k ? 1 : zt <= -p.k ? -1 : 0);
+    const f = F[t], fase = FS[t];
+    if ((filtraFase || filtraDir || p.strategia === "combinata") && fase == null) continue;
+    if (filtraFase && fase !== p.fase) continue;
+    /* combinata: contrarian nelle fasi laterali, trend following nelle fasi di trend, ferma in mezzo */
+    const regola = p.strategia === "combinata" ? (fase === "laterale" ? "contrarian" : fase === "trend" ? "trend" : null) : p.strategia;
+    if (!regola) continue;
+    let d = regola === "contrarian" ? (zt <= -p.k ? 1 : zt >= p.k ? -1 : 0)
+                                    : (zt >= p.k ? 1 : zt <= -p.k ? -1 : 0);
     if ((d === 1 && p.lato === "short") || (d === -1 && p.lato === "long")) d = 0;
-    if (d) { pos = d; ie = t; se = s / 100; best = 0; }
+    if (d && filtraDir && ((Math.sign(f) === d) !== (p.dirTrend === "favore"))) d = 0;
+    if (d) { pos = d; ie = t; se = s / 100; best = 0; fIn = f; faseIn = fase; }
   }
   const anni = (Date.parse(st.date[i1]) - Date.parse(st.date[i0])) / (365.25 * 864e5);
   return {ops, i0, i1, anni};
@@ -638,6 +713,59 @@ function statisticheOps(ops, anni) {
     mediaV: vinc.length ? sV / vinc.length : 0, mediaP: perd.length ? -sP / perd.length : 0,
     pf: sP > 0 ? sV / sP : Infinity, peggiore: Math.min(...R), migliore: Math.max(...R),
     durata: somma(ops.map(o => o.durata)) / n, skew, ddR: dd, curva};
+}
+
+function perFase(ops) {
+  const gruppi = {laterale: [], intermedia: [], trend: [], favore: [], contro: []};
+  for (const o of ops) {
+    if (o.fase == null) continue;
+    gruppi[o.fase].push(o.R);
+    gruppi[Math.sign(o.f) === o.lato ? "favore" : "contro"].push(o.R);
+  }
+  const out = {};
+  for (const [k, v] of Object.entries(gruppi)) {
+    const n = v.length, media = n ? v.reduce((a, b) => a + b, 0) / n : null;
+    const varianza = n > 1 ? v.reduce((a, r) => a + (r - media) ** 2, 0) / (n - 1) : null;
+    out[k] = {n, media, es: varianza != null ? Math.sqrt(varianza / n) : null};   /* es = errore standard della media */
+  }
+  return out;
+}
+
+function diagnosiFasi(st, p) {
+  const base = {...p, fase: "tutte", dirTrend: "tutte"};
+  const dc = perFase(simulaStrategia(st, {...base, strategia: "contrarian"}).ops);
+  const dt = perFase(simulaStrategia(st, {...base, strategia: "trend"}).ops);
+  const g = stato.labGrafici, MIN = 10, fasi = ["laterale", "intermedia", "trend"], NOMI_FASE = nomiFase(p);
+  g.Fasi.data.labels = fasi.map(k => NOMI_FASE[k]);
+  g.Fasi.$n = [dc, dt];
+  g.Fasi.data.datasets[0].data = fasi.map(k => dc[k].media);
+  g.Fasi.data.datasets[1].data = fasi.map(k => dt[k].media);
+  g.Fasi.update("none");
+  const cella = d => d.n ? `${conSegno(d.media, 2)}R <span class="piccolo">(${d.n})</span>` : "–";
+  const righe = [...fasi.map(k => [NOMI_FASE[k], k]), ["A favore del trend", "favore"], ["Contro il trend", "contro"]];
+  /* una differenza conta solo se supera due volte il suo errore standard */
+  const confronto = k => {
+    const a = dc[k], b = dt[k];
+    if (a.n < MIN || b.n < MIN) return {ok: false, frase: `${NOMI_FASE[k]}: troppo poche operazioni per dirlo.`};
+    const d = a.media - b.media, es = Math.sqrt(a.es ** 2 + b.es ** 2), vince = d > 0 ? "contrarian" : "trend";
+    const valori = `${conSegno(a.media, 2)}R il contrarian, ${conSegno(b.media, 2)}R il trend`;
+    if (Math.abs(d) <= 2 * es) return {ok: true, vince: null, frase: `${NOMI_FASE[k]}: ${valori}, ma la differenza sta dentro il rumore (±${nf(2 * es, 2)}R).`};
+    return {ok: true, vince, frase: `${NOMI_FASE[k]}: meglio ${vince === "contrarian" ? "il contrarian" : "il trend following"} (${valori}).`};
+  };
+  const esiti = Object.fromEntries(fasi.map(k => [k, confronto(k)]));
+  const frasi = fasi.map(k => esiti[k].frase);
+  const abbastanza = esiti.laterale.ok && esiti.trend.ok;
+  const separa = esiti.laterale.vince === "contrarian" && esiti.trend.vince === "trend";
+  const misura = p.indicatore === "autocorrelazione" ? "l'autocorrelazione" : "la forza del trend";
+  const conclusione = !abbastanza ? "Servono più operazioni per giudicare: abbassa la soglia di ingresso o allarga il periodo."
+    : separa ? `Qui ${misura} separa le due strategie come ci si aspetta. Prova la Combinata e controlla che regga in tutte e due le metà del periodo.`
+    : `Qui ${misura} non separa le due strategie in modo affidabile: questi dati non giustificano il cambio di strategia in base alla fase.`;
+  document.getElementById("lab-fasi").innerHTML = `
+    <table style="margin-top:8px"><thead><tr><th>Fase all'ingresso</th><th>Contrarian</th><th>Trend</th></tr></thead><tbody>
+      ${righe.map(([nome, k]) => `<tr><td>${nome}</td><td>${cella(dc[k])}</td><td>${cella(dt[k])}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="piccolo" style="margin-top:6px">Tra parentesi il numero di operazioni. «A favore» vuol dire che l'operazione va nella stessa direzione del prezzo nelle ultime ${p.N} sedute.</p>
+    <div class="regola">${frasi.join(" ")} ${conclusione}</div>`;
 }
 
 function mulberry32(a) {
@@ -693,11 +821,24 @@ function classi(valori, larghezze) {
 }
 
 function descriviRegole(p) {
-  const verso = (lato, dir) => (lato === 1 ? "Compra" : "Vendi allo scoperto") + ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`;
+  const verso = (lato, dir) => (lato === 1 ? "compra" : "vendi allo scoperto") + ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`;
+  const ingressiDi = regola => {
+    const v = [], cLong = regola === "contrarian" ? "giu" : "su", cShort = regola === "contrarian" ? "su" : "giu";
+    if (p.lato !== "short") v.push(verso(1, cLong));
+    if (p.lato !== "long") v.push(verso(-1, cShort));
+    return v.join("; ");
+  };
+  const maiuscola = t => t.charAt(0).toUpperCase() + t.slice(1);
   const ingressi = [];
-  const cLong = p.strategia === "contrarian" ? "giu" : "su", cShort = p.strategia === "contrarian" ? "su" : "giu";
-  if (p.lato !== "short") ingressi.push(verso(1, cLong));
-  if (p.lato !== "long") ingressi.push(verso(-1, cShort));
+  if (p.strategia === "combinata") {
+    const nf_ = nomiFase(p), misura = p.indicatore === "autocorrelazione" ? "autocorrelazione" : "forza del trend";
+    ingressi.push(`Nella fase «${nf_.laterale.toLowerCase()}» (${misura} sulle ultime ${p.N} sedute) ${ingressiDi("contrarian")}`);
+    ingressi.push(`Nella fase «${nf_.trend.toLowerCase()}» ${ingressiDi("trend")}. Nella fase «${nf_.intermedia.toLowerCase()}» resta fuori`);
+  } else {
+    ingressi.push(maiuscola(ingressiDi(p.strategia)));
+    if (p.fase !== "tutte") ingressi.push(`Solo nella fase «${nomiFase(p)[p.fase].toLowerCase()}», misurata sulle ultime ${p.N} sedute`);
+  }
+  if (p.dirTrend !== "tutte") ingressi.push(`Solo ${p.dirTrend === "favore" ? "a favore del" : "contro il"} trend delle ultime ${p.N} sedute`);
   const uscite = [`se perdi ${sgm(p.S)} dall'ingresso`];
   if (p.T > 0) uscite.push(`se il prezzo torna indietro di ${sgm(p.T)} dal punto migliore`);
   if (p.G > 0) uscite.push(`se guadagni ${sgm(p.G)}`);
@@ -726,9 +867,10 @@ function presetLab(nome) {
   Object.assign(stato.lab, PRESET[nome]);
   const y = window.scrollY; rotta(); window.scrollTo(0, y);
 }
+const CURSORI_FASE = [{id: "N", label: "Finestra della fase", min: 20, max: 250, step: 5, fmt: v => v + " sedute"}];
 function cursore(id, valore) {
   stato.lab[id] = Number(valore);
-  const c = CURSORI.find(x => x.id === id);
+  const c = [...CURSORI, ...CURSORI_FASE].find(x => x.id === id);
   document.getElementById("o-" + id).textContent = c.fmt(stato.lab[id]);
   clearTimeout(timerLab);
   timerLab = setTimeout(ricalcolaLab, 80);
@@ -746,7 +888,7 @@ async function laboratorio(sim) {
     <section class="card">
       <p class="piccolo">Esempi da cui partire</p><div class="chips">${Object.keys(PRESET).map(n => `<button class="chip-btn" onclick="presetLab('${n}')">${n}</button>`).join("")}</div>
       <div class="controlli">
-        ${seg("strategia", [["contrarian", "Contrarian"], ["trend", "Trend following"]], "Strategia")}
+        ${seg("strategia", [["contrarian", "Contrarian"], ["trend", "Trend"], ["combinata", "Combinata"]], "Strategia")}
         ${seg("lato", [["long", "Long"], ["short", "Short"], ["entrambi", "Entrambi"]], "Lato")}
         ${seg("sigma", a.garch ? [["garch", "σ GARCH"], ["ewma", "σ EWMA"]] : [["ewma", "σ EWMA"]], "Volatilità")}
         ${seg("periodo", [["tutto", "Tutto"], ["prima", "Prima metà"], ["seconda", "Seconda metà"]], "Periodo")}
@@ -754,6 +896,18 @@ async function laboratorio(sim) {
       ${CURSORI.map(c => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
         <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
         <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`).join("")}
+      <h3 style="font-size:14px;margin-top:12px">Fasi di mercato</h3>
+      <div class="controlli">${seg("indicatore", [["forza", "Forza del trend"], ["autocorrelazione", "Autocorrelazione"]], "Misura della fase")}</div>
+      <p class="piccolo">${p.indicatore === "autocorrelazione"
+        ? `Autocorrelazione: varianza dei rendimenti a ${Q_VR} sedute contro quella giornaliera (variance ratio). Bassa vuol dire che i movimenti tendono a rientrare, alta che tendono a proseguire. Le soglie dividono in tre parti uguali una passeggiata casuale.`
+        : `Forza del trend: quanto il prezzo si è mosso nelle ultime sedute rispetto a una passeggiata casuale con la stessa volatilità. Sotto ${nf(SOGLIA_LATERALE, 1)} la fase è laterale, oltre ${nf(SOGLIA_TREND, 0)} è di trend.`}</p>
+      ${CURSORI_FASE.map(c => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
+        <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
+        <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`).join("")}
+      <div class="controlli">
+        ${p.strategia === "combinata" ? "" : seg("fase", [["tutte", "Tutte"], ...["laterale", "intermedia", "trend"].map(k => [k, nomiFase(p)[k]])], "Fase")}
+        ${seg("dirTrend", [["tutte", "Ogni direzione"], ["favore", "A favore del trend"], ["contro", "Contro"]], "Direzione rispetto al trend")}
+      </div>
       <div class="regola" id="lab-regola"></div>
     </section>
     <div id="lab-avvisi"></div>
@@ -767,6 +921,12 @@ async function laboratorio(sim) {
       <h3 style="font-size:14px;margin-top:14px">Risultato cumulato, in R</h3>
       <div class="grafico" style="height:170px;margin-top:6px"><canvas id="gEq" role="img" aria-label="Somma dei risultati in R operazione dopo operazione"></canvas></div>
       <details><summary>Ultime operazioni</summary><div id="lab-ops"></div></details>
+    </section>
+    <section class="card"><h3>Quale strategia in quale fase</h3>
+      <p class="nota">Contrarian e trend following con le stesse uscite, su ogni fase. Media del risultato per operazione, in R.</p>
+      <div class="legenda"><span><i class="q" style="background:var(--s2)"></i>Contrarian</span><span><i class="q" style="background:var(--s1)"></i>Trend following</span></div>
+      <div class="grafico" style="height:190px"><canvas id="gFasi" role="img" aria-label="Risultato medio di contrarian e trend following in ogni fase di mercato"></canvas></div>
+      <div id="lab-fasi"></div>
     </section>
     <section class="card"><h3>Le prossime 200 operazioni</h3>
       <p class="nota" id="lab-mc-nota"></p>
@@ -833,6 +993,14 @@ function creaGraficiLab() {
         label: it => `${pctNoSegno(it.raw.y / 4000, 1)} delle simulazioni`}}},
       scales: assi(c, {x: {type: "linear", ticks: {maxTicksLimit: 6, callback: v => conSegno(v, 0) + "%"}},
         y: {beginAtZero: true, ticks: {display: false}, grid: {display: false}}})}});
+  g.Fasi = nuovoGrafico("gFasi", {type: "bar", data: {labels: ["Laterale", "Intermedia", "Trend"], datasets: [
+      {label: "Contrarian", data: [], backgroundColor: c.s2, barPercentage: 0.9, categoryPercentage: 0.7},
+      {label: "Trend following", data: [], backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 0.7}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => it[0].label, label: it => {
+        const d = g.Fasi.$n[it.datasetIndex][["laterale", "intermedia", "trend"][it.dataIndex]];
+        return d.n ? `${it.dataset.label}: ${conSegno(d.media, 2)}R su ${d.n} operazioni` : `${it.dataset.label}: nessuna operazione`; }}}},
+      scales: assi(c, {y: {ticks: {maxTicksLimit: 5, callback: v => conSegno(v, 2) + "R"}}})}});
   g.colori = c;
   stato.labGrafici = g;
 }
@@ -844,6 +1012,7 @@ function ricalcolaLab() {
   document.getElementById("lab-regola").textContent = descriviRegole(p);
   const {ops, i0, i1, anni} = simulaStrategia(st, p);
   const s = statisticheOps(ops, anni);
+  diagnosiFasi(st, p);
   document.getElementById("lab-periodo").textContent =
     `Dal ${dataBreve(st.date[i0])} al ${dataBreve(st.date[i1])}, ${nf(i1 - i0 + 1, 0)} sedute.`;
   const avvisi = [];
@@ -926,6 +1095,7 @@ function metodo() {
     <p><b>La chiusura di domani.</b> Quantili con la σ GARCH della prossima seduta e la t di Student stimata, senza drift.</p>
     <p><b>Volatilità implicita.</b> VIX, VXN, OVX e GVZ sono volatilità implicite a 30 giorni (OVX e GVZ dalle opzioni sugli ETF USO e GLD). La differenza con la previsione GARCH a ${p.orizzonte_mese} sedute è una misura approssimata del premio per il rischio di varianza.</p>
     <p><b>Laboratorio.</b> Simula una regola su tutto lo storico del mercato, una posizione alla volta. Ingressi e uscite avvengono alle chiusure: si entra quando la seduta chiude oltre la soglia in σ e si esce alla prima chiusura che tocca stop, trailing, target o durata massima. σ è quella prevista per la seduta dopo l'ingresso. Il risultato di ogni operazione è in R, cioè in multipli della perdita allo stop iniziale, al netto del costo. Le 200 operazioni future sono pescate a caso, con reinserimento, da quelle passate. Per evitare di scegliere parametri fortunati, guarda se la regola tiene in entrambe le metà del periodo e con soglie vicine.</p>
+    <p><b>Fasi di mercato.</b> La forza del trend è il rendimento delle ultime N sedute diviso per quello che farebbe una passeggiata casuale con la stessa volatilità, stimata dalla media dei rendimenti in valore assoluto. Usa solo dati già noti alla chiusura. Su una passeggiata casuale un terzo delle sedute sta sotto 0,5 (fase laterale), un terzo tra 0,5 e 1 e un terzo sopra 1 (fase di trend). Le soglie sono fisse e non vengono scelte guardando i risultati. In alternativa la fase si misura con l'autocorrelazione: il variance ratio confronta la varianza dei rendimenti a 5 sedute con cinque volte quella giornaliera. Sotto 1 i movimenti tendono a rientrare, sopra 1 a proseguire; le soglie sono i terzili ottenuti su una passeggiata casuale con la stessa finestra. La strategia combinata usa il contrarian nella prima fase e il trend following nella terza, con le stesse uscite.</p>
     <p><b>Limiti.</b> Le commodity usano la serie del future più vicino senza rettifica per il cambio di contratto: nei giorni di roll compaiono salti che non sono rendimenti veri, soprattutto sul gas. I dati di Yahoo possono contenere errori o arrivare in ritardo.</p>
   </section>`;
 }
