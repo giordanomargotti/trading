@@ -32,6 +32,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from serie_rollate import ROLLATE, confronto_rendimenti, serie_rinnovata
+from serie_rollate import demo as rinnovo_demo
+
 warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------------------------
@@ -56,6 +59,20 @@ ASSET = [
     {"simbolo": "HG=F", "nome": "Rame", "gruppo": "Metalli", "implicita": None},
 ]
 NOMI_IMPLICITA = {"^VIX": "VIX", "^VXN": "VXN", "^OVX": "OVX", "^GVZ": "GVZ"}
+
+# Curve dei futures: contratti mensili su Yahoo, simbolo = radice + mese + anno + borsa
+# (per esempio NGZ26.NYM). Per il TTF si provano due radici.
+CURVE = {
+    "CL=F": {"radici": ["CL"], "borsa": ".NYM", "mesi": "FGHJKMNQUVXZ", "quanti": 12},
+    "BZ=F": {"radici": ["BZ"], "borsa": ".NYM", "mesi": "FGHJKMNQUVXZ", "quanti": 12},
+    "NG=F": {"radici": ["NG"], "borsa": ".NYM", "mesi": "FGHJKMNQUVXZ", "quanti": 12},
+    "TTF=F": {"radici": ["TTF", "TFM"], "borsa": ".NYM", "mesi": "FGHJKMNQUVXZ", "quanti": 12},
+    "GC=F": {"radici": ["GC"], "borsa": ".CMX", "mesi": "GJMQVZ", "quanti": 6},
+    "SI=F": {"radici": ["SI"], "borsa": ".CMX", "mesi": "HKNUZ", "quanti": 5},
+    "HG=F": {"radici": ["HG"], "borsa": ".CMX", "mesi": "HKNUZ", "quanti": 5},
+}
+CODICI_MESE = "FGHJKMNQUVXZ"
+STORICO_CURVE_MAX = 300        # istantanee tenute per mercato in docs/curve.json
 
 INIZIO = "2000-01-01"          # inizio del campione per tutti i mercati
 GIORNI_ANNO = 252              # sedute per anno, per annualizzare
@@ -115,6 +132,103 @@ def scarica(simbolo: str, periodo: str = "max") -> pd.DataFrame:
             if i < TENTATIVI - 1:
                 time.sleep(10 * 2 ** i)
     raise RuntimeError(f"{type(ultimo_errore).__name__}: {ultimo_errore}")
+
+
+def scarica_rapido(simbolo: str, periodo: str = "10d") -> pd.DataFrame | None:
+    """Un solo tentativo: per i contratti della curva un simbolo mancante è normale."""
+    import yfinance as yf
+    try:
+        df = yf.Ticker(simbolo).history(period=periodo, interval="1d", auto_adjust=False,
+                                        actions=False, raise_errors=True)
+        return df if df is not None and not df.empty and "Close" in df.columns else None
+    except Exception:
+        return None
+
+
+def mesi_tra(a: str, b: str) -> int:
+    ya, ma = map(int, a.split("-"))
+    yb, mb = map(int, b.split("-"))
+    return (yb * 12 + mb) - (ya * 12 + ma)
+
+
+def scarica_curva(simbolo: str, ultima: pd.Timestamp) -> list | None:
+    """Ultima chiusura dei prossimi contratti mensili ancora vivi."""
+    cfg = CURVE[simbolo]
+    for radice in cfg["radici"]:
+        punti, y, m, tentati, mancanti = [], ultima.year, ultima.month, 0, 0
+        while len(punti) < cfg["quanti"] and tentati < cfg["quanti"] + 6:
+            codice = CODICI_MESE[m - 1]
+            if codice in cfg["mesi"]:
+                tentati += 1
+                sim = f"{radice}{codice}{str(y)[2:]}{cfg['borsa']}"
+                df = scarica_rapido(sim)
+                time.sleep(0.4)
+                if df is not None:
+                    df = pulisci(df)
+                    # un contratto scaduto o fermo non fa parte della curva di oggi
+                    if len(df) and (ultima - df.index[-1]).days <= 5:
+                        punti.append({"mese": f"{y}-{m:02d}", "simbolo": sim, "prezzo": sig(float(df["Close"].iloc[-1]), 6)})
+                        mancanti = 0
+                    else:
+                        mancanti += 1
+                else:
+                    mancanti += 1
+                if not punti and mancanti >= 4:
+                    break                          # radice sbagliata: si prova la successiva
+            m += 1
+            if m > 12:
+                m, y = 1, y + 1
+        if len(punti) >= 2:
+            return punti
+    return None
+
+
+def metriche_curva(punti: list, data: str) -> dict:
+    p = sorted(punti, key=lambda x: x["mese"])
+    f1, f2, fl = p[0]["prezzo"], p[1]["prezzo"], p[-1]["prezzo"]
+    d12, dl = max(1, mesi_tra(p[0]["mese"], p[1]["mese"])), max(1, mesi_tra(p[0]["mese"], p[-1]["mese"]))
+    return {
+        "data": data, "punti": p,
+        "struttura": "backwardation" if f1 > f2 else "contango",
+        "spread12": num(f2 / f1 - 1, 5),                      # dal primo al secondo contratto
+        "roll_annuo": num(math.log(f1 / f2) * 12 / d12, 4),    # rendimento del roll per chi è long, annualizzato
+        "pendenza": num(fl / f1 - 1, 4), "mesi_pendenza": dl,
+    }
+
+
+def aggiorna_storico_curve(file: Path, curve_oggi: dict) -> dict:
+    """Aggiunge le curve di oggi a docs/curve.json e restituisce, per mercato, quella di circa un mese fa."""
+    try:
+        storico = json.loads(file.read_text("utf-8")) if file.exists() else {}
+    except Exception:
+        storico = {}
+    mese_fa = {}
+    for simbolo, curva in curve_oggi.items():
+        voci = [v for v in storico.get(simbolo, []) if v.get("data") != curva["data"]]
+        limite = (pd.Timestamp(curva["data"]) - pd.Timedelta(days=28)).strftime("%Y-%m-%d")
+        vecchie = [v for v in voci if v["data"] <= limite]
+        if vecchie:
+            mese_fa[simbolo] = vecchie[-1]
+        voci.append({"data": curva["data"], "punti": [[x["mese"], x["prezzo"]] for x in curva["punti"]]})
+        storico[simbolo] = voci[-STORICO_CURVE_MAX:]
+    file.write_text(json.dumps(storico, separators=(",", ":")), "utf-8")
+    return mese_fa
+
+
+def curva_demo(simbolo: str, prezzo: float, ultima: pd.Timestamp) -> list:
+    """Curva inventata per provare l'app: contango con un premio d'inverno sul gas."""
+    punti, y, m = [], ultima.year, ultima.month
+    cfg = CURVE[simbolo]
+    while len(punti) < cfg["quanti"]:
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+        if CODICI_MESE[m - 1] not in cfg["mesi"]:
+            continue
+        i = len(punti)
+        inverno = 0.08 if ("NG" in simbolo or "TTF" in simbolo) and m in (12, 1, 2) else 0.0
+        punti.append({"mese": f"{y}-{m:02d}", "simbolo": f"DEMO{i}", "prezzo": sig(prezzo * (1 + 0.006 * i + inverno), 6)})
+    return punti
 
 
 def pulisci(df: pd.DataFrame) -> pd.DataFrame:
@@ -274,8 +388,10 @@ def previsione(prezzo: float, sigma: float, nu: float | None) -> dict:
 # ---------------------------------------------------------------------------
 # Analisi di un mercato
 # ---------------------------------------------------------------------------
-def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> tuple[dict, dict]:
-    """Restituisce la voce per data.json e lo storico completo per il laboratorio."""
+def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None, rinnovo: dict | None = None) -> tuple[dict, dict]:
+    """Restituisce la voce per data.json e lo storico completo per il laboratorio.
+
+    rinnovo: informazioni della serie rinnovata a ogni scadenza (serie_rollate.py), se c'è."""
     r = rendimenti_log(df)
     if len(r) < 500:
         raise ValueError(f"storico troppo corto ({len(r)} rendimenti)")
@@ -340,6 +456,21 @@ def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> tuple[di
         storia["zg"] = lista(z.to_numpy(), 2)
         storia["sg"] = lista(np.append(cv[1:], math.sqrt(var_futura[0])), 3)
 
+    rettifica = None
+    if rinnovo:
+        # chiusure in cui il CFD scade: chi è dentro viene chiuso e paga di nuovo lo spread per restare
+        giorni_roll = {pd.Timestamp(d) for d in rinnovo["roll_date"]}
+        storia["roll"] = [i for i, d in enumerate(r.index) if d in giorni_roll]
+        # dal primo al secondo contratto, in %: positivo = contango
+        sp = rinnovo["spread"].reindex(r.index).to_numpy(dtype=float) * 100
+        storia["sp"] = lista(sp, 3)
+        storia["rinnovo"] = True
+        ultimo_sp = sp[np.isfinite(sp)]
+        rettifica = {k: rinnovo.get(k) for k in ("fonte", "regola", "anticipo", "contratto", "prossimo_roll",
+                                                   "verifica", "buchi", "confronto")}
+        rettifica["spread_oggi"] = num(ultimo_sp[-1], 3) if len(ultimo_sp) else None
+        rettifica["roll_anno"] = num(len(giorni_roll & set(r.index)) / max(1e-9, (r.index[-1] - r.index[0]).days / 365.25), 1)
+
     return {
         "simbolo": cfg["simbolo"], "nome": cfg["nome"], "gruppo": cfg["gruppo"],
         "stato": "ok", "errore": None,
@@ -358,6 +489,7 @@ def analizza(cfg: dict, df: pd.DataFrame, impl: pd.DataFrame | None) -> tuple[di
         "domani": previsione(chiusura, sigma1, nu),
         "distribuzione": statistiche(r, z, nu),
         "serie": serie,
+        "rettifica": rettifica,
     }, storia
 
 
@@ -424,7 +556,7 @@ def main() -> int:
         except Exception as e:
             print(f"File precedente illeggibile, si riparte da zero: {e}", file=sys.stderr)
 
-    risultati, aggiornati = [], 0
+    risultati, aggiornati, fonti = [], 0, {"Yahoo Finance"}
     for i, cfg in enumerate(ASSET):
         try:
             if args.demo:
@@ -433,13 +565,38 @@ def main() -> int:
                 if i:
                     time.sleep(PAUSA)
                 df = pulisci(scarica(cfg["simbolo"]))
+            rinnovo = None
+            if cfg["simbolo"] in ROLLATE:
+                try:
+                    if args.demo:
+                        rinnovo = rinnovo_demo(df, cfg["simbolo"])
+                    else:
+                        df_r, rinnovo = serie_rinnovata(cfg["simbolo"], df, scarica_rapido, pulisci, df.index[-1])
+                        df_r = df_r[df_r.index >= pd.Timestamp(INIZIO)]
+                        rinnovo["confronto"] = confronto_rendimenti(df, df_r)
+                        df = df_r
+                        fonti.add("EIA")
+                    print(f"     rinnovo {cfg['simbolo']}: {rinnovo['fonte']}; contratto {rinnovo['contratto']['simbolo']}; "
+                          f"prossima chiusura del CFD {rinnovo['prossimo_roll']}; verifica del calendario "
+                          f"{rinnovo['verifica']}; buchi {rinnovo['buchi']}; confronto {rinnovo.get('confronto')}")
+                except Exception as e:
+                    print(f"    serie rinnovata non disponibile per {cfg['simbolo']}, resta la continua di Yahoo: {e}",
+                          file=sys.stderr)
+                    rinnovo = None
             impl = None
             if cfg.get("implicita"):
                 try:
                     impl = implicita_demo(df, i) if args.demo else pulisci(scarica(cfg["implicita"], "3mo"))
                 except Exception as e:
                     print(f"    implicita {cfg['implicita']} non disponibile: {e}", file=sys.stderr)
-            voce, storia = analizza(cfg, df, impl)
+            voce, storia = analizza(cfg, df, impl, rinnovo)
+            if cfg["simbolo"] in CURVE:
+                ultima = pd.Timestamp(voce["ultimo"]["data"])
+                punti = (curva_demo(cfg["simbolo"], voce["ultimo"]["chiusura"], ultima) if args.demo
+                         else scarica_curva(cfg["simbolo"], ultima))
+                voce["curva"] = metriche_curva(punti, voce["ultimo"]["data"]) if punti else None
+                if punti:
+                    print(f"     curva {cfg['simbolo']}: {len(punti)} contratti, {voce['curva']['struttura']}")
             # lo storico del laboratorio va in un file a parte, letto solo quando serve
             voce["storia"] = nome_file_storia(cfg["simbolo"])
             file_storia = out.parent / voce["storia"]
@@ -457,10 +614,29 @@ def main() -> int:
         voce.update({k: cfg[k] for k in ("simbolo", "nome", "gruppo")})
         risultati.append(voce)
 
+    # storico delle curve (solo con dati veri): serve a mostrare la curva di un mese fa
+    curve_oggi = {v["simbolo"]: v["curva"] for v in risultati if v.get("stato") == "ok" and v.get("curva")}
+    if curve_oggi and not args.demo:
+        mese_fa = aggiorna_storico_curve(out.parent / "curve.json", curve_oggi)
+        for v in risultati:
+            if v.get("curva") and v["simbolo"] in mese_fa:
+                v["curva"]["mese_fa"] = mese_fa[v["simbolo"]]
+
+    # cambio euro/dollaro: i CFD su commodity sono quotati in dollari, il capitale è in euro
+    cambio = None
+    if args.demo:
+        cambio = {"EURUSD": 1.15, "data": risultati[0].get("ultimo", {}).get("data")}
+    else:
+        eurusd = scarica_rapido("EURUSD=X", "10d")
+        if eurusd is not None:
+            eurusd = pulisci(eurusd)
+            if len(eurusd):
+                cambio = {"EURUSD": sig(float(eurusd["Close"].iloc[-1]), 5), "data": eurusd.index[-1].strftime("%Y-%m-%d")}
+
     dati = {
         "versione": 1,
         "generato": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "fonte": "Simulazione GJR-GARCH-t (dati di prova)" if args.demo else "Yahoo Finance",
+        "fonte": "Simulazione GJR-GARCH-t (dati di prova)" if args.demo else " ed ".join(sorted(fonti, reverse=True)),
         "demo": bool(args.demo),
         "inizio": INIZIO,
         "bordi": BORDI.tolist(),
@@ -469,6 +645,7 @@ def main() -> int:
         "parametri": {"lambda_ewma": LAMBDA_EWMA, "finestra_realizzata": FINESTRA_REALIZZATA,
                       "orizzonte_mese": ORIZZONTE_MESE, "giorni_anno": GIORNI_ANNO,
                       "quote_hill": QUOTE_HILL},
+        "cambio": cambio,
         "asset": risultati,
     }
     out.parent.mkdir(parents=True, exist_ok=True)

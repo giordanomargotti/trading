@@ -106,6 +106,7 @@ input[type=range]{width:100%;accent-color:var(--accent);min-height:32px}
 <body>
 <main id="app"><p class="vuoto">Carico i dati…</p></main>
 <script src="vendor/chart.umd.min.js"></script>
+<script src="motore.js"></script>
 <script>
 "use strict";
 const app = document.getElementById("app");
@@ -319,6 +320,7 @@ function dettaglio(sim) {
     ${a.storia ? `<button class="azione" onclick="location.hash='lab=' + encodeURIComponent('${esc(a.simbolo)}')">Simula strategie su questo mercato</button>` : ""}
     ${sezioneDomani(a)}
     ${sezioneVol(a)}
+    ${sezioneCurva(a)}
     ${sezioneDistribuzione(a)}
     ${sezioneZ(a)}
     ${sezionePrezzo(a)}
@@ -327,6 +329,7 @@ function dettaglio(sim) {
   const c = impostaChart();
   graficoDomani(a, c);
   graficoVol(a, c);
+  graficoCurva(a, c);
   graficoDistribuzione(a, c);
   graficoZ(a, c);
   graficoPrezzo(a, c);
@@ -415,6 +418,37 @@ function graficoVol(a, c) {
       plugins: {tooltip: {callbacks: {title: it => dataBreve(it[0].label), label: it => `${it.dataset.label} ${volp(it.raw)}`}}},
       scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
         y: {beginAtZero: true, ticks: {callback: v => nf(v, 0) + "%", maxTicksLimit: 5}}})}});
+}
+
+function sezioneCurva(a) {
+  const cv = a.curva;
+  if (!cv) return "";
+  return `<section class="card"><h3>Curva dei futures</h3>
+    <p class="nota">Chiusure dei prossimi contratti mensili del ${dataBreve(cv.data)}${cv.mese_fa ? `, confrontate con il ${dataBreve(cv.mese_fa.data)}` : ""}.</p>
+    <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Oggi</span>${cv.mese_fa ? `<span><i class="lin tr" style="border-color:var(--text2)"></i>Un mese fa</span>` : ""}</div>
+    <div class="grafico" style="height:190px"><canvas id="gCurva" role="img" aria-label="Prezzi dei prossimi contratti futures"></canvas></div>
+    <dl class="kv">
+      <dt>Struttura</dt><dd>${cv.struttura}</dd>
+      <dt>Dal primo al secondo contratto</dt><dd>${pct(cv.spread12)}</dd>
+      <dt>Roll annualizzato per chi è long</dt><dd>${pct(cv.roll_annuo, 1)}</dd>
+      <dt>Dal primo all'ultimo, ${cv.mesi_pendenza} mesi</dt><dd>${pct(cv.pendenza, 1)}</dd>
+    </dl>
+    <p class="piccolo" style="margin-top:8px">Un CFD su future passa al contratto successivo a ogni scadenza. In contango il long paga la differenza e lo short la incassa; in backwardation succede il contrario. ${cv.struttura === "contango" ? "Oggi il roll pesa sui long." : "Oggi il roll favorisce i long."} Sul gas la curva ha anche un andamento stagionale: i mesi invernali costano di più.</p>
+  </section>`;
+}
+function graficoCurva(a, c) {
+  const cv = a.curva;
+  if (!cv) return;
+  const etichetta = m => dataIt(m + "-01", {month: "short"}) + " " + m.slice(2, 4);
+  const oggi = Object.fromEntries(cv.punti.map(x => [x.mese, x.prezzo]));
+  const prima = cv.mese_fa ? Object.fromEntries(cv.mese_fa.punti) : {};
+  const mesi = [...new Set([...Object.keys(oggi), ...Object.keys(prima)])].sort();
+  const ds = [{label: "Oggi", data: mesi.map(m => oggi[m] ?? null), borderColor: c.s1, backgroundColor: c.s1, borderWidth: 2, pointRadius: 3, spanGaps: true}];
+  if (cv.mese_fa) ds.push({label: "Un mese fa", data: mesi.map(m => prima[m] ?? null), borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, spanGaps: true});
+  nuovoGrafico("gCurva", {type: "line", data: {labels: mesi.map(etichetta), datasets: ds},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {label: it => `${it.dataset.label}: ${prezzo(it.raw)}`}}},
+      scales: assi(c, {x: {ticks: {maxRotation: 0, autoSkip: true, maxTicksLimit: 6}}, y: {ticks: {maxTicksLimit: 5, callback: tickPrezzo}}})}});
 }
 
 function sezioneDistribuzione(a) {
@@ -570,166 +604,25 @@ function graficoPrezzo(a, c) {
 
 /* ---------- laboratorio di strategie ---------- */
 const PRESET = {
-  "Contrarian con trailing": {strategia: "contrarian", lato: "long", k: 2, S: 2, T: 2, G: 0, H: 0},
-  "Contrarian classico": {strategia: "contrarian", lato: "long", k: 2, S: 4, T: 0, G: 1, H: 10},
-  "Trend following": {strategia: "trend", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
-  "Combinata": {strategia: "combinata", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  "Contrarian con trailing": {strategia: "contrarian", ingresso: "shock", lato: "long", k: 2, S: 2, T: 2, G: 0, H: 0},
+  "Contrarian classico": {strategia: "contrarian", ingresso: "shock", lato: "long", k: 2, S: 4, T: 0, G: 1, H: 10},
+  "Trend following": {strategia: "trend", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  "Trend su rottura": {strategia: "trend", ingresso: "rottura", Nr: 55, lato: "entrambi", k: 2, S: 2, T: 4, G: 0, H: 0},
+  "Combinata": {strategia: "combinata", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
 };
 stato.lab = {...PRESET["Contrarian con trailing"], sigma: "garch", periodo: "tutto", costo: 0.10, rischio: 1,
-  N: 60, fase: "tutte", dirTrend: "tutte", indicatore: "forza"};
+  N: 60, fase: "tutte", dirTrend: "tutte", indicatore: "forza", Nr: 55, finanz: 5, capitale: 1000};
+/* costo di andata e ritorno di partenza per mercato, in % (Fineco: mark-up 0,14% per lato sul gas) */
+const COSTO_DEFAULT = {"NG=F": 0.3, "TTF=F": 0.4, "CL=F": 0.2, "BZ=F": 0.2, "GC=F": 0.15, "SI=F": 0.2, "HG=F": 0.2};
+/* lotto minimo noto dal sito Fineco: moltiplicatore = euro per punto di prezzo */
+const LOTTI_FINECO = {"NG=F": {nome: "CFD Gas naturale di Fineco", molt: 500}};
 
-/* Forza del trend: rendimento delle ultime N sedute diviso per quello che farebbe in media
-   una passeggiata casuale con la stessa volatilità (σ stimata dalla media dei |rendimenti|).
-   Usa solo dati fino alla chiusura del giorno. Su una passeggiata casuale |F| è circa |N(0,1)|:
-   un terzo delle sedute sotto 0,5, un terzo tra 0,5 e 1, un terzo sopra 1. */
-const SOGLIA_LATERALE = 0.5, SOGLIA_TREND = 1;
 const nomiFase = p => p.indicatore === "autocorrelazione"
   ? {laterale: "Ritorno alla media", intermedia: "Neutra", trend: "Persistenza"}
   : {laterale: "Laterale", intermedia: "Intermedia", trend: "Trend"};
-function forzaTrend(st, N) {
-  if (st._forza && st._forza.N === N) return st._forza.F;
-  const n = st.c.length, F = new Array(n).fill(null), r = new Float64Array(n);
-  for (let t = 1; t < n; t++) r[t] = Math.log(st.c[t] / st.c[t - 1]);
-  let s = 0, a = 0;
-  for (let t = 1; t < n; t++) {
-    s += r[t]; a += Math.abs(r[t]);
-    if (t > N) { s -= r[t - N]; a -= Math.abs(r[t - N]); }
-    if (t >= N && a > 0) F[t] = s / (a / N * Math.sqrt(Math.PI / 2) * Math.sqrt(N));
-  }
-  st._forza = {N, F};
-  return F;
-}
-const faseDi = f => f == null ? null : Math.abs(f) < SOGLIA_LATERALE ? "laterale" : Math.abs(f) < SOGLIA_TREND ? "intermedia" : "trend";
-
-/* Autocorrelazione con il variance ratio di Lo e MacKinlay: varianza dei rendimenti a Q sedute
-   divisa per Q volte la varianza giornaliera, sulle ultime W sedute. Sotto 1 i movimenti tendono
-   a rientrare, sopra 1 a proseguire. Le soglie sono i terzili che si ottengono su una passeggiata
-   casuale gaussiana con la stessa finestra: fisse, non scelte guardando il mercato. */
-const Q_VR = 5, cacheSoglieVR = {};
-function serieVR(P, W) {
-  const n = P.length, V = new Array(n).fill(null), q = Q_VR;
-  for (let t = W; t < n; t++) {
-    const mu = (P[t] - P[t - W]) / W;
-    let v1 = 0, vq = 0, m = 0;
-    for (let i = t - W + 1; i <= t; i++) { const d = P[i] - P[i - 1] - mu; v1 += d * d; }
-    for (let j = t - W + q; j <= t; j++) { const d = P[j] - P[j - q] - q * mu; vq += d * d; m++; }
-    v1 /= W; vq /= m;
-    V[t] = v1 > 0 ? vq / (q * v1) : null;
-  }
-  return V;
-}
-function soglieVR(W) {
-  if (cacheSoglieVR[W]) return cacheSoglieVR[W];
-  const rng = mulberry32(99 + W), n = 30000, P = new Float64Array(n);
-  for (let t = 1; t < n; t++) { let u = 0; while (!u) u = rng(); P[t] = P[t - 1] + Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
-  const V = serieVR(P, W).filter(v => v != null).sort((a, b) => a - b);
-  return (cacheSoglieVR[W] = [quantile(V, 1 / 3), quantile(V, 2 / 3)]);
-}
-function fasiSerie(st, p) {
-  const chiave = p.indicatore + ":" + p.N;
-  if (st._fasi && st._fasi.chiave === chiave) return st._fasi.fasi;
-  let fasi;
-  if (p.indicatore === "autocorrelazione") {
-    const n = st.c.length, P = new Float64Array(n);
-    for (let t = 1; t < n; t++) P[t] = P[t - 1] + Math.log(st.c[t] / st.c[t - 1]);
-    const V = serieVR(P, p.N), [s1, s2] = soglieVR(p.N);
-    fasi = V.map(v => v == null ? null : v < s1 ? "laterale" : v > s2 ? "trend" : "intermedia");
-  } else {
-    fasi = forzaTrend(st, p.N).map(faseDi);
-  }
-  st._fasi = {chiave, fasi};
-  return fasi;
-}
 stato.storie = {};
 stato.labGrafici = null;
 let timerLab = null;
-
-/* motore: ingressi e uscite alle chiusure giornaliere, una posizione alla volta */
-function simulaStrategia(st, p) {
-  const usaG = p.sigma === "garch" && st.zg;
-  const z = usaG ? st.zg : st.ze, sg = usaG ? st.sg : st.se, n = st.c.length;
-  let i0 = 0, i1 = n - 1;
-  if (p.periodo !== "tutto") {
-    const meta = (Date.parse(st.date[0]) + Date.parse(st.date[n - 1])) / 2;
-    const k = st.date.findIndex(d => Date.parse(d) >= meta);
-    if (p.periodo === "prima") i1 = k - 1; else i0 = k;
-  }
-  const lnc = new Float64Array(n);
-  for (let t = 0; t < n; t++) lnc[t] = Math.log(st.c[t]);
-  const costo = p.costo / 100, ops = [];
-  const F = forzaTrend(st, p.N || 60), FS = fasiSerie(st, {...p, N: p.N || 60});
-  const filtraFase = p.strategia !== "combinata" && p.fase && p.fase !== "tutte";
-  const filtraDir = p.dirTrend && p.dirTrend !== "tutte";
-  let pos = 0, ie = 0, se = 0, best = 0, fIn = null, faseIn = null;
-  for (let t = i0; t <= i1; t++) {
-    if (pos !== 0) {
-      const x = pos * (lnc[t] - lnc[ie]);                   /* risultato in log dal prezzo d'ingresso */
-      const livStop = -p.S * se, livTrail = p.T > 0 ? best - p.T * se : -Infinity;
-      let motivo = null;
-      if (x <= Math.max(livStop, livTrail)) motivo = livTrail > livStop ? "trailing" : "stop";
-      else if (p.G > 0 && x >= p.G * se) motivo = "target";
-      else if (p.H > 0 && t - ie >= p.H) motivo = "durata";
-      else if (t === i1) motivo = "fine periodo";
-      if (motivo) {
-        const pct = (pos === 1 ? Math.exp(x) - 1 : 1 - Math.exp(-x)) - costo;
-        ops.push({ie, iu: t, lato: pos, R: (x - costo) / (p.S * se), pct, durata: t - ie, motivo, f: fIn, fase: faseIn});
-        pos = 0;
-        continue;                                           /* niente nuovo ingresso nella stessa seduta */
-      }
-      if (x > best) best = x;
-      continue;
-    }
-    if (t === i1) break;
-    const zt = z[t], s = sg[t];
-    if (zt == null || s == null || !(s > 0)) continue;
-    const f = F[t], fase = FS[t];
-    if ((filtraFase || filtraDir || p.strategia === "combinata") && fase == null) continue;
-    if (filtraFase && fase !== p.fase) continue;
-    /* combinata: contrarian nelle fasi laterali, trend following nelle fasi di trend, ferma in mezzo */
-    const regola = p.strategia === "combinata" ? (fase === "laterale" ? "contrarian" : fase === "trend" ? "trend" : null) : p.strategia;
-    if (!regola) continue;
-    let d = regola === "contrarian" ? (zt <= -p.k ? 1 : zt >= p.k ? -1 : 0)
-                                    : (zt >= p.k ? 1 : zt <= -p.k ? -1 : 0);
-    if ((d === 1 && p.lato === "short") || (d === -1 && p.lato === "long")) d = 0;
-    if (d && filtraDir && ((Math.sign(f) === d) !== (p.dirTrend === "favore"))) d = 0;
-    if (d) { pos = d; ie = t; se = s / 100; best = 0; fIn = f; faseIn = fase; }
-  }
-  const anni = (Date.parse(st.date[i1]) - Date.parse(st.date[i0])) / (365.25 * 864e5);
-  return {ops, i0, i1, anni};
-}
-
-function statisticheOps(ops, anni) {
-  const n = ops.length;
-  if (!n) return null;
-  const R = ops.map(o => o.R), somma = a => a.reduce((x, y) => x + y, 0);
-  const vinc = R.filter(r => r > 0), perd = R.filter(r => r <= 0);
-  const media = somma(R) / n;
-  const sd = Math.sqrt(somma(R.map(r => (r - media) ** 2)) / Math.max(1, n - 1));
-  const skew = n > 2 && sd > 0 ? somma(R.map(r => ((r - media) / sd) ** 3)) * n / ((n - 1) * (n - 2)) : null;
-  const sV = somma(vinc), sP = -somma(perd);
-  let cum = 0, picco = 0, dd = 0;
-  const curva = R.map(r => { cum += r; picco = Math.max(picco, cum); dd = Math.max(dd, picco - cum); return cum; });
-  return {n, perAnno: anni > 0 ? n / anni : null, vincenti: vinc.length / n, media, mediaPct: somma(ops.map(o => o.pct)) / n,
-    mediaV: vinc.length ? sV / vinc.length : 0, mediaP: perd.length ? -sP / perd.length : 0,
-    pf: sP > 0 ? sV / sP : Infinity, peggiore: Math.min(...R), migliore: Math.max(...R),
-    durata: somma(ops.map(o => o.durata)) / n, skew, ddR: dd, curva};
-}
-
-function perFase(ops) {
-  const gruppi = {laterale: [], intermedia: [], trend: [], favore: [], contro: []};
-  for (const o of ops) {
-    if (o.fase == null) continue;
-    gruppi[o.fase].push(o.R);
-    gruppi[Math.sign(o.f) === o.lato ? "favore" : "contro"].push(o.R);
-  }
-  const out = {};
-  for (const [k, v] of Object.entries(gruppi)) {
-    const n = v.length, media = n ? v.reduce((a, b) => a + b, 0) / n : null;
-    const varianza = n > 1 ? v.reduce((a, r) => a + (r - media) ** 2, 0) / (n - 1) : null;
-    out[k] = {n, media, es: varianza != null ? Math.sqrt(varianza / n) : null};   /* es = errore standard della media */
-  }
-  return out;
-}
 
 function diagnosiFasi(st, p) {
   const base = {...p, fase: "tutte", dirTrend: "tutte"};
@@ -768,60 +661,10 @@ function diagnosiFasi(st, p) {
     <div class="regola">${frasi.join(" ")} ${conclusione}</div>`;
 }
 
-function mulberry32(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-const quantile = (ordinati, p) => ordinati[Math.min(ordinati.length - 1, Math.max(0, Math.round(p * (ordinati.length - 1))))];
-
-/* 200 operazioni future: ricampionamento con reinserimento delle operazioni passate */
-function montecarlo(R, f, nOp = 200, nPerc = 4000) {
-  const rng = mulberry32(20261110), m = R.length, w = nOp + 1;
-  const eq = new Float32Array(nPerc * w), finali = new Float64Array(nPerc), dd = new Float64Array(nPerc);
-  let meta = 0;
-  for (let p = 0; p < nPerc; p++) {
-    let E = 1, picco = 1, maxdd = 0, minE = 1;
-    eq[p * w] = 1;
-    for (let k = 1; k <= nOp; k++) {
-      E *= 1 + f * R[Math.floor(rng() * m)];
-      if (E < 0) E = 0;
-      if (E > picco) picco = E;
-      maxdd = Math.max(maxdd, picco > 0 ? 1 - E / picco : 1);
-      minE = Math.min(minE, E);
-      eq[p * w + k] = E;
-    }
-    finali[p] = E; dd[p] = maxdd;
-    if (minE <= 0.5) meta++;
-  }
-  const bande = {p5: [], p25: [], p50: [], p75: [], p95: []}, col = new Float64Array(nPerc);
-  for (let k = 0; k < w; k++) {
-    for (let p = 0; p < nPerc; p++) col[p] = eq[p * w + k];
-    col.sort();
-    for (const [nome, q] of [["p5", .05], ["p25", .25], ["p50", .5], ["p75", .75], ["p95", .95]]) bande[nome].push(quantile(col, q) * 100);
-  }
-  let perdita = 0;
-  for (const e of finali) if (e < 1) perdita++;
-  finali.sort(); dd.sort();
-  return {bande, finali, dd, pMeta: meta / nPerc, pPerdita: perdita / nPerc};
-}
-
-/* istogramma con classi di larghezza "tonda", al massimo una quarantina */
-function classi(valori, larghezze) {
-  let lo = Infinity, hi = -Infinity;
-  for (const v of valori) { if (v < lo) lo = v; if (v > hi) hi = v; }
-  const w = larghezze.find(l => (hi - lo) / l <= 40) || larghezze[larghezze.length - 1];
-  const inizio = Math.floor(lo / w) * w, nb = Math.max(1, Math.floor((hi - inizio) / w) + 1);
-  const conteggi = new Array(nb).fill(0);
-  for (const v of valori) conteggi[Math.min(nb - 1, Math.floor((v - inizio) / w))]++;
-  return conteggi.map((k, i) => ({x: inizio + (i + 0.5) * w, y: k, da: inizio + i * w, a: inizio + (i + 1) * w}));
-}
-
 function descriviRegole(p) {
-  const verso = (lato, dir) => (lato === 1 ? "compra" : "vendi allo scoperto") + ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`;
+  const verso = (lato, dir) => (lato === 1 ? "compra" : "vendi allo scoperto") + (p.ingresso === "rottura"
+    ? ` alla chiusura ${dir === "giu" ? "sotto il minimo" : "sopra il massimo"} delle ${p.Nr} sedute precedenti`
+    : ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`);
   const ingressiDi = regola => {
     const v = [], cLong = regola === "contrarian" ? "giu" : "su", cShort = regola === "contrarian" ? "su" : "giu";
     if (p.lato !== "short") v.push(verso(1, cLong));
@@ -843,16 +686,18 @@ function descriviRegole(p) {
   if (p.T > 0) uscite.push(`se il prezzo torna indietro di ${sgm(p.T)} dal punto migliore`);
   if (p.G > 0) uscite.push(`se guadagni ${sgm(p.G)}`);
   if (p.H > 0) uscite.push(`dopo ${p.H} sedute`);
-  return `${ingressi.join(". ")}. Esci alla chiusura ${uscite.join(", ").replace(/, ([^,]*)$/, " o $1")}. σ è quella prevista per la seduta dopo l'ingresso e resta fissa; 1R è la perdita allo stop iniziale.`;
+  return `${ingressi.join(". ")}. Esci alla chiusura ${uscite.join(", ").replace(/, ([^,]*)$/, " o $1")}. σ è quella prevista per la seduta dopo l'ingresso e resta fissa; 1R è la perdita allo stop iniziale. Costi: spread ${nf(p.costo, 2)}% per operazione più finanziamento ${nf(p.finanz, 1)}% annuo per ogni seduta tenuta.`;
 }
 
 const CURSORI = [
-  {id: "k", label: "Ingresso oltre", min: 1, max: 4, step: 0.25, fmt: sgm},
+  {id: "k", label: "Ingresso oltre", min: 1, max: 4, step: 0.25, fmt: sgm, mostra: p => p.ingresso !== "rottura"},
+  {id: "Nr", label: "Rottura di", min: 10, max: 250, step: 5, fmt: v => v + " sedute", mostra: p => p.ingresso === "rottura"},
   {id: "S", label: "Stop iniziale", min: 0.5, max: 6, step: 0.25, fmt: sgm},
   {id: "T", label: "Trailing stop", min: 0, max: 8, step: 0.25, fmt: v => v ? sgm(v) : "spento"},
   {id: "G", label: "Target", min: 0, max: 10, step: 0.25, fmt: v => v ? sgm(v) : "nessuno"},
   {id: "H", label: "Durata massima", min: 0, max: 120, step: 1, fmt: v => v ? v + " sedute" : "nessuna"},
-  {id: "costo", label: "Costo per operazione", min: 0, max: 1, step: 0.05, fmt: v => nf(v, 2) + "%"},
+  {id: "costo", label: "Spread per operazione", min: 0, max: 1, step: 0.05, fmt: v => nf(v, 2) + "%"},
+  {id: "finanz", label: "Finanziamento annuo", min: 0, max: 10, step: 0.5, fmt: v => nf(v, 1) + "%"},
   {id: "rischio", label: "Rischio sul capitale", min: 0.25, max: 3, step: 0.25, fmt: v => nf(v, 2) + "%"},
 ];
 function seg(chiave, opzioni, etichetta) {
@@ -868,9 +713,13 @@ function presetLab(nome) {
   const y = window.scrollY; rotta(); window.scrollTo(0, y);
 }
 const CURSORI_FASE = [{id: "N", label: "Finestra della fase", min: 20, max: 250, step: 5, fmt: v => v + " sedute"}];
+const CURSORI_OGGI = [{id: "capitale", label: "Capitale", min: 250, max: 10000, step: 250, fmt: v => nf(v, 0) + " €"}];
+const rigaCursore = (c, p) => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
+  <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
+  <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`;
 function cursore(id, valore) {
   stato.lab[id] = Number(valore);
-  const c = [...CURSORI, ...CURSORI_FASE].find(x => x.id === id);
+  const c = [...CURSORI, ...CURSORI_FASE, ...CURSORI_OGGI].find(x => x.id === id);
   document.getElementById("o-" + id).textContent = c.fmt(stato.lab[id]);
   clearTimeout(timerLab);
   timerLab = setTimeout(ricalcolaLab, 80);
@@ -881,6 +730,8 @@ async function laboratorio(sim) {
   if (!a || !a.storia) { location.hash = ""; return; }
   const p = stato.lab;
   if (p.sigma === "garch" && a.garch == null) p.sigma = "ewma";
+  if (stato.labMercato !== sim) { p.costo = COSTO_DEFAULT[sim] ?? 0.10; stato.labMercato = sim; }
+  stato.labAsset = a;
   app.innerHTML = `
     <button class="indietro" onclick="indietro()">‹ ${esc(a.nome)}</button>
     <h1>Laboratorio: ${esc(a.nome)}</h1>
@@ -889,26 +740,27 @@ async function laboratorio(sim) {
       <p class="piccolo">Esempi da cui partire</p><div class="chips">${Object.keys(PRESET).map(n => `<button class="chip-btn" onclick="presetLab('${n}')">${n}</button>`).join("")}</div>
       <div class="controlli">
         ${seg("strategia", [["contrarian", "Contrarian"], ["trend", "Trend"], ["combinata", "Combinata"]], "Strategia")}
+        ${seg("ingresso", [["shock", "Shock in σ"], ["rottura", "Rottura"]], "Ingresso")}
         ${seg("lato", [["long", "Long"], ["short", "Short"], ["entrambi", "Entrambi"]], "Lato")}
         ${seg("sigma", a.garch ? [["garch", "σ GARCH"], ["ewma", "σ EWMA"]] : [["ewma", "σ EWMA"]], "Volatilità")}
         ${seg("periodo", [["tutto", "Tutto"], ["prima", "Prima metà"], ["seconda", "Seconda metà"]], "Periodo")}
       </div>
-      ${CURSORI.map(c => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
-        <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
-        <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`).join("")}
+      ${CURSORI.filter(c => !c.mostra || c.mostra(p)).map(c => rigaCursore(c, p)).join("")}
       <h3 style="font-size:14px;margin-top:12px">Fasi di mercato</h3>
       <div class="controlli">${seg("indicatore", [["forza", "Forza del trend"], ["autocorrelazione", "Autocorrelazione"]], "Misura della fase")}</div>
       <p class="piccolo">${p.indicatore === "autocorrelazione"
         ? `Autocorrelazione: varianza dei rendimenti a ${Q_VR} sedute contro quella giornaliera (variance ratio). Bassa vuol dire che i movimenti tendono a rientrare, alta che tendono a proseguire. Le soglie dividono in tre parti uguali una passeggiata casuale.`
         : `Forza del trend: quanto il prezzo si è mosso nelle ultime sedute rispetto a una passeggiata casuale con la stessa volatilità. Sotto ${nf(SOGLIA_LATERALE, 1)} la fase è laterale, oltre ${nf(SOGLIA_TREND, 0)} è di trend.`}</p>
-      ${CURSORI_FASE.map(c => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
-        <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
-        <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`).join("")}
+      ${CURSORI_FASE.map(c => rigaCursore(c, p)).join("")}
       <div class="controlli">
         ${p.strategia === "combinata" ? "" : seg("fase", [["tutte", "Tutte"], ...["laterale", "intermedia", "trend"].map(k => [k, nomiFase(p)[k]])], "Fase")}
         ${seg("dirTrend", [["tutte", "Ogni direzione"], ["favore", "A favore del trend"], ["contro", "Contro"]], "Direzione rispetto al trend")}
       </div>
       <div class="regola" id="lab-regola"></div>
+    </section>
+    <section class="card"><h3>Oggi con queste regole</h3>
+      <div id="lab-oggi"></div>
+      ${CURSORI_OGGI.map(c => rigaCursore(c, p)).join("")}
     </section>
     <div id="lab-avvisi"></div>
     <section class="card"><h3>Le operazioni passate</h3>
@@ -1005,12 +857,57 @@ function creaGraficiLab() {
   stato.labGrafici = g;
 }
 
+function aggiornaOggi(res, st, a) {
+  const p = stato.lab, el = document.getElementById("lab-oggi");
+  if (!el || !a) return;
+  const n = st.c.length, P = st.c[n - 1], oggi = dataBreve(st.date[n - 1]);
+  if (res.i1 !== n - 1) { el.innerHTML = `<p class="piccolo">Scegli «Tutto» o «Seconda metà» per vedere la situazione di oggi.</p>`; return; }
+  const ult = res.ops.length ? res.ops[res.ops.length - 1] : null;
+  let html = "", sigma = null;
+  if (ult && ult.motivo === "aperta") {
+    sigma = ult.se;
+    html += `<p class="nota">Posizione ${ult.lato === 1 ? "long" : "short"} aperta dal ${dataBreve(st.date[ult.ie])} a ${prezzo(st.c[ult.ie])}.</p>
+      <dl class="kv"><dt>Chiusura del ${oggi}</dt><dd>${prezzo(P)}</dd>
+      <dt>Esci se una chiusura va ${ult.lato === 1 ? "sotto" : "sopra"}</dt><dd>${prezzo(ult.livello)}</dd>
+      ${ult.target ? `<dt>Target</dt><dd>${prezzo(ult.target)}</dd>` : ""}
+      ${ult.restanti != null ? `<dt>Sedute rimaste</dt><dd>${ult.restanti}</dd>` : ""}
+      <dt>Risultato finora</dt><dd>${conSegno(ult.R, 2)}R</dd></dl>`;
+  } else if (res.prossima) {
+    const q = res.prossima;
+    sigma = q.sigma || null;
+    if (!q.regola) {
+      html += `<p class="nota">Nessuna posizione aperta. Con la fase di oggi (${q.fase ? nomiFase(p)[q.fase].toLowerCase() : "non calcolabile"}) la regola resta ferma.</p>`;
+    } else {
+      const righe = [];
+      if (q.long) righe.push(`<dt>Long se la prossima chiusura è ${q.long.sopra ? "sopra" : "sotto"}</dt><dd>${prezzo(q.long.prezzo)}</dd>`);
+      if (q.short) righe.push(`<dt>Short se la prossima chiusura è ${q.short.sopra ? "sopra" : "sotto"}</dt><dd>${prezzo(q.short.prezzo)}</dd>`);
+      html += `<p class="nota">Nessuna posizione aperta. Chiusura del ${oggi}: ${prezzo(P)}.</p>` +
+        (righe.length ? `<dl class="kv">${righe.join("")}</dl>` : `<p class="piccolo">Con i filtri scelti la prossima seduta non può dare un ingresso.</p>`);
+    }
+  }
+  if (sigma) {
+    const rischio = p.capitale * p.rischio / 100, stopPct = p.S * sigma, ctrv = rischio / stopPct;
+    html += `<h3 style="font-size:14px;margin-top:12px">Quanto puoi muovere</h3>
+      <dl class="kv"><dt>Rischio per operazione</dt><dd>${nf(rischio, 2)} €</dd>
+      <dt>Stop a ${sgm(p.S)}, cioè</dt><dd>${pctNoSegno(stopPct, 1)} dal prezzo</dd>
+      <dt>Controvalore massimo</dt><dd>${nf(ctrv, 0)} €</dd></dl>`;
+    const lotto = LOTTI_FINECO[a.simbolo];
+    if (lotto) {
+      const valLotto = lotto.molt * P, rischioLotto = valLotto * stopPct, troppo = valLotto > ctrv * 1.05;
+      html += `<div class="${troppo ? "avviso" : "regola"}">Un lotto del ${lotto.nome} (moltiplicatore ${lotto.molt}) vale circa ${nf(valLotto, 0)} € di controvalore. Con questo stop rischia ${nf(rischioLotto, 0)} €, cioè il ${pctNoSegno(rischioLotto / p.capitale, 1)} del capitale: ${troppo ? "troppo per il rischio che hai scelto." : "rientra nel rischio che hai scelto."}</div>`;
+    }
+  }
+  if (a.curva) html += `<p class="piccolo" style="margin-top:8px">Curva dei futures: ${a.curva.struttura}. Il roll vale ${pct(a.curva.roll_annuo, 1)} l'anno per chi è long, e lo stesso con il segno opposto per chi è short.</p>`;
+  el.innerHTML = html;
+}
+
 function ricalcolaLab() {
   const st = stato.labStoria, g = stato.labGrafici, p = stato.lab;
   if (!st || !g || !document.getElementById("gR")) return;
   const c = g.colori;
   document.getElementById("lab-regola").textContent = descriviRegole(p);
-  const {ops, i0, i1, anni} = simulaStrategia(st, p);
+  const ris = simulaStrategia(st, p), {ops, i0, i1, anni} = ris;
+  aggiornaOggi(ris, st, stato.labAsset);
   const s = statisticheOps(ops, anni);
   diagnosiFasi(st, p);
   document.getElementById("lab-periodo").textContent =

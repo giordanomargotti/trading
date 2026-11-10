@@ -1,0 +1,62 @@
+name: Ricerca strategie
+
+# Avvio solo a mano (Actions -> Ricerca strategie -> Run workflow): la ricerca è uno studio fatto
+# una volta con un protocollo fissato, non un calcolo da ripetere ogni giorno.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: aggiorna-dati
+  cancel-in-progress: false
+
+jobs:
+  ricerca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblica.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installa le librerie
+        run: pip install -r requirements.txt
+
+      - name: Controlla i calcoli
+        run: python tests/test_calcoli.py
+
+      - name: Scarica le chiusure e ricalcola
+        run: python scripts/aggiorna_dati.py --out docs/data.json
+
+      - name: Ricerca con protocollo fuori campione
+        run: node scripts/ricerca.js docs
+
+      - name: Salva i risultati nel repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ricerca.json docs/data.json
+          [ -f docs/curve.json ] && git add docs/curve.json
+          if git diff --cached --quiet; then
+            echo "Nessun cambiamento"
+          else
+            git commit -m "Ricerca strategie $(date -u +%Y-%m-%d)"
+            git push || (git pull --rebase && git push)
+          fi
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - id: pubblica
+        uses: actions/deploy-pages@v5
