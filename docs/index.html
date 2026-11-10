@@ -630,6 +630,8 @@ const PRESET = {
   "Trend following": {strategia: "trend", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
   "Trend su rottura": {strategia: "trend", ingresso: "rottura", Nr: 55, lato: "entrambi", k: 2, S: 2, T: 4, G: 0, H: 0},
   "Combinata": {strategia: "combinata", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  /* dalla ricerca: l'unico esempio positivo in tutte le prove, con la σ usata nella ricerca */
+  "Trend following solo short": {strategia: "trend", ingresso: "shock", lato: "short", k: 2, S: 2, T: 3, G: 0, H: 0, sigma: "ewma"},
 };
 /* Finanziamento Fineco dei CFD su materie prime tenuti oltre la giornata: Euribor 1 mese (circa 2,2%)
    + 2,95% annuo addebitato sui long; Euribor − 2,95% accreditato sugli short, cioè oggi un addebito
@@ -905,6 +907,13 @@ function aggiornaOggi(res, st, a) {
       ${ult.target ? `<dt>Target</dt><dd>${prezzo(ult.target)}</dd>` : ""}
       ${ult.restanti != null ? `<dt>Sedute rimaste</dt><dd>${ult.restanti}</dd>` : ""}
       <dt>Risultato finora</dt><dd>${conSegno(ult.R, 2)}R</dd></dl>`;
+    const z = res.daZero;
+    if (z && z.regola && (z.long || z.short)) {
+      const righe = [];
+      if (z.long) righe.push(`<dt>Long se la prossima chiusura è ${z.long.sopra ? "sopra" : "sotto"}</dt><dd>${prezzo(z.long.prezzo)}</dd>`);
+      if (z.short) righe.push(`<dt>Short se la prossima chiusura è ${z.short.sopra ? "sopra" : "sotto"}</dt><dd>${prezzo(z.short.prezzo)}</dd>`);
+      html += `<p class="nota" style="margin-top:10px">Se parti oggi senza posizione:</p><dl class="kv">${righe.join("")}</dl>`;
+    }
   } else if (res.prossima) {
     const q = res.prossima;
     sigma = q.sigma || null;
@@ -918,9 +927,11 @@ function aggiornaOggi(res, st, a) {
         (righe.length ? `<dl class="kv">${righe.join("")}</dl>` : `<p class="piccolo">Con i filtri scelti la prossima seduta non può dare un ingresso.</p>`);
     }
   }
+  /* dimensione per un ingresso da oggi: σ di oggi, non quella di una posizione aperta da tempo */
+  if (res.daZero && res.daZero.sigma) sigma = res.daZero.sigma;
   if (sigma) {
     const rischio = p.capitale * p.rischio / 100, stopPct = p.S * sigma, ctrv = rischio / stopPct;
-    html += `<h3 style="font-size:14px;margin-top:12px">Quanto puoi muovere</h3>
+    html += `<h3 style="font-size:14px;margin-top:12px">Quanto puoi muovere${ult && ult.motivo === "aperta" ? " con un ingresso da oggi" : ""}</h3>
       <dl class="kv"><dt>Rischio per operazione</dt><dd>${nf(rischio, 2)} €</dd>
       <dt>Stop a ${sgm(p.S)}, cioè</dt><dd>${pctNoSegno(stopPct, 1)} dal prezzo</dd>
       <dt>Controvalore massimo</dt><dd>${nf(ctrv, 0)} €</dd></dl>`;

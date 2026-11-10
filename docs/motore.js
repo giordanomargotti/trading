@@ -193,12 +193,10 @@ function simulaStrategia(st, p) {
     if (d && ammesso(d, t)) { pos = d; ie = t; se = s / 100; best = 0; fIn = F[t]; faseIn = FS[t]; }
   }
 
-  /* se a fine storico non c'è una posizione, livelli di ingresso per la seduta successiva */
-  let prossima = null;
-  const ultima = ops.length ? ops[ops.length - 1] : null;
-  if (i1 === n - 1 && !(ultima && ultima.motivo === "aperta")) {
-    const t = n - 1, s = sg[t] / 100, regola = regolaIn(t), P = st.c[t];
-    prossima = {fase: FS[t], regola, long: null, short: null};
+  /* livelli di ingresso per la seduta dopo t, per chi è senza posizione */
+  function livelliIngresso(t) {
+    const s = sg[t] / 100, regola = regolaIn(t), P = st.c[t];
+    const out = {fase: FS[t], regola, long: null, short: null};
     if (regola && s > 0) {
       let su, giu;
       if (rottura) {
@@ -211,13 +209,22 @@ function simulaStrategia(st, p) {
       const longSopra = regola === "trend";               /* trend: long sopra, short sotto */
       const okDir = d => !filtraDir || (Math.sign(F[t]) === d) === (p.dirTrend === "favore");
       const okCurva = d => p.lato !== "curva" || versoCurva(st, t) === d;
-      if (p.lato !== "short" && okDir(1) && okCurva(1)) prossima.long = {sopra: longSopra, prezzo: longSopra ? su : giu};
-      if (p.lato !== "long" && okDir(-1) && okCurva(-1)) prossima.short = {sopra: !longSopra, prezzo: longSopra ? giu : su};
-      prossima.sigma = s;
+      if (p.lato !== "short" && okDir(1) && okCurva(1)) out.long = {sopra: longSopra, prezzo: longSopra ? su : giu};
+      if (p.lato !== "long" && okDir(-1) && okCurva(-1)) out.short = {sopra: !longSopra, prezzo: longSopra ? giu : su};
+      out.sigma = s;
     }
+    return out;
+  }
+  /* a fine storico: se la regola è senza posizione, i livelli per la prossima seduta (prossima);
+     in ogni caso, quelli di chi parte oggi senza posizione (daZero) */
+  let prossima = null, daZero = null;
+  if (i1 === n - 1) {
+    const ultima = ops.length ? ops[ops.length - 1] : null;
+    daZero = livelliIngresso(n - 1);
+    if (!(ultima && ultima.motivo === "aperta")) prossima = daZero;
   }
   const anni = (Date.parse(st.date[i1]) - Date.parse(st.date[i0])) / (365.25 * 864e5);
-  return {ops, i0, i1, anni, prossima};
+  return {ops, i0, i1, anni, prossima, daZero};
 }
 
 function statisticheOps(ops, anni) {
