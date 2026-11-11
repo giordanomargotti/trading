@@ -129,7 +129,7 @@ details.piega[open]>summary .p-s{white-space:normal}
 .p-c{padding:0 14px 12px}
 .chiave .tile .v{font-size:17px}
 .fissa{position:sticky;top:0;z-index:10;background:var(--bg);margin:0 -16px;padding:8px 16px;border-bottom:.5px solid var(--border)}
-.fissa select{font:inherit;font-size:16px;font-weight:500;color:var(--text);background:var(--surface);border:.5px solid var(--axis);border-radius:8px;padding:6px 8px;max-width:100%;min-height:38px}
+.fissa select,.card > select{font:inherit;font-size:16px;font-weight:500;color:var(--text);background:var(--surface);border:.5px solid var(--axis);border-radius:8px;padding:6px 8px;max-width:100%;min-height:38px}
 .seg.largo{display:flex;margin-top:8px}
 .seg.largo button{flex:1}
 .esito{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums;margin-top:8px;min-height:20px}
@@ -150,7 +150,7 @@ dialog.foglio::backdrop{background:rgba(0,0,0,.45)}
 <body>
 <main id="app"><p class="vuoto">Carico i dati…</p></main>
 <nav class="barra" aria-label="Sezioni"><div class="barra-int">
-  <a href="#oggi" id="nav-oggi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Oggi</a>
+  <a href="#main" id="nav-main"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Main</a>
   <a href="#mercati" id="nav-mercati"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16.5l5.5-6.5 4 3.5L20 5.5"/><path d="M3 20.5h18"/></svg>Mercati</a>
   <a href="#strategia" id="nav-strategia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v5.4m0 5.2V20M12 4v1.4m0 5.2V20M19 4v9.4m0 5.2V20"/><circle cx="5" cy="12" r="2.6"/><circle cx="12" cy="8" r="2.6"/><circle cx="19" cy="16" r="2.6"/></svg>Strategia</a>
 </div></nav>
@@ -369,7 +369,7 @@ function ultimaData() {
 }
 function testata(titolo, extra = "") {
   const u = ultimaData(), marchio = titolo === "Fat Tail";
-  const nome = marchio ? `<button onclick="apriInfo('convessita')" aria-label="Fat Tail: convessità e code grasse">${MARCHIO}${titolo}</button>` : titolo;
+  const nome = marchio ? `<button onclick="location.hash='main'" aria-label="Fat Tail, pagina principale">${MARCHIO}${titolo}</button>` : titolo;
   return `<header class="testa"><div><h1${marchio ? ' class="marchio"' : ""}>${nome}</h1>
     <p class="meta">${u ? "Chiusure fino a " + dataIt(u) : ""}</p></div>${extra}</header>`;
 }
@@ -422,13 +422,14 @@ const REGOLA_PREDEFINITA = {sim: "NG=F", p: {...stato.lab, ...PRESET["Trend foll
   stato.diario = Array.isArray(m.diario) ? m.diario : [];
   stato.aperte = new Set(Array.isArray(m.aperte) ? m.aperte : []);
   stato.grappoli = m.grappoli || "1";
+  stato.mainSim = m.mainSim || null;
   if (m.modo) stato.modo = m.modo;
   if (m.scala) stato.scala = m.scala;
 })();
 function ricorda() {
   try {
     localStorage.setItem(CHIAVE_MEMORIA, JSON.stringify({lab: stato.lab, labSim: stato.labSim, seguita: stato.seguita,
-      posizione: stato.posizione, diario: stato.diario, aperte: [...stato.aperte], grappoli: stato.grappoli,
+      posizione: stato.posizione, diario: stato.diario, aperte: [...stato.aperte], grappoli: stato.grappoli, mainSim: stato.mainSim,
       modo: stato.modo, scala: stato.scala}));
   } catch (e) { /* senza memoria l'app funziona lo stesso, ma non ricorda le scelte */ }
 }
@@ -478,13 +479,26 @@ function descriviRegole(p) {
 }
 
 /* ---------- spiegazioni: un foglio che sale dal basso ---------- */
+const CORPO_CONVESSITA = `
+    <p class="piccolo">Rendimento di tre profili al variare del mercato. Curve di esempio sul lato del rialzo; per una posizione short i due lati si scambiano.</p>
+    <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Lineare</span>
+      <span><i class="lin" style="border-color:var(--s2)"></i>Concava (fragile)</span>
+      <span><i class="lin" style="border-color:var(--s3)"></i>Convessa (antifragile)</span></div>
+    <div class="grafico" style="height:300px"><canvas id="gConv" role="img" aria-label="Rendimento di un profilo convesso, di uno lineare e di uno concavo al variare del mercato"></canvas></div>
+    <table style="margin:6px 0 14px"><thead><tr><th>Mercato</th><th>−40%</th><th>+40%</th></tr></thead><tbody>
+      <tr><td>Convessa</td><td>−10%</td><td>+86%</td></tr><tr><td>Lineare</td><td>−40%</td><td>+40%</td></tr><tr><td>Concava</td><td>−54%</td><td>+10%</td></tr></tbody></table>
+    <p><b>Convessa.</b> Perdita fissa, guadagno aperto: molte perdite piccole, pochi guadagni grandi.</p>
+    <p><b>Concava.</b> Guadagno fisso, perdita aperta: molti guadagni piccoli, poche perdite grandi.</p>
+    <p><b>Code grasse.</b> I movimenti estremi arrivano più spesso di quanto prevede la gaussiana: lo mostra il riquadro «Distribuzione e code» di ogni mercato. Il profilo convesso li incassa, quello concavo li paga.</p>
+    <p><b>Il costo.</b> Finché il movimento grande non arriva, il profilo convesso perde poco ma spesso. Conviene solo dove le code sono abbastanza grasse da ripagare quelle perdite: la pagina Strategia lo verifica regola per regola.</p>
+    <p><b>Nell'app.</b> Stop e trailing stop senza target danno un profilo convesso (Trend following). Target vicino e stop largo danno un profilo concavo (Contrarian classico). In Risultati, asimmetria positiva vuol dire profilo convesso.</p>`;
 const INFO = {
   glossario: ["σ, z e R", `
     <p><b>σ.</b> Deviazione standard prevista del rendimento di una seduta. Con σ al 3%, un movimento del 6% vale 2σ.</p>
     <p><b>z.</b> Rendimento di una seduta diviso per la σ prevista la sera prima. Oltre ±2 la seduta è insolita.</p>
     <p><b>R.</b> Risultato di un'operazione in multipli della perdita allo stop iniziale, al netto dei costi. −1R è la perdita allo stop; +3R è un guadagno pari a tre volte quella perdita.</p>`],
   oggi: ["Come si legge «Oggi»", `
-    <p>La regola seguita lavora sulle chiusure giornaliere. La soglia vale per la prossima chiusura: se il prezzo chiude oltre, l'ingresso è a quel prezzo. Per gas e petrolio del NYMEX la chiusura è il regolamento delle 14:30 di New York, di norma le 20:30 in Italia.</p>
+    <p>La regola lavora sulle chiusure giornaliere. La soglia vale per la prossima chiusura: se il prezzo chiude oltre, l'ingresso è a quel prezzo. Per gas e petrolio del NYMEX la chiusura è il regolamento delle 14:30 di New York, di norma le 20:30 in Italia.</p>
     <p>Dopo l'ingresso, «Segna la posizione» fa seguire la posizione all'app: stop e trailing stop restano fissati con la σ del giorno d'ingresso e a ogni aggiornamento compare il livello d'uscita.</p>
     <p><b>Dimensione.</b> Rischio in euro diviso per la distanza dello stop. Il rischio è la quota di capitale persa se scatta lo stop iniziale.</p>
     <p>L'app non invia ordini e non conosce le posizioni reali: segue solo quella segnata qui.</p>`],
@@ -524,7 +538,7 @@ const INFO = {
     <p><b>σ.</b> È quella prevista per la seduta dopo l'ingresso e resta fissa per tutta l'operazione. Con σ GARCH i parametri sono stimati su tutto lo storico, quindi gli ingressi usano un po' di informazione dal futuro; con σ EWMA no.</p>
     <p><b>Costi.</b> Spread di andata e ritorno a ogni operazione e, sulle serie rinnovate, a ogni scadenza del CFD attraversata. Finanziamento Fineco per ogni seduta tenuta: Euribor a 1 mese + 2,95% annuo sui long; sugli short accredito di Euribor − 2,95%, che con l'Euribor sotto il 2,95% diventa un addebito.</p>
     <p><b>Verso della curva.</b> Solo short quando la curva è in contango e solo long in backwardation, letta alla chiusura d'ingresso.</p>
-    <p>«Segui questa regola» porta la regola nella pagina Oggi, con capitale e rischio della scheda Oggi.</p>`],
+    <p>«Segui questa regola» la fissa come regola seguita: nella scheda Oggi si può segnare la posizione aperta e tenere il diario.</p>`],
   fasi: ["Fasi di mercato", `
     <p><b>Forza del trend.</b> Rendimento delle ultime N sedute diviso per quello di una passeggiata casuale con la stessa volatilità. Sotto 0,5 la fase è laterale, oltre 1 è di trend; su una passeggiata casuale ogni fase copre circa un terzo delle sedute. Le soglie sono fisse, non scelte sui risultati.</p>
     <p><b>Autocorrelazione.</b> Variance ratio: varianza dei rendimenti a 5 sedute contro cinque volte quella giornaliera. Sotto 1 i movimenti tendono a rientrare, sopra 1 a proseguire; le soglie sono i terzili di una passeggiata casuale con la stessa finestra.</p>
@@ -545,19 +559,7 @@ const INFO = {
     <p>Rendimenti logaritmici tra chiusure consecutive, dal ${dataBreve(d.inizio)} o dall'inizio della serie.</p>
     <p>Gas Henry Hub e WTI: serie rinnovata a ogni scadenza del CFD. Brent, TTF e metalli: serie del future più vicino senza rettifica per il cambio di contratto; nei giorni di cambio compaiono salti che non sono rendimenti veri, soprattutto sul TTF.</p>
     <p>I dati possono contenere errori o arrivare in ritardo. L'app non invia ordini e non è una consulenza finanziaria.</p>`]; },
-  convessita: ["Convessità e code grasse", `
-    <p class="piccolo">Rendimento di tre profili al variare del mercato. Curve di esempio sul lato del rialzo; per una posizione short i due lati si scambiano.</p>
-    <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Lineare</span>
-      <span><i class="lin" style="border-color:var(--s2)"></i>Concava (fragile)</span>
-      <span><i class="lin" style="border-color:var(--s3)"></i>Convessa (antifragile)</span></div>
-    <div class="grafico" style="height:300px"><canvas id="gConv" role="img" aria-label="Rendimento di un profilo convesso, di uno lineare e di uno concavo al variare del mercato"></canvas></div>
-    <table style="margin:6px 0 14px"><thead><tr><th>Mercato</th><th>−40%</th><th>+40%</th></tr></thead><tbody>
-      <tr><td>Convessa</td><td>−10%</td><td>+86%</td></tr><tr><td>Lineare</td><td>−40%</td><td>+40%</td></tr><tr><td>Concava</td><td>−54%</td><td>+10%</td></tr></tbody></table>
-    <p><b>Convessa.</b> Perdita fissa, guadagno aperto: molte perdite piccole, pochi guadagni grandi.</p>
-    <p><b>Concava.</b> Guadagno fisso, perdita aperta: molti guadagni piccoli, poche perdite grandi.</p>
-    <p><b>Code grasse.</b> I movimenti estremi arrivano più spesso di quanto prevede la gaussiana: lo mostra il riquadro «Distribuzione e code» di ogni mercato. Il profilo convesso li incassa, quello concavo li paga.</p>
-    <p><b>Il costo.</b> Finché il movimento grande non arriva, il profilo convesso perde poco ma spesso. Conviene solo dove le code sono abbastanza grasse da ripagare quelle perdite: la pagina Strategia lo verifica regola per regola.</p>
-    <p><b>Nell'app.</b> Stop e trailing stop senza target danno un profilo convesso (Trend following). Target vicino e stop largo danno un profilo concavo (Contrarian classico). In Risultati, asimmetria positiva vuol dire profilo convesso.</p>`],
+  convessita: ["Convessità e code grasse", CORPO_CONVESSITA],
 };
 const foglio = document.getElementById("foglio");
 function pulisciFoglio() { if (stato.gConv) { stato.gConv.destroy(); stato.gConv = null; } }
@@ -574,7 +576,7 @@ foglio.addEventListener("close", () => { if (!foglio.open) pulisciFoglio(); });
 function apriInfo(k) {
   const v = INFO[k], [titolo, corpo] = typeof v === "function" ? v() : v;
   apriFoglio(titolo, corpo);
-  if (k === "convessita") graficoConvessita();
+  if (k === "convessita") stato.gConv = graficoConvessita();
 }
 
 /* I tre profili: lineare y = x; convesso con perdita fissa del 10% e guadagno che cresce con il
@@ -582,7 +584,7 @@ function apriInfo(k) {
    ribasso. Sono curve di esempio. */
 function graficoConvessita() {
   const cv = document.getElementById("gConv");
-  if (!cv) return;
+  if (!cv) return null;
   const c = impostaChart();
   const conv = x => -10 + 0.06 * Math.max(x, 0) ** 2, conc = x => 10 - 0.04 * Math.min(x, 0) ** 2;
   const xs = Array.from({length: 101}, (_, i) => i - 50), pari = Math.sqrt(10 / 0.06);
@@ -615,7 +617,7 @@ function graficoConvessita() {
     }
     ctx.restore();
   }};
-  stato.gConv = new Chart(cv, {type: "line", data: {datasets: [
+  return new Chart(cv, {type: "line", data: {datasets: [
       linea("Lineare", c.s1, x => x), linea("Concava", c.s2, conc), linea("Convessa", c.s3, conv),
       {data: punti.map(p => ({x: p.x, y: p.y})), showLine: false, pointRadius: 5, pointHoverRadius: 5,
         pointBackgroundColor: punti.map(p => p.colore), pointBorderColor: c.surface, pointBorderWidth: 2}]},
@@ -659,7 +661,7 @@ function htmlScadenza(a) {
   if (cv) v.push(`Curva in ${cv.struttura}: il passaggio al contratto successivo favorisce ${cv.struttura === "contango" ? "lo short" : "il long"} (secondo contratto ${pct(cv.spread12, 1)} sul primo).`);
   return v.map(t => `<p class="piccolo" style="margin-top:8px">${t}</p>`).join("");
 }
-/* personale: nella pagina Oggi, dove conta la posizione segnata dall'utente */
+/* personale: la regola è quella seguita, quindi conta la posizione segnata dall'utente */
 function htmlSegnale(a, st, p, personale) {
   const n = st.c.length, P = st.c[n - 1], ultima = st.date[n - 1];
   const ris = simulaStrategia(st, {...p, periodo: "tutto"}), z = ris.daZero;
@@ -753,43 +755,60 @@ function salvaPosizione() {
   segnaPosizione(lato, data);
 }
 
-/* ---------- pagina Oggi ---------- */
-async function paginaOggi() {
-  const d = stato.dati, seg = stato.seguita, a = d.asset.find(x => x.simbolo === seg.sim), parti = partiRegola(seg.p);
-  const altra = stato.posizione && stato.posizione.sim !== seg.sim ? d.asset.find(x => x.simbolo === stato.posizione.sim) : null;
+/* ---------- pagina Main ---------- */
+function mercatoMain() {
+  const v = stato.dati.asset.filter(x => x.storia && x.ultimo);
+  return v.find(x => x.simbolo === stato.mainSim) || v.find(x => x.simbolo === stato.seguita.sim) || v[0] || null;
+}
+function cambiaMain(sim) { stato.mainSim = sim; ricorda(); const y = window.scrollY; rotta(); window.scrollTo(0, y); }
+async function paginaMain() {
+  const d = stato.dati, a = mercatoMain(), mercati = d.asset.filter(x => x.storia && x.ultimo);
+  const conEmivita = d.asset.filter(x => x.garch && x.garch.emivita);
   app.innerHTML = `
     ${testata("Fat Tail", `<button class="btn" onclick="avvia()">Ricarica</button>`)}
     ${d.demo ? `<div class="avviso">Dati simulati di prova. Al primo aggiornamento automatico arrivano le chiusure vere.</div>` : ""}
-    <section class="card"><h3>${esc(titoloRegola(seg.p))}</h3>
-      <p class="nota">${esc(a ? a.nome : seg.sim)}. Ingresso: ${parti.ingresso}. Uscita: ${parti.uscite}.</p>
-      <div id="oggi-segnale"><p class="piccolo">Carico lo storico…</p></div>
-      <div class="fila"><button class="link" onclick="modificaSeguita()">Cambia regola o capitale</button>
-        <button class="link" onclick="apriInfo('oggi')">Come si legge</button></div>
+    <section class="card"><h3>Convessità e code grasse</h3>${CORPO_CONVESSITA}</section>
+    <section class="card"><h3>Persistenza della volatilità</h3>
+      ${conEmivita.length ? `<p class="nota">Emivita di uno shock di volatilità: sedute perché metà dell'effetto si riassorba, secondo il GARCH di ogni mercato.</p>
+        <div class="grafico" style="height:${40 + 24 * conEmivita.length}px"><canvas id="gEmivita" role="img" aria-label="Emivita di uno shock di volatilità per mercato"></canvas></div>` : ""}
+      ${a ? `<h3 style="font-size:14px;margin-top:16px">Grappoli su un mercato</h3>
+        <select aria-label="Mercato" onchange="cambiaMain(this.value)" style="margin-bottom:10px">
+          ${mercati.map(m => `<option value="${esc(m.simbolo)}"${m.simbolo === a.simbolo ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select>
+        ${corpoGrappoli(a)}` : ""}
     </section>
-    ${altra ? `<div class="avviso">C'è una posizione segnata su ${esc(altra.nome)}, che non è più il mercato della regola seguita. <button class="link" onclick="togliPosizione()">Togli la posizione</button></div>` : ""}
-    ${htmlDiario()}
     ${htmlMovimenti()}
-    <div class="fila" style="margin-top:10px"><button class="link" onclick="apriInfo('convessita')">Perché cercare la convessità</button>
+    <div class="fila" style="margin-top:10px"><button class="link" onclick="location.hash='strategia'">Segnali: Strategia, scheda Oggi</button>
       <button class="link" onclick="apriInfo('dati')">Dati e limiti</button></div>`;
-  attivaPieghe();
-  const el = () => document.getElementById("oggi-segnale");
-  if (!a || !a.ultimo || !a.storia) {
-    el().innerHTML = `<div class="errore">Dati di ${esc(a ? a.nome : seg.sim)} non disponibili oggi.</div>`;
-    return;
+  const c = impostaChart();
+  const gc = graficoConvessita();
+  if (gc) stato.grafici.push(gc);
+  if (conEmivita.length) {
+    const v = conEmivita.slice().sort((x, y) => y.garch.emivita - x.garch.emivita);
+    nuovoGrafico("gEmivita", {type: "bar", data: {labels: v.map(x => x.nome), datasets: [
+        {data: v.map(x => x.garch.emivita), backgroundColor: v.map(x => a && x.simbolo === a.simbolo ? c.s2 : c.s1), barPercentage: 0.8, categoryPercentage: 0.9}]},
+      options: {indexAxis: "y", plugins: {tooltip: {callbacks: {label: it => `${nf(it.raw, 0)} sedute; persistenza ${nf(v[it.dataIndex].garch.persistenza, 3)}`}}},
+        scales: assi(c, {x: {type: "logarithmic", min: 10, grid: {display: true, color: c.grid}, ticks: {autoSkip: false, maxRotation: 0,
+            callback: x => [10, 20, 50, 100, 200, 500].includes(x) ? String(x) : ""}},
+          y: {grid: {display: false}, ticks: {autoSkip: false, font: {size: 11}}}})}});
   }
+  if (!a) return;
   try {
     const st = await caricaStoria(a);
-    if (el()) el().innerHTML = htmlSegnale(a, st, seg.p, true);        /* se nel frattempo è cambiata pagina non c'è più */
+    /* se nel frattempo è cambiata pagina o mercato non si disegna */
+    if (!location.hash.startsWith("#m=") && !location.hash.startsWith("#lab=") && document.getElementById("gGrappoli") && mercatoMain() === a) graficiGrappoli(a, st);
   } catch (e) {
-    if (el()) el().innerHTML = `<div class="errore">Storico non disponibile (${esc(e.message)}).</div>`;
+    const el = document.getElementById("grappoli-testo");
+    if (el) el.innerHTML = `<div class="errore">Storico non disponibile (${esc(e.message)}).</div>`;
   }
 }
-function modificaSeguita() {
+/* porta la regola seguita nella pagina Strategia, scheda Oggi */
+function apriSeguita() {
   Object.assign(stato.lab, stato.seguita.p);
   stato.labSim = stato.labMercato = stato.seguita.sim;
-  stato.labScheda = "regola";
+  stato.labScheda = "oggi";
   ricorda();
-  location.hash = "strategia";
+  const h = "#lab=" + encodeURIComponent(stato.seguita.sim);
+  if (location.hash === h) rotta(); else location.hash = h;
 }
 function htmlDiario() {
   const v = stato.diario;
@@ -1360,7 +1379,7 @@ async function laboratorio(sim) {
         </div>
         ${cur(["k", "Nr", "S", "T"])}
         <div class="regola" id="lab-regola"></div>
-        <button class="azione" id="lab-segui" onclick="seguiRegola()">Segui questa regola in «Oggi»</button>
+        <button class="azione" id="lab-segui" onclick="seguiRegola()">Segui questa regola</button>
         ${comeSiLegge("regola")}
       </section>
       ${piega("lab-avanzate", "Avanzate", "target, durata, σ, periodo, costi, fasi di mercato", `
@@ -1412,10 +1431,12 @@ async function laboratorio(sim) {
     <div id="sch-oggi"${sch === "oggi" ? "" : " hidden"}>
       <section class="card">
         <div id="lab-oggi"></div>
+        <div id="lab-seguita"></div>
         ${sotto("Capitale e rischio")}
         ${CURSORI_OGGI.map(c => rigaCursore(c, p)).join("")}
         ${comeSiLegge("oggi")}
       </section>
+      ${htmlDiario()}
     </div>`;
   attivaPieghe();
   let st;
@@ -1440,16 +1461,20 @@ function schedaLab(k) {
   ridimensiona(document.getElementById("sch-" + k));
   window.scrollTo(0, 0);
 }
+/* capitale e rischio cambiano la dimensione, non la regola */
+function stessaRegola() {
+  return stato.seguita.sim === stato.labSim && CHIAVI_REGOLA.every(k => k === "capitale" || k === "rischio" || stato.seguita.p[k] === stato.lab[k]);
+}
 function seguiRegola() {
   stato.seguita = {sim: stato.labSim, p: {...stato.lab, periodo: "tutto"}};
   ricorda();
-  aggiornaSegui();
+  ricalcolaLab();
 }
 function aggiornaSegui() {
   const b = document.getElementById("lab-segui");
   if (!b) return;
-  const uguale = stato.seguita.sim === stato.labSim && CHIAVI_REGOLA.every(k => stato.seguita.p[k] === stato.lab[k]);
-  b.textContent = uguale ? "Regola seguita in «Oggi»" : "Segui questa regola in «Oggi»";
+  const uguale = stessaRegola();
+  b.textContent = uguale ? "Regola seguita: segnali nella scheda Oggi" : "Segui questa regola";
   b.disabled = uguale;
 }
 
@@ -1513,7 +1538,11 @@ function ricalcolaLab() {
   const c = g.colori;
   document.getElementById("lab-regola").textContent = descriviRegole(p, !!(stato.labAsset && stato.labAsset.rettifica));
   const ris = simulaStrategia(st, p), {ops, i0, i1, anni} = ris;
-  document.getElementById("lab-oggi").innerHTML = htmlSegnale(stato.labAsset, st, p, false);
+  const seguita = stessaRegola();
+  document.getElementById("lab-oggi").innerHTML = htmlSegnale(stato.labAsset, st, p, seguita);
+  const sg = stato.seguita, as = stato.dati.asset.find(x => x.simbolo === sg.sim);
+  document.getElementById("lab-seguita").innerHTML = seguita ? "" : `<div class="regola">Posizione e diario valgono per la regola seguita: ${esc(titoloRegola(sg.p))} su ${esc(as ? as.nome : sg.sim)}${stato.posizione ? ", con una posizione segnata" : ""}.
+    <button class="link" onclick="apriSeguita()">Apri la regola seguita</button> <button class="link" onclick="seguiRegola()">Segui questa</button></div>`;
   const s = statisticheOps(ops, anni);
   document.getElementById("lab-esito").innerHTML = s
     ? `<span><b>${nf(s.n, 0)}</b> operazioni</span><span><b>${conSegno(s.media, 2)}R</b> in media</span><span>t <b>${conSegno(s.t, 1)}</b></span><span><b>${pctNoSegno(s.vincenti, 0)}</b> in guadagno</span>`
@@ -1595,13 +1624,13 @@ function rotta() {
   if (!stato.dati) return;
   const h = decodeURIComponent(location.hash.slice(1));
   distruggi();
-  let voce = "oggi";
+  let voce = "main";
   if (h.startsWith("m=")) { voce = "mercati"; dettaglio(h.slice(2)); }
   else if (h === "mercati") { voce = "mercati"; paginaMercati(); }
   else if (h.startsWith("lab=")) { voce = "strategia"; laboratorio(h.slice(4)); }
   else if (h === "strategia") { voce = "strategia"; laboratorio(stato.labSim); }
-  else paginaOggi();
-  for (const k of ["oggi", "mercati", "strategia"]) {
+  else paginaMain();
+  for (const k of ["main", "mercati", "strategia"]) {
     const el = document.getElementById("nav-" + k);
     if (k === voce) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
   }

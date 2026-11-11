@@ -6,7 +6,8 @@ https://giordanomargotti.github.io/trading/
 
 ## Le tre pagine
 
-- **Oggi**: la regola seguita, con la soglia d'ingresso per la prossima chiusura o, se una posizione è segnata come aperta, il livello d'uscita; dimensione della posizione rispetto al capitale e al lotto Fineco; prossima chiusura d'ufficio del CFD; diario delle operazioni chiuse. Sotto, i mercati con una seduta oltre 2σ.
+- **Main**: convessità e code grasse, persistenza della volatilità (emivita per mercato, grappoli e autocorrelazione), mercati con una seduta oltre 2σ.
+- **Strategia → Oggi** (segnali): la regola seguita, con la soglia d'ingresso per la prossima chiusura o, se una posizione è segnata come aperta, il livello d'uscita; dimensione della posizione rispetto al capitale e al lotto Fineco; prossima chiusura d'ufficio del CFD; diario delle operazioni chiuse. Sotto, i mercati con una seduta oltre 2σ.
 - **Mercati**: per ogni mercato quattro numeri chiave e sei riquadri da aprire:
   - chiusura di domani: distribuzione prevista, intervalli al 90% e al 98%;
   - volatilità: realizzata a 21 sedute, EWMA (λ 0,94), GJR-GARCH(1,1) con t di Student, implicita (VIX, VXN, OVX, GVZ);
@@ -14,7 +15,7 @@ https://giordanomargotti.github.io/trading/
   - curva e scadenze: prossimi contratti, contango o backwardation, roll, rinnovo del CFD (petrolio, gas, metalli);
   - distribuzione e code: istogramma con gaussiana e t, sedute oltre 2-5σ, indice di coda α di Hill, VaR ed ES;
   - prezzo dell'ultimo anno.
-- **Strategia**: contrarian, trend following (su shock in σ o su rottura) o combinata secondo la fase di mercato, con stop, trailing, target, durata, spread, finanziamento e filtro sul verso della curva. Risultati storici in R, per fase di mercato e per volatilità all'ingresso, 200 operazioni simulate; un pulsante porta la regola nella pagina Oggi.
+- **Strategia**: contrarian, trend following (su shock in σ o su rottura) o combinata secondo la fase di mercato, con stop, trailing, target, durata, spread, finanziamento e filtro sul verso della curva. Risultati storici in R, per fase di mercato e per volatilità all'ingresso, 200 operazioni simulate; un pulsante porta la regola nella scheda Oggi della Strategia.
 
 Il nome in alto apre una scheda su convessità e code grasse. Ogni riquadro ha un «Come si legge». Le scelte restano salvate sul telefono.
 
