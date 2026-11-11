@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 *.tmp
 .venv/
+# risultato della ricerca, se la si esegue a mano
+docs/ricerca.json

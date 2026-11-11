@@ -161,7 +161,7 @@ def scarica_eia(url: str, tentativi: int = 3) -> pd.Series:
     errore = None
     for i in range(tentativi):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (mercati-e-code; GitHub Actions)"})
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (fat-tail; GitHub Actions)"})
             with urllib.request.urlopen(req, timeout=60) as resp:
                 dati = resp.read()
             grezzo = pd.read_excel(io.BytesIO(dati), sheet_name="Data 1", header=None)

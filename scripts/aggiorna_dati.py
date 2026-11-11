@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mercati e code: aggiornamento giornaliero dei dati.
+Fat Tail: aggiornamento giornaliero dei dati.
 
 Scarica da Yahoo Finance le chiusure giornaliere di indici azionari e
 commodities, calcola tre stime di volatilità (realizzata a 21 sedute, EWMA
@@ -544,7 +544,7 @@ def implicita_demo(df: pd.DataFrame, seme: int) -> pd.DataFrame:
 
 # ---------------------------------------------------------------------------
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Aggiorna i dati della web app Mercati e code.")
+    ap = argparse.ArgumentParser(description="Aggiorna i dati della web app Fat Tail.")
     ap.add_argument("--out", default="docs/data.json", help="file JSON da scrivere")
     ap.add_argument("--demo", action="store_true", help="usa dati simulati invece di Yahoo Finance")
     args = ap.parse_args()

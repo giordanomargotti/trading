@@ -1,7 +1,7 @@
 // Service worker: l'app si apre anche senza rete con gli ultimi dati scaricati.
 // Pagina e dati: prima la rete, poi la copia salvata. Libreria e icone: prima la copia salvata.
-const CACHE = "mercati-v3";
-const GUSCIO = ["./", "index.html", "motore.js", "manifest.webmanifest", "vendor/chart.umd.min.js",
+const CACHE = "fattail-v1";
+const GUSCIO = ["./", "index.html", "motore.js", "data.json", "manifest.webmanifest", "vendor/chart.umd.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

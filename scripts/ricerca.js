@@ -16,7 +16,9 @@
    - Riferimenti senza parametri: sempre long, sempre short, e la regola della curva (short in
      contango, long in backwardation), in % annuo sul controvalore.
 
-   Uso: node scripts/ricerca.js [cartella docs]   (legge storia/*.json, scrive ricerca.json) */
+   Uso, a mano e fuori dall'app: python scripts/aggiorna_dati.py, poi node scripts/ricerca.js docs
+   (legge docs/storia/*.json, scrive docs/ricerca.json, che non va nel repository). I dati usati
+   nello studio del 10 novembre 2026 sono nel ramo dati-ricerca. */
 "use strict";
 const fs = require("fs");
 const path = require("path");

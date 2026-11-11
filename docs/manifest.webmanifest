@@ -1,7 +1,7 @@
 {
-  "name": "Mercati e code",
-  "short_name": "Mercati",
-  "description": "Chiusure giornaliere, volatilità e distribuzione dei rendimenti di indici e commodities",
+  "name": "Fat Tail",
+  "short_name": "Fat Tail",
+  "description": "Volatilità, code e strategie su indici e commodities, con le chiusure di ogni giorno",
   "lang": "it",
   "start_url": "./",
   "scope": "./",
