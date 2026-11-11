@@ -112,7 +112,9 @@ const versoCurva = (st, t) => !st.sp || st.sp[t] == null || st.sp[t] === 0 ? 0 :
    finanz, finanzShort   finanziamento overnight di long e short, in % annuo del controvalore
               (negativo = accredito)
    sigma      garch | ewma; periodo tutto | prima | seconda
-   N, indicatore, fase, dirTrend   misura e filtri delle fasi di mercato */
+   N, indicatore, fase, dirTrend   misura e filtri delle fasi di mercato
+   ingressoForzato   {i, lato}: una sola operazione, aperta alla chiusura i nel verso dato, con le
+              uscite della regola. Serve a seguire una posizione presa a una data scelta. */
 function simulaStrategia(st, p) {
   const usaG = p.sigma === "garch" && st.zg;
   const z = usaG ? st.zg : st.ze, sg = usaG ? st.sg : st.se, n = st.c.length;
@@ -132,6 +134,8 @@ function simulaStrategia(st, p) {
   const filtraDir = p.dirTrend && p.dirTrend !== "tutte";
   const ops = [];
   let pos = 0, ie = 0, se = 0, best = 0, fIn = null, faseIn = null;
+  const forzato = p.ingressoForzato || null;
+  if (forzato) { i0 = forzato.i; i1 = n - 1; }
 
   function segnale(regola, t) {
     if (rottura) {
@@ -157,6 +161,21 @@ function simulaStrategia(st, p) {
     return true;
   }
 
+  /* operazione chiusa (o ancora aperta) alla chiusura t, con risultato x in log dal prezzo d'ingresso */
+  function operazione(t, x, motivo) {
+    const durata = t - ie, rinnovi = durata > 0 ? rollCum[t - 1] - rollCum[ie] : 0;   /* scadenze tra ingresso e uscita */
+    const costi = costo * (1 + rinnovi) + (pos === 1 ? finLong : finShort) * durata;
+    const pct = (pos === 1 ? Math.exp(x) - 1 : 1 - Math.exp(-x)) - costi;
+    const op = {ie, iu: t, lato: pos, R: (x - costi) / (p.S * se), pct, durata, motivo, f: fIn, fase: faseIn, se, rinnovi};
+    if (motivo === "aperta") {
+      const b = Math.max(best, x), liv = Math.max(-p.S * se, p.T > 0 ? b - p.T * se : -Infinity);
+      op.livello = st.c[ie] * Math.exp(pos * liv);         /* stop valido dalla prossima seduta */
+      op.target = p.G > 0 ? st.c[ie] * Math.exp(pos * p.G * se) : null;
+      op.restanti = p.H > 0 ? p.H - durata : null;
+    }
+    return op;
+  }
+
   for (let t = i0; t <= i1; t++) {
     if (pos !== 0) {
       const x = pos * (lnc[t] - lnc[ie]);                   /* risultato in log dal prezzo d'ingresso */
@@ -167,21 +186,19 @@ function simulaStrategia(st, p) {
       else if (p.H > 0 && t - ie >= p.H) motivo = "durata";
       else if (t === i1) motivo = i1 === n - 1 ? "aperta" : "fine periodo";
       if (motivo) {
-        const durata = t - ie, rinnovi = rollCum[t - 1] - rollCum[ie];      /* scadenze tra ingresso e uscita */
-        const costi = costo * (1 + rinnovi) + (pos === 1 ? finLong : finShort) * durata;
-        const pct = (pos === 1 ? Math.exp(x) - 1 : 1 - Math.exp(-x)) - costi;
-        const op = {ie, iu: t, lato: pos, R: (x - costi) / (p.S * se), pct, durata, motivo, f: fIn, fase: faseIn, se, rinnovi};
-        if (motivo === "aperta") {
-          const b = Math.max(best, x), liv = Math.max(livStop, p.T > 0 ? b - p.T * se : -Infinity);
-          op.livello = st.c[ie] * Math.exp(pos * liv);       /* stop valido dalla prossima seduta */
-          op.target = p.G > 0 ? st.c[ie] * Math.exp(pos * p.G * se) : null;
-          op.restanti = p.H > 0 ? p.H - durata : null;
-        }
-        ops.push(op);
+        ops.push(operazione(t, x, motivo));
         pos = 0;
+        if (forzato) break;
         continue;                                           /* niente nuovo ingresso nella stessa seduta */
       }
       if (x > best) best = x;
+      continue;
+    }
+    if (forzato) {
+      const s = sg[t];
+      if (t !== forzato.i || s == null || !(s > 0)) break;
+      pos = forzato.lato; ie = t; se = s / 100; best = 0; fIn = F[t]; faseIn = FS[t];
+      if (t === i1) { ops.push(operazione(t, 0, "aperta")); pos = 0; }     /* ingresso all'ultima chiusura */
       continue;
     }
     if (t === i1) break;
@@ -216,15 +233,18 @@ function simulaStrategia(st, p) {
     return out;
   }
   /* a fine storico: se la regola è senza posizione, i livelli per la prossima seduta (prossima);
-     in ogni caso, quelli di chi parte oggi senza posizione (daZero) */
-  let prossima = null, daZero = null;
+     in ogni caso, quelli di chi parte oggi senza posizione (daZero) e il verso dell'ingresso che
+     l'ultima chiusura ha fatto scattare per chi era senza posizione (segnaleUltima, 0 se nessuno) */
+  let prossima = null, daZero = null, segnaleUltima = 0;
   if (i1 === n - 1) {
     const ultima = ops.length ? ops[ops.length - 1] : null;
     daZero = livelliIngresso(n - 1);
     if (!(ultima && ultima.motivo === "aperta")) prossima = daZero;
+    const s = sg[n - 1], regola = regolaIn(n - 1);
+    if (s != null && s > 0 && regola) { const d = segnale(regola, n - 1); if (d && ammesso(d, n - 1)) segnaleUltima = d; }
   }
   const anni = (Date.parse(st.date[i1]) - Date.parse(st.date[i0])) / (365.25 * 864e5);
-  return {ops, i0, i1, anni, prossima, daZero};
+  return {ops, i0, i1, anni, prossima, daZero, segnaleUltima};
 }
 
 function statisticheOps(ops, anni) {

@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fat Tail</title>
+<meta name="description" content="Volatilità, code e strategie su indici e commodities, con le chiusure di ogni giorno">
+<meta name="theme-color" content="#184f95">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fat Tail">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f9f9f7;--surface:#fcfcfb;--surface2:#f1f0ec;--text:#0b0b0b;--text2:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--neg:#e34948;
+  --up:#006300;--down:#d03b3b;--chip-bg:rgba(250,178,25,.24);--chip-text:#6b4a00;
+  --accent:#184f95;--on-accent:#ffffff;
+}
+@media (prefers-color-scheme:dark){:root{
+  color-scheme:dark;
+  --bg:#0d0d0d;--surface:#1a1a19;--surface2:#242422;--text:#f0efec;--text2:#c3c2b7;--muted:#898781;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--neg:#e66767;
+  --up:#0ca30c;--down:#e66767;--chip-bg:rgba(250,178,25,.18);--chip-text:#fab219;
+  --accent:#6da7ec;--on-accent:#0d0d0d;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:max(12px,env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-size:20px;font-weight:500;margin:0}
+h2{font-size:13px;font-weight:500;color:var(--text2);margin:20px 4px 6px}
+h3{font-size:16px;font-weight:500;margin:0 0 2px}
+p{margin:0}
+button{font:inherit;color:inherit}
+.testa{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 2px}
+.meta{font-size:13px;color:var(--text2)}
+.azioni{display:flex;gap:6px}
+.btn{background:transparent;border:.5px solid var(--axis);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;min-height:36px}
+.btn:active{transform:scale(.98)}
+.avviso{background:var(--chip-bg);color:var(--chip-text);border-radius:10px;padding:10px 12px;font-size:13px;margin:12px 0}
+.errore{background:rgba(227,73,72,.12);color:var(--down);border-radius:10px;padding:10px 12px;font-size:13px;margin:12px 0}
+.lista{background:var(--surface);border:.5px solid var(--border);border-radius:12px;overflow:hidden}
+.riga{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:transparent;border:0;border-bottom:.5px solid var(--border);text-align:left;cursor:pointer;min-height:56px}
+.riga:last-child{border-bottom:0}
+.riga:active{background:var(--surface2)}
+.r-sx{flex:1;min-width:0;display:flex;flex-direction:column}
+.r-nome{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-sub{font-size:12px;color:var(--text2);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.r-dx{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.r-prezzo{font-size:15px}
+.su{color:var(--up)}.giu{color:var(--down)}
+.spark{flex:0 0 64px;height:24px}
+.chip{display:inline-flex;align-items:center;gap:3px;background:var(--chip-bg);color:var(--chip-text);border-radius:6px;padding:0 6px;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.chip svg{width:10px;height:10px}
+.indietro{background:none;border:0;color:var(--accent);padding:8px 0;font-size:15px;cursor:pointer;min-height:44px}
+.hero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 2px}
+.hero .prezzo{font-size:28px;font-weight:500}
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:14px 14px 12px;margin:12px 0}
+.nota{font-size:13px;color:var(--text2);margin:2px 0 10px}
+.piccolo{font-size:12px;color:var(--text2)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px}
+.tile{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.tile .l{font-size:12px;color:var(--text2)}
+.tile .v{font-size:20px;font-weight:500}
+.tile .s{font-size:12px;color:var(--text2)}
+.grafico{position:relative;width:100%}
+.legenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text2);margin:6px 0}
+.legenda span{display:inline-flex;align-items:center;gap:5px}
+.q{display:inline-block;width:10px;height:10px;border-radius:2px}
+.lin{display:inline-block;width:16px;height:0;border-top:2px solid}
+.lin.tr{border-top-style:dashed}
+.seg{display:inline-flex;background:var(--surface2);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:6px;padding:6px 10px;font-size:13px;color:var(--text2);cursor:pointer;min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 0 0 .5px var(--border)}
+.controlli{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{font-weight:500;color:var(--text2);text-align:right;padding:6px 4px;border-bottom:.5px solid var(--border)}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:6px 4px;border-bottom:.5px solid var(--border)}
+tr:last-child td{border-bottom:0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px;margin-top:8px}
+.kv dt{color:var(--text2)}.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+details{margin-top:8px;font-size:13px}
+summary{cursor:pointer;color:var(--accent);padding:6px 0}
+.sezione-testo p{font-size:14px;margin:0 0 10px}
+.sezione-testo b{font-weight:500}
+.vuoto{text-align:center;color:var(--text2);padding:48px 12px}
+.azione{display:block;width:100%;text-align:center;background:var(--accent);color:var(--on-accent);border:0;border-radius:10px;padding:12px;font-size:15px;font-weight:500;margin:12px 0;cursor:pointer;min-height:44px}
+.cursore{display:grid;grid-template-columns:112px minmax(0,1fr) 64px;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+.cursore label{color:var(--text2)}
+.cursore output{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:32px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.chip-btn{background:var(--surface2);border:0;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;min-height:32px}
+.regola{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:13px;margin:10px 0 4px}
+.piede{font-size:12px;color:var(--muted);margin-top:16px}
+/* ----- struttura: barra in basso, riquadri che si aprono, foglio delle spiegazioni ----- */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+.marchio{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.marchio button{display:flex;align-items:center;gap:8px;border:0;background:none;padding:0;font:inherit;letter-spacing:inherit;color:inherit;cursor:pointer;min-height:36px}
+.marchio svg{width:44px;height:18px;color:var(--accent)}
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:.5px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.barra-int{display:flex;max-width:560px;margin:0 auto}
+.barra a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 6px;font-size:11px;color:var(--text2);text-decoration:none;min-height:54px}
+.barra a[aria-current="page"]{color:var(--accent);font-weight:500}
+.barra svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.link{background:none;border:0;color:var(--accent);padding:8px 0;font-size:14px;cursor:pointer;min-height:44px;text-align:left}
+.fila{display:flex;flex-wrap:wrap;gap:0 18px;margin-top:4px}
+.segnale{font-size:19px;font-weight:500;line-height:1.3;margin:8px 0;font-variant-numeric:tabular-nums}
+.azione:disabled{background:var(--surface2);color:var(--text2);cursor:default}
+.azione.sec{background:transparent;color:var(--accent);border:.5px solid var(--axis)}
+.avviso .azione{margin:10px 0 2px}
+details.piega{padding:0;margin:8px 0;font-size:inherit}
+details.piega>summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) 16px;column-gap:10px;align-items:center;padding:11px 14px;color:var(--text);min-height:56px}
+details.piega>summary::-webkit-details-marker{display:none}
+.p-t{font-size:15px;font-weight:500}
+.p-s{grid-column:1;font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-f{grid-column:2;grid-row:1 / span 2;width:16px;height:16px;color:var(--muted);transition:transform .15s}
+details.piega[open]>summary .p-f{transform:rotate(90deg)}
+details.piega[open]>summary .p-s{white-space:normal}
+.p-c{padding:0 14px 12px}
+.chiave .tile .v{font-size:17px}
+.fissa{position:sticky;top:0;z-index:10;background:var(--bg);margin:0 -16px;padding:8px 16px;border-bottom:.5px solid var(--border)}
+.fissa select{font:inherit;font-size:16px;font-weight:500;color:var(--text);background:var(--surface);border:.5px solid var(--axis);border-radius:8px;padding:6px 8px;max-width:100%;min-height:38px}
+.seg.largo{display:flex;margin-top:8px}
+.seg.largo button{flex:1}
+.esito{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums;margin-top:8px;min-height:20px}
+.esito b{color:var(--text);font-weight:500}
+.term{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.chip-btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+dialog.foglio{border:0;padding:0;margin:auto auto 0;width:100%;max-width:560px;max-height:88vh;border-radius:16px 16px 0 0;background:var(--surface);color:var(--text)}
+dialog.foglio::backdrop{background:rgba(0,0,0,.45)}
+.foglio-int{padding:18px 16px calc(16px + env(safe-area-inset-bottom));overflow-y:auto;max-height:88vh}
+.foglio-int h2{font-size:17px;font-weight:500;color:var(--text);margin:0 0 10px;outline:none}
+.foglio-int p{font-size:14px;margin:0 0 10px}
+.foglio-int b{font-weight:500}
+.foglio-int label{display:block;font-size:13px;color:var(--text2);margin:10px 0 4px}
+.foglio-int input[type=date],.foglio-int select{font:inherit;font-size:16px;color:var(--text);background:var(--surface2);border:.5px solid var(--axis);border-radius:8px;padding:8px;min-height:40px;width:100%}
+@media (prefers-reduced-motion:reduce){.p-f{transition:none}}
+</style>
+</head>
+<body>
+<main id="app"><p class="vuoto">Carico i dati…</p></main>
+<nav class="barra" aria-label="Sezioni"><div class="barra-int">
+  <a href="#oggi" id="nav-oggi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Oggi</a>
+  <a href="#mercati" id="nav-mercati"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16.5l5.5-6.5 4 3.5L20 5.5"/><path d="M3 20.5h18"/></svg>Mercati</a>
+  <a href="#strategia" id="nav-strategia"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v5.4m0 5.2V20M12 4v1.4m0 5.2V20M19 4v9.4m0 5.2V20"/><circle cx="5" cy="12" r="2.6"/><circle cx="12" cy="8" r="2.6"/><circle cx="19" cy="16" r="2.6"/></svg>Strategia</a>
+</div></nav>
+<dialog class="foglio" id="foglio" aria-labelledby="foglio-titolo"><div class="foglio-int" id="foglio-int"></div></dialog>
+<script src="../vendor/chart.umd.min.js"></script>
+<script src="../motore.js"></script>
+<script>
+"use strict";
+const app = document.getElementById("app");
+const stato = {dati: null, modo: "grezzi", scala: "lin", grafici: [], scrollElenco: 0};
+
+window.addEventListener("error", e => mostraErrore(e.message || String(e)));
+window.addEventListener("unhandledrejection", e => mostraErrore(String(e.reason && e.reason.message || e.reason)));
+function mostraErrore(msg) {
+  const d = document.createElement("div");
+  d.className = "errore";
+  d.textContent = "Errore: " + msg;
+  app.prepend(d);
+}
+
+/* ---------- formattazione ---------- */
+const MENO = "−";
+const nf = (x, d) => Number(x).toLocaleString("it-IT", {minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: "always"});
+function conSegno(x, d) {
+  const s = nf(Math.abs(x), d);
+  if (!/[1-9]/.test(s)) return s;                  /* niente "−0,0" */
+  return (x > 0 ? "+" : MENO) + s;
+}
+const pct = (x, d = 2) => x == null ? "–" : conSegno(x * 100, d) + "%";
+const pctNoSegno = (x, d = 2) => x == null ? "–" : nf(x * 100, d) + "%";
+const volp = x => x == null ? "–" : nf(x, 1) + "%";
+const sigma = z => z == null ? "–" : conSegno(z, 1) + "σ";
+const sgm = v => (Number.isInteger(v) ? nf(v, 0) : nf(v, 2)) + "σ";
+function decimaliPrezzo(p) { const a = Math.abs(p); return a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : 3; }
+const prezzo = p => p == null ? "–" : nf(p, decimaliPrezzo(p));
+const tickPrezzo = v => Number(v).toLocaleString("it-IT", {maximumFractionDigits: 3, useGrouping: "always"});
+function dataIt(s, opz) {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("it-IT", opz || {weekday: "short", day: "numeric", month: "short", year: "numeric"});
+}
+const dataBreve = s => dataIt(s, {day: "numeric", month: "short", year: "numeric"});
+function rapporto(x) {
+  if (!isFinite(x)) return "–";
+  return "×" + (x < 10 ? nf(x, 1) : nf(Math.round(x), 0));
+}
+/* "una seduta ogni N": più leggibile delle percentuali piccolissime */
+function ogni(p) {
+  if (!(p > 0)) return "mai";
+  const n = 1 / p;
+  if (n < 10) return nf(n, 1);
+  if (n < 1e4) return nf(Math.round(n), 0);
+  if (n < 1e6) return nf(Math.round(n / 1e3), 0) + " mila";
+  if (n < 1e9) return nf(n / 1e6, 1) + " mln";
+  return nf(n / 1e9, 1) + " mld";
+}
+const potenzaDi10 = v => v > 0 && Math.abs(Math.log10(v) - Math.round(Math.log10(v))) < 1e-9;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+/* ---------- densità ---------- */
+function lnGamma(z) {
+  const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+    -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+const normPdf = x => Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+function tPdf(x, nu) {
+  return Math.exp(lnGamma((nu + 1) / 2) - lnGamma(nu / 2) - 0.5 * Math.log(nu * Math.PI)
+    - (nu + 1) / 2 * Math.log(1 + x * x / nu));
+}
+/* t con varianza unitaria, come nel GARCH */
+function tStdPdf(x, nu) { const s = Math.sqrt((nu - 2) / nu); return tPdf(x / s, nu) / s; }
+
+/* ---------- colori e Chart.js ---------- */
+function colori() {
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  return {text: v("--text"), text2: v("--text2"), muted: v("--muted"), grid: v("--grid"), axis: v("--axis"),
+    surface: v("--surface"), s1: v("--s1"), s2: v("--s2"), s3: v("--s3"), neg: v("--neg")};
+}
+function alfa(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+function impostaChart() {
+  const c = colori();
+  Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = c.muted;
+  Chart.defaults.animation = false;
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.legend.display = false;
+  Object.assign(Chart.defaults.plugins.tooltip, {backgroundColor: c.text, titleColor: c.surface, bodyColor: c.surface,
+    padding: 8, cornerRadius: 6, displayColors: false, titleFont: {weight: "500"}});
+  return c;
+}
+function assi(c, extra = {}) {
+  const base = {grid: {color: c.grid, drawTicks: false}, border: {color: c.axis}, ticks: {padding: 6}};
+  return {x: {...base, grid: {display: false}, ...extra.x}, y: {...base, ...extra.y}};
+}
+function nuovoGrafico(id, config) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const g = new Chart(el, config);
+  stato.grafici.push(g);
+  return g;
+}
+/* un grafico creato dentro un riquadro chiuso o una scheda nascosta nasce senza dimensioni:
+   si ridisegna quando compare */
+function ridimensiona(el) { el.querySelectorAll("canvas").forEach(cv => { const g = Chart.getChart(cv); if (g) g.resize(); }); }
+function distruggi() { stato.grafici.forEach(g => g.destroy()); stato.grafici = []; }
+
+/* etichette per gli assi temporali: un mese sì e uno no, l'anno sotto gennaio */
+function tickMese(date) {
+  return function (val, i) {
+    const d = date[i];
+    if (!d || i === 0 || i > date.length - 8 || date[i - 1].slice(0, 7) === d.slice(0, 7)) return "";
+    const m = Number(d.slice(5, 7));
+    if (m % 2 === 0) return "";
+    const lab = dataIt(d, {month: "short"});
+    return m === 1 ? [lab, d.slice(0, 4)] : lab;
+  };
+}
+
+/* anteprima in docs/v2: dati, motore, libreria e icone stanno un livello sopra */
+const BASE = "../";
+
+/* ---------- caricamento ---------- */
+async function carica() {
+  const r = await fetch(BASE + "data.json", {cache: "no-store"});
+  if (r.status === 404) throw new Error("NODATA");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+/* storico completo di un mercato: una sola richiesta anche se lo chiedono più riquadri insieme */
+stato.attese = {};
+function caricaStoria(a) {
+  if (stato.storie[a.storia]) return Promise.resolve(stato.storie[a.storia]);
+  if (!stato.attese[a.storia]) {
+    stato.attese[a.storia] = fetch(BASE + a.storia, {cache: "no-store"})
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(st => (stato.storie[a.storia] = st))
+      .finally(() => { delete stato.attese[a.storia]; });
+  }
+  return stato.attese[a.storia];
+}
+async function avvia() {
+  try {
+    stato.dati = await carica();
+    stato.storie = {};
+    rotta();
+  } catch (e) {
+    distruggi();
+    app.innerHTML = e.message === "NODATA"
+      ? `<p class="vuoto">Dati non ancora generati.<br>Va avviato il workflow «Aggiorna dati» dalla scheda Actions del repository.</p>`
+      : `<p class="vuoto">Dati non caricati (${esc(e.message)}).<br><button class="btn" onclick="avvia()">Riprova</button></p>`;
+  }
+}
+
+/* ---------- elenco ---------- */
+function sparkline(valori) {
+  const v = valori.filter(x => x != null).slice(-60);
+  if (v.length < 2) return "";
+  const min = Math.min(...v), max = Math.max(...v), w = 64, h = 24, k = max - min || 1;
+  const pts = v.map((y, i) => `${(i / (v.length - 1) * w).toFixed(1)},${(h - 2 - (y - min) / k * (h - 4)).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 64 24" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+const ICONA_ALLERTA = `<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1 9.5 9h-9z" fill="currentColor"/></svg>`;
+function chipZ(z) {
+  if (z == null || Math.abs(z) < 2) return "";
+  return `<span class="chip" title="Movimento di ieri oltre 2σ">${ICONA_ALLERTA}${sigma(z)}</span>`;
+}
+function rigaAsset(a) {
+  if (a.stato === "errore") {
+    return `<button class="riga" disabled><span class="r-sx"><span class="r-nome">${esc(a.nome)}</span>
+      <span class="r-sub">Dati non disponibili</span></span></button>`;
+  }
+  const u = a.ultimo, cl = u.var > 0 ? "su" : u.var < 0 ? "giu" : "";
+  const volG = a.vol.garch_domani != null ? a.vol.garch_domani : a.vol.ewma;
+  const vecchio = a.stato === "vecchio" ? `<span class="chip">dati del ${dataIt(u.data, {day: "numeric", month: "short"})}</span>` : "";
+  return `<button class="riga" onclick="apri('${esc(a.simbolo)}')" aria-label="${esc(a.nome)}: ${prezzo(u.chiusura)}, ${pct(u.var)}">
+    <span class="r-sx"><span class="r-nome">${esc(a.nome)}</span>
+      <span class="r-sub"><span>vol ${volp(volG)}</span><span>z ${sigma(u.z)}</span>${chipZ(u.z)}${vecchio}</span></span>
+    ${sparkline(a.serie.chiusura)}
+    <span class="r-dx"><span class="r-prezzo">${prezzo(u.chiusura)}</span><span class="${cl}" style="font-size:13px">${pct(u.var)}</span></span>
+  </button>`;
+}
+
+/* ---------- pezzi comuni ---------- */
+const riga = (dt, dd) => `<dt>${dt}</dt><dd>${dd}</dd>`;
+const tessera = (l, v, s) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`;
+const termine = t => `<button class="term" onclick="apriInfo('glossario')">${t}</button>`;
+const comeSiLegge = k => `<button class="link" onclick="apriInfo('${k}')">Come si legge</button>`;
+const dataCorta = s => dataIt(s, {day: "numeric", month: "short", year: "2-digit"});
+const FRECCIA = `<svg class="p-f" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+/* una densità con la coda destra che non scende: il segno dell'app */
+const MARCHIO = `<svg viewBox="0 0 44 18" aria-hidden="true"><path d="M1 16.5C7 16.5 8.5 2 14 2s7 9.5 13 12c5 2 11 2.4 16 2.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+/* riquadro chiuso con una riga di sintesi; si apre al tocco e ricorda se è aperto */
+function piega(k, titolo, sintesi, corpo, idSintesi) {
+  return `<details class="card piega" data-k="${k}"${stato.aperte.has(k) ? " open" : ""}><summary><span class="p-t">${titolo}</span>
+    <span class="p-s"${idSintesi ? ` id="${idSintesi}"` : ""}>${sintesi}</span>${FRECCIA}</summary><div class="p-c">${corpo}</div></details>`;
+}
+function attivaPieghe() {
+  document.querySelectorAll("details.piega").forEach(d => d.addEventListener("toggle", () => {
+    if (d.open) stato.aperte.add(d.dataset.k); else stato.aperte.delete(d.dataset.k);
+    ricorda();
+    if (d.open) ridimensiona(d);
+  }));
+}
+function ultimaData() {
+  const d = stato.dati.asset.filter(a => a.ultimo).map(a => a.ultimo.data).sort();
+  return d.length ? d[d.length - 1] : null;
+}
+function testata(titolo, extra = "") {
+  const u = ultimaData(), marchio = titolo === "Fat Tail";
+  const nome = marchio ? `<button onclick="apriInfo('convessita')" aria-label="Fat Tail: convessità e code grasse">${MARCHIO}${titolo}</button>` : titolo;
+  return `<header class="testa"><div><h1${marchio ? ' class="marchio"' : ""}>${nome}</h1>
+    <p class="meta">${u ? "Chiusure fino a " + dataIt(u) : ""}</p></div>${extra}</header>`;
+}
+
+const PRESET = {
+  "Contrarian con trailing": {strategia: "contrarian", ingresso: "shock", lato: "long", k: 2, S: 2, T: 2, G: 0, H: 0},
+  "Contrarian classico": {strategia: "contrarian", ingresso: "shock", lato: "long", k: 2, S: 4, T: 0, G: 1, H: 10},
+  "Trend following": {strategia: "trend", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  "Trend su rottura": {strategia: "trend", ingresso: "rottura", Nr: 55, lato: "entrambi", k: 2, S: 2, T: 4, G: 0, H: 0},
+  "Combinata": {strategia: "combinata", ingresso: "shock", lato: "entrambi", k: 2, S: 2, T: 3, G: 0, H: 0},
+  /* dalla ricerca: l'unico esempio positivo in tutte le prove, con la σ usata nella ricerca */
+  "Trend following solo short": {strategia: "trend", ingresso: "shock", lato: "short", k: 2, S: 2, T: 3, G: 0, H: 0, sigma: "ewma"},
+};
+/* Finanziamento Fineco dei CFD su materie prime tenuti oltre la giornata: Euribor 1 mese (circa 2,2%)
+   + 2,95% annuo addebitato sui long; Euribor − 2,95% accreditato sugli short, cioè oggi un addebito
+   dello 0,75%. */
+stato.lab = {...PRESET["Contrarian con trailing"], sigma: "garch", periodo: "tutto", costo: 0.10, rischio: 1,
+  N: 60, fase: "tutte", dirTrend: "tutte", indicatore: "forza", Nr: 55, finanz: 5.15, finanzShort: 0.75, capitale: 1000};
+/* spread di andata e ritorno di partenza per mercato, in %: KID Fineco sul gas 19 € per lato su
+   10.000 €; mark-up 0,10% per lato sul petrolio più lo spread del mercato */
+const COSTO_DEFAULT = {"NG=F": 0.4, "TTF=F": 0.4, "CL=F": 0.25, "BZ=F": 0.25, "GC=F": 0.15, "SI=F": 0.2, "HG=F": 0.2};
+/* lotti dei CFD Fineco: moltiplicatore = dollari per punto di prezzo */
+const LOTTI_FINECO = {"NG=F": {nome: "CFD Gas naturale di Fineco", molt: 500},
+  "CL=F": {nome: "CFD Petrolio di Fineco", molt: 50}, "BZ=F": {nome: "CFD Petrolio Brent di Fineco", molt: 50}};
+const meseIt = m => /^\d{4}-\d{2}$/.test(m || "") ? dataIt(m + "-01", {month: "long", year: "numeric"}) : "–";
+const finTesto = v => v < 0 ? `accredito ${nf(-v, 2)}%` : `${nf(v, 2)}%`;
+
+const nomiFase = p => p.indicatore === "autocorrelazione"
+  ? {laterale: "Ritorno alla media", intermedia: "Neutra", trend: "Persistenza"}
+  : {laterale: "Laterale", intermedia: "Intermedia", trend: "Trend"};
+stato.storie = {};
+stato.labGrafici = null;
+let timerLab = null;
+
+/* ---------- memoria sul telefono ---------- */
+const CHIAVE_MEMORIA = "fattail-v1";
+const CHIAVI_REGOLA = ["strategia", "ingresso", "lato", "k", "Nr", "S", "T", "G", "H", "sigma", "costo", "finanz", "finanzShort",
+  "rischio", "capitale", "N", "fase", "dirTrend", "indicatore"];
+/* regola seguita finché non se ne sceglie un'altra */
+const REGOLA_PREDEFINITA = {sim: "NG=F", p: {...stato.lab, ...PRESET["Trend following solo short"], costo: COSTO_DEFAULT["NG=F"]}};
+(function ripristina() {
+  let m = {};
+  try { m = JSON.parse(localStorage.getItem(CHIAVE_MEMORIA)) || {}; } catch (e) { m = {}; }
+  stato.seguita = m.seguita && m.seguita.p && m.seguita.sim ? m.seguita : REGOLA_PREDEFINITA;
+  Object.assign(stato.lab, m.lab || stato.seguita.p, {periodo: "tutto"});
+  stato.labSim = m.labSim || stato.seguita.sim;
+  stato.labMercato = stato.labSim;
+  stato.labScheda = "regola";
+  stato.posizione = m.posizione && m.posizione.sim && m.posizione.data ? m.posizione : null;
+  stato.diario = Array.isArray(m.diario) ? m.diario : [];
+  stato.aperte = new Set(Array.isArray(m.aperte) ? m.aperte : []);
+  stato.grappoli = m.grappoli || "1";
+  if (m.modo) stato.modo = m.modo;
+  if (m.scala) stato.scala = m.scala;
+})();
+function ricorda() {
+  try {
+    localStorage.setItem(CHIAVE_MEMORIA, JSON.stringify({lab: stato.lab, labSim: stato.labSim, seguita: stato.seguita,
+      posizione: stato.posizione, diario: stato.diario, aperte: [...stato.aperte], grappoli: stato.grappoli,
+      modo: stato.modo, scala: stato.scala}));
+  } catch (e) { /* senza memoria l'app funziona lo stesso, ma non ricorda le scelte */ }
+}
+
+/* ---------- regole: nome e descrizione ---------- */
+const LATI = {long: "solo long", short: "solo short", entrambi: "long e short", curva: "nel verso della curva"};
+const TIPI = {contrarian: "Contrarian", trend: "Trend following", combinata: "Combinata"};
+function nomeRegola(p) {
+  for (const [nome, r] of Object.entries(PRESET)) if (Object.keys(r).every(k => p[k] === r[k])) return nome;
+  return null;
+}
+const titoloRegola = p => nomeRegola(p) || `${TIPI[p.strategia]}, ${LATI[p.lato]}`;
+function partiRegola(p) {
+  const uscite = [`stop ${sgm(p.S)}`];
+  if (p.T > 0) uscite.push(`trailing ${sgm(p.T)}`);
+  if (p.G > 0) uscite.push(`target ${sgm(p.G)}`);
+  if (p.H > 0) uscite.push(`${p.H} sedute al massimo`);
+  return {ingresso: p.ingresso === "rottura" ? `rottura di ${p.Nr} sedute` : `seduta oltre ${sgm(p.k)}`, uscite: uscite.join(", ")};
+}
+function descriviRegole(p) {
+  const verso = (lato, dir) => (lato === 1 ? "acquisto" : "vendita allo scoperto") + (p.ingresso === "rottura"
+    ? ` alla chiusura ${dir === "giu" ? "sotto il minimo" : "sopra il massimo"} delle ${p.Nr} sedute precedenti`
+    : ` alla chiusura di una seduta che ${dir === "giu" ? "scende" : "sale"} oltre ${sgm(p.k)}`);
+  const ingressiDi = regola => {
+    const v = [], cLong = regola === "contrarian" ? "giu" : "su", cShort = regola === "contrarian" ? "su" : "giu";
+    if (p.lato === "curva") return `${verso(1, cLong)} se la curva è in backwardation; ${verso(-1, cShort)} se è in contango`;
+    if (p.lato !== "short") v.push(verso(1, cLong));
+    if (p.lato !== "long") v.push(verso(-1, cShort));
+    return v.join("; ");
+  };
+  const maiuscola = t => t.charAt(0).toUpperCase() + t.slice(1);
+  const ingressi = [];
+  if (p.strategia === "combinata") {
+    const nomi = nomiFase(p);
+    ingressi.push(`Nella fase «${nomi.laterale.toLowerCase()}»: ${ingressiDi("contrarian")}`);
+    ingressi.push(`Nella fase «${nomi.trend.toLowerCase()}»: ${ingressiDi("trend")}. Nella fase «${nomi.intermedia.toLowerCase()}» nessun ingresso`);
+  } else {
+    ingressi.push(maiuscola(ingressiDi(p.strategia)));
+    if (p.fase !== "tutte") ingressi.push(`Solo nella fase «${nomiFase(p)[p.fase].toLowerCase()}»`);
+  }
+  if (p.dirTrend !== "tutte") ingressi.push(`Solo ${p.dirTrend === "favore" ? "a favore del" : "contro il"} trend delle ultime ${p.N} sedute`);
+  const uscite = [`con una perdita di ${sgm(p.S)} dall'ingresso`];
+  if (p.T > 0) uscite.push(`con un ritorno di ${sgm(p.T)} dal punto migliore`);
+  if (p.G > 0) uscite.push(`con un guadagno di ${sgm(p.G)}`);
+  if (p.H > 0) uscite.push(`dopo ${p.H} sedute`);
+  return `${ingressi.join(". ")}. Uscita alla chiusura ${uscite.join(", ").replace(/, ([^,]*)$/, " o $1")}.`;
+}
+
+/* ---------- spiegazioni: un foglio che sale dal basso ---------- */
+const INFO = {
+  glossario: ["σ, z e R", `
+    <p><b>σ.</b> Deviazione standard prevista del rendimento di una seduta. Con σ al 3%, un movimento del 6% vale 2σ.</p>
+    <p><b>z.</b> Rendimento di una seduta diviso per la σ prevista la sera prima. Oltre ±2 la seduta è insolita.</p>
+    <p><b>R.</b> Risultato di un'operazione in multipli della perdita allo stop iniziale, al netto dei costi. −1R è la perdita allo stop; +3R è un guadagno pari a tre volte quella perdita.</p>`],
+  oggi: ["Come si legge «Oggi»", `
+    <p>La regola seguita lavora sulle chiusure giornaliere. La soglia vale per la prossima chiusura: se il prezzo chiude oltre, l'ingresso è a quel prezzo. Per gas e petrolio del NYMEX la chiusura è il regolamento delle 14:30 di New York, di norma le 20:30 in Italia.</p>
+    <p>Dopo l'ingresso, «Segna la posizione» fa seguire la posizione all'app: stop e trailing stop restano fissati con la σ del giorno d'ingresso e a ogni aggiornamento compare il livello d'uscita.</p>
+    <p><b>Dimensione.</b> Rischio in euro diviso per la distanza dello stop. Il rischio è la quota di capitale persa se scatta lo stop iniziale.</p>
+    <p>L'app non invia ordini e non conosce le posizioni reali: segue solo quella segnata qui.</p>`],
+  mercati: ["Come si legge l'elenco", `
+    <p><b>vol.</b> Volatilità annualizzata prevista per la prossima seduta: dal GARCH, o dall'EWMA dove il GARCH non è stimato.</p>
+    <p><b>z.</b> Rendimento dell'ultima seduta diviso per la σ prevista la sera prima. Il triangolo segnala una seduta oltre 2σ.</p>
+    <p>La linea è la chiusura delle ultime 60 sedute.</p>`],
+  domani: ["Chiusura di domani", `
+    <p>Distribuzione prevista della prossima chiusura, senza drift: σ del GARCH per la prossima seduta e t di Student con i gradi di libertà stimati. Dove il GARCH non è stimato: gaussiana con la σ EWMA.</p>
+    <p>La gaussiana tratteggiata ha la stessa σ e code più sottili: il confronto al 98% mostra quanto pesa la coda.</p>`],
+  vol: () => { const p = stato.dati.parametri; return ["Volatilità", `
+    <p>Valori annualizzati. La realizzata guarda indietro; EWMA e GARCH sono previsioni.</p>
+    <p><b>Realizzata.</b> Radice della media dei rendimenti al quadrato delle ultime ${p.finestra_realizzata} sedute, per √${p.giorni_anno}.</p>
+    <p><b>EWMA.</b> Media esponenziale dei rendimenti al quadrato con λ = ${nf(p.lambda_ewma, 2)}, come in RiskMetrics. Reagisce in fretta e non ha un livello di lungo periodo.</p>
+    <p><b>GJR-GARCH(1,1) con t di Student.</b> La varianza di domani dipende da una base (ω), dallo shock di oggi (α), da un termine in più per gli shock negativi (γ) e dalla varianza di oggi (β). Persistenza = α + γ/2 + β. L'emivita è il numero di sedute in cui uno shock di volatilità si dimezza. γ può essere negativo: sulle commodity spesso sono i rialzi ad alzare la volatilità.</p>
+    <p><b>Implicita.</b> VIX, VXN, OVX e GVZ sono volatilità implicite a 30 giorni (OVX e GVZ dalle opzioni sugli ETF USO e GLD). La differenza con il GARCH a ${p.orizzonte_mese} sedute misura in modo approssimato il premio per il rischio di varianza.</p>`]; },
+  grappoli: ["Grappoli di volatilità", `
+    <p>Barre: rendimenti giornalieri. Linee: fascia di ±2σ prevista la sera prima. Le sedute grandi arrivano a gruppi e la fascia si allarga con loro.</p>
+    <p>Sotto, l'autocorrelazione per ritardi da 1 a 60 sedute: dei rendimenti in valore assoluto (quanto si muove il prezzo) e dei rendimenti con il segno (in che verso). Dentro la fascia grigia, ±2/√n, è rumore.</p>
+    <p>La soglia dell'ultima riga è due deviazioni standard dei rendimenti di tutta la storia: una misura senza modello di quanto le sedute grandi stanno vicine tra loro.</p>`],
+  curva: ["Curva e scadenze", `
+    <p>Chiusure dei prossimi contratti mensili. Contango: i contratti lontani costano di più. Backwardation: costano di meno. Sul gas la curva ha anche un andamento stagionale: i mesi invernali costano di più.</p>
+    <p><b>Roll.</b> In contango il prezzo del contratto tenuto tende a scendere verso quello del contratto in scadenza: è un costo per chi è long e un guadagno per chi è short. In backwardation succede il contrario.</p>
+    <p><b>Rinnovo.</b> Il CFD Fineco segue un contratto alla volta e si chiude d'ufficio nell'ultimo giorno di negoziazione: per il gas lo stesso giorno del future, per il petrolio due giorni lavorativi prima. Per restare in posizione va riaperto sul contratto successivo, pagando di nuovo lo spread.</p>
+    <p><b>Serie rinnovata.</b> Per gas Henry Hub e WTI statistiche e strategie usano il rendimento di chi rinnova, non la serie continua, che nel giorno del cambio salta da un contratto all'altro. Fino al 5 aprile 2024 i rendimenti vengono dai prezzi di regolamento NYMEX pubblicati dall'EIA; dopo, dalla serie continua di Yahoo, con il giorno del cambio preso dal nuovo contratto se ancora quotato, altrimenti messo a zero. «Sempre long» confronta le due serie: la differenza è quanto il rinnovo ha tolto o dato a chi era long.</p>`],
+  dist: () => { const p = stato.dati.parametri; return ["Distribuzione e code", `
+    <p>Barre: frequenza osservata dei rendimenti, in σ. Linee: gaussiana e t di Student. In scala logaritmica si vedono le code.</p>
+    <p><b>Grezzi.</b> Rendimenti divisi per la deviazione standard di tutto il campione: è la distribuzione incondizionata. <b>Divisi per σ GARCH.</b> Ogni rendimento diviso per la σ prevista quel giorno: resta la coda che il GARCH non spiega.</p>
+    <p><b>Le code.</b> Ogni quante sedute il rendimento ha superato la soglia, contro la t di Student e la gaussiana. «Volte» è la frequenza osservata divisa per quella gaussiana.</p>
+    <p><b>Indice di coda α (Hill).</b> Stimato sul ${nf(p.quote_hill.q25 * 100, 1)}% delle sedute più estreme; tra parentesi l'intervallo usando l'1% e il 5%. Più è basso, più la coda è grassa. Sotto 4 il momento quarto non è finito.</p>
+    <p><b>VaR ed ES all'1%.</b> Perdita giornaliera superata nell'1% delle sedute e perdita media in quelle sedute, dalla storia.</p>
+    <p><b>Giorno più estremo.</b> Quota della seduta più estrema sulla somma dei rendimenti alla quarta: se è alta, la curtosi del campione dipende da quella seduta.</p>`]; },
+  prezzo: ["Prezzo", `
+    <p>Chiusure dell'ultimo anno. Per gas Henry Hub e WTI i livelli passati sono riportati al contratto di oggi: le variazioni sono quelle di chi ha tenuto il CFD, i livelli possono differire dai prezzi storici.</p>`],
+  regola: ["Come funziona una regola", `
+    <p>La regola si applica alle chiusure giornaliere, una posizione alla volta. L'ingresso avviene alla chiusura che supera la soglia; l'uscita alla prima chiusura oltre stop, trailing stop, target o durata massima. Lo stop scatta alla chiusura: una perdita può superare 1R, come con un gap.</p>
+    <p><b>σ.</b> È quella prevista per la seduta dopo l'ingresso e resta fissa per tutta l'operazione. Con σ GARCH i parametri sono stimati su tutto lo storico, quindi gli ingressi usano un po' di informazione dal futuro; con σ EWMA no.</p>
+    <p><b>Costi.</b> Spread di andata e ritorno a ogni operazione e, sulle serie rinnovate, a ogni scadenza del CFD attraversata. Finanziamento Fineco per ogni seduta tenuta: Euribor a 1 mese + 2,95% annuo sui long; sugli short accredito di Euribor − 2,95%, che con l'Euribor sotto il 2,95% diventa un addebito.</p>
+    <p><b>Verso della curva.</b> Solo short quando la curva è in contango e solo long in backwardation, letta alla chiusura d'ingresso.</p>
+    <p>«Segui questa regola» porta la regola nella pagina Oggi, con capitale e rischio della scheda Oggi.</p>`],
+  fasi: ["Fasi di mercato", `
+    <p><b>Forza del trend.</b> Rendimento delle ultime N sedute diviso per quello di una passeggiata casuale con la stessa volatilità. Sotto 0,5 la fase è laterale, oltre 1 è di trend; su una passeggiata casuale ogni fase copre circa un terzo delle sedute. Le soglie sono fisse, non scelte sui risultati.</p>
+    <p><b>Autocorrelazione.</b> Variance ratio: varianza dei rendimenti a 5 sedute contro cinque volte quella giornaliera. Sotto 1 i movimenti tendono a rientrare, sopra 1 a proseguire; le soglie sono i terzili di una passeggiata casuale con la stessa finestra.</p>
+    <p>La strategia combinata usa il contrarian nella prima fase e il trend following nella terza, con le stesse uscite. Nella tabella una differenza conta solo se supera due volte il suo errore standard; altrimenti è «nel rumore».</p>`],
+  risultati: ["Come si leggono i risultati", `
+    <p><b>R.</b> Risultato in multipli della perdita allo stop iniziale, al netto dei costi. <b>t.</b> Media divisa per il suo errore standard: sotto 2 il risultato può uscire anche per caso.</p>
+    <p><b>Profit factor.</b> Somma dei guadagni divisa per la somma delle perdite. <b>Asimmetria.</b> Positiva: pochi guadagni grandi e molte perdite piccole, cioè un profilo convesso. Negativa: il contrario. <b>Discesa massima.</b> La perdita più ampia dal massimo del risultato cumulato.</p>
+    <p>Per non scegliere parametri fortunati, la regola deve reggere su «Prima metà» e «Seconda metà» (in Avanzate) e con soglie vicine.</p>
+    <button class="link" onclick="apriInfo('convessita')">Convessità e code grasse</button>`],
+  volreg: ["Volatilità all'ingresso", `
+    <p>Volatilità relativa: la σ fissata all'ingresso divisa per la mediana delle σ delle 252 sedute precedenti. Bassa, media e alta sono i tre terzi della sua storia su questo mercato.</p>
+    <p>La differenza tra alta e bassa conta solo se supera due volte il suo errore standard.</p>`],
+  montecarlo: ["Prossime 200 operazioni", `
+    <p>4.000 percorsi da 200 operazioni pescate a caso, con reinserimento, dalle operazioni passate della regola. A ogni operazione si rischia la quota di capitale scelta nella scheda Oggi.</p>
+    <p>Limiti: le operazioni sono trattate come indipendenti; non può uscire una perdita peggiore della peggiore già vista; le serie di perdite consecutive sono sottostimate.</p>`],
+  dati: () => { const d = stato.dati; return ["Dati e limiti", `
+    <p>Fonte: ${esc(d.fonte)}. Aggiornamento automatico ogni mattina, da martedì a sabato, con le chiusure del giorno prima. Ultimo aggiornamento: ${new Date(d.generato).toLocaleString("it-IT", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"})}.</p>
+    <p>Rendimenti logaritmici tra chiusure consecutive, dal ${dataBreve(d.inizio)} o dall'inizio della serie.</p>
+    <p>Gas Henry Hub e WTI: serie rinnovata a ogni scadenza del CFD. Brent, TTF e metalli: serie del future più vicino senza rettifica per il cambio di contratto; nei giorni di cambio compaiono salti che non sono rendimenti veri, soprattutto sul TTF.</p>
+    <p>I dati possono contenere errori o arrivare in ritardo. L'app non invia ordini e non è una consulenza finanziaria.</p>`]; },
+  convessita: ["Convessità e code grasse", `
+    <p class="piccolo">Rendimento di tre profili al variare del mercato. Curve di esempio sul lato del rialzo; per una posizione short i due lati si scambiano.</p>
+    <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Lineare</span>
+      <span><i class="lin" style="border-color:var(--s2)"></i>Concava (fragile)</span>
+      <span><i class="lin" style="border-color:var(--s3)"></i>Convessa (antifragile)</span></div>
+    <div class="grafico" style="height:300px"><canvas id="gConv" role="img" aria-label="Rendimento di un profilo convesso, di uno lineare e di uno concavo al variare del mercato"></canvas></div>
+    <table style="margin:6px 0 14px"><thead><tr><th>Mercato</th><th>−40%</th><th>+40%</th></tr></thead><tbody>
+      <tr><td>Convessa</td><td>−10%</td><td>+86%</td></tr><tr><td>Lineare</td><td>−40%</td><td>+40%</td></tr><tr><td>Concava</td><td>−54%</td><td>+10%</td></tr></tbody></table>
+    <p><b>Convessa.</b> Perdita fissa, guadagno aperto: molte perdite piccole, pochi guadagni grandi.</p>
+    <p><b>Concava.</b> Guadagno fisso, perdita aperta: molti guadagni piccoli, poche perdite grandi.</p>
+    <p><b>Code grasse.</b> I movimenti estremi arrivano più spesso di quanto prevede la gaussiana: lo mostra il riquadro «Distribuzione e code» di ogni mercato. Il profilo convesso li incassa, quello concavo li paga.</p>
+    <p><b>Il costo.</b> Finché il movimento grande non arriva, il profilo convesso perde poco ma spesso. Conviene solo dove le code sono abbastanza grasse da ripagare quelle perdite: la pagina Strategia lo verifica regola per regola.</p>
+    <p><b>Nell'app.</b> Stop e trailing stop senza target danno un profilo convesso (Trend following). Target vicino e stop largo danno un profilo concavo (Contrarian classico). In Risultati, asimmetria positiva vuol dire profilo convesso.</p>`],
+};
+const foglio = document.getElementById("foglio");
+function pulisciFoglio() { if (stato.gConv) { stato.gConv.destroy(); stato.gConv = null; } }
+function apriFoglio(titolo, corpo) {
+  pulisciFoglio();
+  const int = document.getElementById("foglio-int");
+  int.innerHTML = `<h2 id="foglio-titolo" tabindex="-1" autofocus>${titolo}</h2>${corpo}<button class="azione sec" onclick="chiudiFoglio()">Chiudi</button>`;
+  if (!foglio.open) foglio.showModal();
+  int.scrollTop = 0;
+}
+function chiudiFoglio() { if (foglio.open) foglio.close(); pulisciFoglio(); }
+foglio.addEventListener("click", e => { if (e.target === foglio) chiudiFoglio(); });
+foglio.addEventListener("close", () => { if (!foglio.open) pulisciFoglio(); });
+function apriInfo(k) {
+  const v = INFO[k], [titolo, corpo] = typeof v === "function" ? v() : v;
+  apriFoglio(titolo, corpo);
+  if (k === "convessita") graficoConvessita();
+}
+
+/* I tre profili: lineare y = x; convesso con perdita fissa del 10% e guadagno che cresce con il
+   quadrato del rialzo; concavo con guadagno fisso del 10% e perdita che cresce con il quadrato del
+   ribasso. Sono curve di esempio. */
+function graficoConvessita() {
+  const cv = document.getElementById("gConv");
+  if (!cv) return;
+  const c = impostaChart();
+  const conv = x => -10 + 0.06 * Math.max(x, 0) ** 2, conc = x => 10 - 0.04 * Math.min(x, 0) ** 2;
+  const xs = Array.from({length: 101}, (_, i) => i - 50), pari = Math.sqrt(10 / 0.06);
+  const linea = (nome, colore, f) => ({label: nome, data: xs.map(x => ({x, y: f(x)})), borderColor: colore, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4});
+  const punti = [
+    {x: -40, y: conv(-40), colore: c.s3, testo: "Perdita fissa −10%", dx: -24, dy: -15, align: "left"},
+    {x: 40, y: conv(40), colore: c.s3, testo: "Guadagno aperto +86%", dx: -10, dy: 0, align: "right"},
+    {x: pari, y: 0, colore: c.s3, testo: "Pareggio", dx: 9, dy: 13, align: "left"},
+    {x: -40, y: conc(-40), colore: c.s2, testo: "Crollo −54%", dx: 10, dy: 0, align: "left"},
+  ];
+  const nomi = [
+    {x: 47.4, y: conv(47.4), testo: "Convessa", dx: -9, dy: 0, align: "right", forte: true},
+    {x: 50, y: 30, testo: "Lineare", dx: -3, dy: 0, align: "right", forte: true},
+    {x: 50, y: 10, testo: "Concava", dx: -3, dy: 12, align: "right", forte: true},
+  ];
+  const etichette = {id: "etichette", afterDatasetsDraw(ch) {
+    const ctx = ch.ctx, X = ch.scales.x, Y = ch.scales.y;
+    ctx.save();
+    ctx.font = `11px ${Chart.defaults.font.family}`;
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    for (const e of [...punti, ...nomi]) {
+      const px = X.getPixelForValue(e.x) + e.dx, py = Y.getPixelForValue(e.y) + e.dy;
+      ctx.textAlign = e.align;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = c.surface;
+      ctx.strokeText(e.testo, px, py);
+      ctx.fillStyle = e.forte ? c.text : c.text2;
+      ctx.fillText(e.testo, px, py);
+    }
+    ctx.restore();
+  }};
+  stato.gConv = new Chart(cv, {type: "line", data: {datasets: [
+      linea("Lineare", c.s1, x => x), linea("Concava", c.s2, conc), linea("Convessa", c.s3, conv),
+      {data: punti.map(p => ({x: p.x, y: p.y})), showLine: false, pointRadius: 5, pointHoverRadius: 5,
+        pointBackgroundColor: punti.map(p => p.colore), pointBorderColor: c.surface, pointBorderWidth: 2}]},
+    options: {parsing: false, interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex < 3, callbacks: {
+        title: it => it.length ? `Mercato ${conSegno(it[0].raw.x, 0)}%` : "",
+        label: it => `${it.dataset.label}: ${conSegno(it.raw.y, 0)}%`}}},
+      scales: assi(c, {
+        x: {type: "linear", min: -50, max: 50, title: {display: true, text: "Variazione del mercato", color: c.muted, font: {size: 11}},
+          grid: {display: true, drawTicks: false, color: ctx => ctx.tick && ctx.tick.value === 0 ? c.axis : "transparent"},
+          ticks: {stepSize: 25, padding: 6, callback: v => v === 0 ? "0" : conSegno(v, 0) + "%"}},
+        y: {min: -100, max: 150, grid: {drawTicks: false, color: ctx => ctx.tick && ctx.tick.value === 0 ? c.axis : c.grid},
+          ticks: {stepSize: 50, padding: 6, callback: v => v === 0 ? "0" : conSegno(v, 0) + "%"}}})},
+    plugins: [etichette]});
+}
+
+/* ---------- cosa dice la regola dopo l'ultima chiusura ---------- */
+const MOTIVI = {trailing: "trailing stop", stop: "stop iniziale", target: "target", durata: "durata massima"};
+/* la posizione segnata dall'utente, seguita con le uscite della regola a partire dalla chiusura d'ingresso */
+function posizionePersonale(st, p, pos) {
+  const i = st.date.indexOf(pos.data);
+  if (i < 0) return null;
+  return simulaStrategia(st, {...p, periodo: "tutto", ingressoForzato: {i, lato: pos.lato}}).ops[0] || null;
+}
+function htmlDimensione(a, p, s1, P) {
+  const rischio = p.capitale * p.rischio / 100, stopPct = p.S * s1, ctrv = rischio / stopPct;
+  let html = `<dl class="kv">${riga(`Rischio: ${nf(p.rischio, 2)}% di ${nf(p.capitale, 0)} €`, nf(rischio, 2) + " €")}
+    ${riga(`Stop a ${sgm(p.S)}`, pctNoSegno(stopPct, 1) + " dal prezzo")}
+    ${riga("Controvalore massimo", nf(ctrv, 0) + " €")}</dl>`;
+  const lotto = LOTTI_FINECO[a.simbolo];
+  if (lotto) {
+    const cambio = stato.dati.cambio && stato.dati.cambio.EURUSD;
+    const valLotto = lotto.molt * P / (cambio || 1), rischioLotto = valLotto * stopPct, troppo = valLotto > ctrv * 1.05;
+    html += `<div class="${troppo ? "avviso" : "regola"}">Un lotto del ${lotto.nome} vale circa ${nf(valLotto, 0)} €: con questo stop il rischio è ${nf(rischioLotto, 0)} €, il ${pctNoSegno(rischioLotto / p.capitale, 1)} del capitale${troppo ? ", oltre il limite scelto." : "."}</div>`;
+  }
+  return html;
+}
+function htmlScadenza(a) {
+  const rt = a.rettifica, cv = a.curva, v = [];
+  if (rt && rt.prossimo_roll) v.push(`CFD di ${meseIt(rt.prossimo_roll.consegna)}: chiusura d'ufficio il ${dataBreve(rt.prossimo_roll.data)}. Per restare in posizione va riaperto sul contratto successivo, con un nuovo spread.`);
+  if (cv) v.push(`Curva in ${cv.struttura}: il passaggio al contratto successivo favorisce ${cv.struttura === "contango" ? "lo short" : "il long"} (secondo contratto ${pct(cv.spread12, 1)} sul primo).`);
+  return v.map(t => `<p class="piccolo" style="margin-top:8px">${t}</p>`).join("");
+}
+/* personale: nella pagina Oggi, dove conta la posizione segnata dall'utente */
+function htmlSegnale(a, st, p, personale) {
+  const n = st.c.length, P = st.c[n - 1], ultima = st.date[n - 1];
+  const ris = simulaStrategia(st, {...p, periodo: "tutto"}), z = ris.daZero;
+  const pos = personale && stato.posizione && stato.posizione.sim === a.simbolo ? stato.posizione : null;
+  const op = pos ? posizionePersonale(st, p, pos) : null;
+  const verso = l => l === 1 ? "Long" : "Short";
+  if (pos && op && op.motivo === "aperta") {
+    return `<p class="segnale">Uscita se la prossima chiusura è ${op.lato === 1 ? "sotto" : "sopra"} ${prezzo(op.livello)}</p>
+      <dl class="kv">${riga(`${verso(op.lato)} dalla chiusura del ${dataBreve(pos.data)}`, prezzo(st.c[op.ie]))}
+        ${riga(`Ultima chiusura, ${dataBreve(ultima)}`, prezzo(P))}
+        ${riga("Distanza dall'uscita", pct(op.livello / P - 1, 1))}
+        ${op.target ? riga("Target", prezzo(op.target)) : ""}
+        ${op.restanti != null ? riga("Sedute rimaste", op.restanti) : ""}
+        ${riga(`Risultato finora, in ${termine("R")}`, conSegno(op.R, 2) + "R")}
+        ${op.rinnovi ? riga("Rinnovi a scadenza", op.rinnovi) : ""}</dl>
+      ${op.rinnovi ? `<p class="piccolo" style="margin-top:6px">Dopo un rinnovo i prezzi passati sono riportati al contratto di oggi.</p>` : ""}
+      ${htmlScadenza(a)}
+      <button class="link" onclick="togliPosizione()">Togli la posizione</button>`;
+  }
+  if (pos && op) {
+    return `<p class="segnale">Uscita scattata alla chiusura del ${dataBreve(st.date[op.iu])} a ${prezzo(st.c[op.iu])}</p>
+      <dl class="kv">${riga(`${verso(op.lato)} dalla chiusura del ${dataBreve(pos.data)}`, prezzo(st.c[op.ie]))}
+        ${riga("Motivo dell'uscita", MOTIVI[op.motivo] || op.motivo)}
+        ${riga(`Risultato, in ${termine("R")}`, conSegno(op.R, 2) + "R")}
+        ${riga("Risultato sul controvalore", pct(op.pct, 1))}</dl>
+      <button class="azione" onclick="archiviaPosizione()">Chiudi e scrivi nel diario</button>
+      <button class="link" onclick="togliPosizione()">Togli senza scrivere</button>`;
+  }
+  let html = "";
+  if (pos) html += `<div class="avviso">La posizione segnata il ${dataBreve(pos.data)} non si può seguire: la data è fuori dallo storico. <button class="link" onclick="togliPosizione()">Togli la posizione</button></div>`;
+  if (personale && ris.segnaleUltima) {
+    html += `<div class="avviso">Ingresso ${ris.segnaleUltima === 1 ? "long" : "short"} scattato alla chiusura del ${dataBreve(ultima)} a ${prezzo(P)}.
+      <button class="azione" onclick="segnaPosizione(${ris.segnaleUltima}, '${ultima}')">Segna la posizione come aperta</button></div>`;
+  }
+  if (!z || !z.regola) {
+    html += `<p class="segnale">Nessun ingresso possibile alla prossima chiusura</p>
+      <p class="nota">Fase di oggi: ${z && z.fase ? nomiFase(p)[z.fase].toLowerCase() : "non calcolabile"}. In questa fase la regola resta ferma.</p>`;
+  } else if (!z.long && !z.short) {
+    html += `<p class="segnale">Nessun ingresso possibile alla prossima chiusura</p><p class="nota">I filtri scelti escludono entrambi i versi.</p>`;
+  } else {
+    const frase = (nome, s) => `${nome} se la prossima chiusura è ${s.sopra ? "sopra" : "sotto"} ${prezzo(s.prezzo)}`;
+    html += `<p class="segnale">${[z.short ? frase("Short", z.short) : "", z.long ? frase("Long", z.long) : ""].filter(Boolean).join("<br>")}</p>
+      <dl class="kv">${riga(`Ultima chiusura, ${dataBreve(ultima)}`, prezzo(P))}
+        ${z.short ? riga("Distanza dalla soglia short", pct(z.short.prezzo / P - 1, 1)) : ""}
+        ${z.long ? riga("Distanza dalla soglia long", pct(z.long.prezzo / P - 1, 1)) : ""}</dl>`;
+  }
+  if (z && z.sigma) html += `<h3 style="font-size:14px;margin-top:14px">Dimensione di un nuovo ingresso</h3>${htmlDimensione(a, p, z.sigma, P)}`;
+  html += htmlScadenza(a);
+  const ult = ris.ops.length ? ris.ops[ris.ops.length - 1] : null;
+  if (!personale && ult && ult.motivo === "aperta") {
+    html += `<p class="piccolo" style="margin-top:8px">Seguita dall'inizio, la regola è ${ult.lato === 1 ? "long" : "short"} dal ${dataBreve(st.date[ult.ie])}: ${conSegno(ult.R, 2)}R finora, uscita con una chiusura ${ult.lato === 1 ? "sotto" : "sopra"} ${prezzo(ult.livello)}.</p>`;
+  }
+  if (personale) html += `<button class="link" onclick="foglioPosizione()">Segna una posizione già aperta</button>`;
+  return html;
+}
+function storiaSeguita() {
+  const a = stato.dati.asset.find(x => x.simbolo === stato.seguita.sim);
+  return {a, st: a && a.storia ? stato.storie[a.storia] : null};
+}
+function segnaPosizione(lato, data) { stato.posizione = {sim: stato.seguita.sim, lato, data}; ricorda(); rotta(); }
+function togliPosizione() { stato.posizione = null; ricorda(); rotta(); }
+function archiviaPosizione() {
+  const pos = stato.posizione, {a, st} = storiaSeguita();
+  const op = pos && st ? posizionePersonale(st, stato.seguita.p, pos) : null;
+  if (op && op.motivo !== "aperta") {
+    stato.diario.push({sim: pos.sim, nome: a.nome, lato: pos.lato, dal: pos.data, al: st.date[op.iu], R: Math.round(op.R * 100) / 100, motivo: op.motivo});
+  }
+  togliPosizione();
+}
+function foglioPosizione() {
+  const {st} = storiaSeguita();
+  if (!st) return;
+  const ultima = st.date[st.date.length - 1], lato = stato.seguita.p.lato;
+  apriFoglio("Posizione già aperta", `
+    <p>L'app segue la posizione con le uscite della regola, a partire dalla chiusura d'ingresso.</p>
+    <label for="pos-data">Chiusura d'ingresso</label>
+    <input type="date" id="pos-data" value="${ultima}" min="${st.date[0]}" max="${ultima}">
+    ${lato === "long" || lato === "short" ? `<input type="hidden" id="pos-lato" value="${lato === "long" ? 1 : -1}">`
+      : `<label for="pos-lato">Verso</label><select id="pos-lato"><option value="1">Long</option><option value="-1">Short</option></select>`}
+    <p class="piccolo" id="pos-errore" style="margin-top:8px" role="alert"></p>
+    <button class="azione" onclick="salvaPosizione()">Salva</button>`);
+}
+function salvaPosizione() {
+  const {st} = storiaSeguita();
+  const data = document.getElementById("pos-data").value, lato = Number(document.getElementById("pos-lato").value);
+  if (!st || !st.date.includes(data)) {
+    document.getElementById("pos-errore").textContent = "In quella data non c'è una chiusura: mercato chiuso o data fuori dallo storico.";
+    return;
+  }
+  chiudiFoglio();
+  segnaPosizione(lato, data);
+}
+
+/* ---------- pagina Oggi ---------- */
+async function paginaOggi() {
+  const d = stato.dati, seg = stato.seguita, a = d.asset.find(x => x.simbolo === seg.sim), parti = partiRegola(seg.p);
+  const altra = stato.posizione && stato.posizione.sim !== seg.sim ? d.asset.find(x => x.simbolo === stato.posizione.sim) : null;
+  app.innerHTML = `
+    ${testata("Fat Tail", `<button class="btn" onclick="avvia()">Ricarica</button>`)}
+    ${d.demo ? `<div class="avviso">Dati simulati di prova. Al primo aggiornamento automatico arrivano le chiusure vere.</div>` : ""}
+    <section class="card"><h3>${esc(titoloRegola(seg.p))}</h3>
+      <p class="nota">${esc(a ? a.nome : seg.sim)}. Ingresso: ${parti.ingresso}. Uscita: ${parti.uscite}.</p>
+      <div id="oggi-segnale"><p class="piccolo">Carico lo storico…</p></div>
+      <div class="fila"><button class="link" onclick="modificaSeguita()">Cambia regola o capitale</button>
+        <button class="link" onclick="apriInfo('oggi')">Come si legge</button></div>
+    </section>
+    ${altra ? `<div class="avviso">C'è una posizione segnata su ${esc(altra.nome)}, che non è più il mercato della regola seguita. <button class="link" onclick="togliPosizione()">Togli la posizione</button></div>` : ""}
+    ${htmlDiario()}
+    ${htmlMovimenti()}
+    <div class="fila" style="margin-top:10px"><button class="link" onclick="apriInfo('convessita')">Perché cercare la convessità</button>
+      <button class="link" onclick="apriInfo('dati')">Dati e limiti</button></div>`;
+  attivaPieghe();
+  const el = () => document.getElementById("oggi-segnale");
+  if (!a || !a.ultimo || !a.storia) {
+    el().innerHTML = `<div class="errore">Dati di ${esc(a ? a.nome : seg.sim)} non disponibili oggi.</div>`;
+    return;
+  }
+  try {
+    const st = await caricaStoria(a);
+    if (el()) el().innerHTML = htmlSegnale(a, st, seg.p, true);        /* se nel frattempo è cambiata pagina non c'è più */
+  } catch (e) {
+    if (el()) el().innerHTML = `<div class="errore">Storico non disponibile (${esc(e.message)}).</div>`;
+  }
+}
+function modificaSeguita() {
+  Object.assign(stato.lab, stato.seguita.p);
+  stato.labSim = stato.labMercato = stato.seguita.sim;
+  stato.labScheda = "regola";
+  ricorda();
+  location.hash = "strategia";
+}
+function htmlDiario() {
+  const v = stato.diario;
+  if (!v.length) return "";
+  const somma = v.reduce((s, o) => s + o.R, 0);
+  return piega("diario", "Diario", `${v.length} ${v.length === 1 ? "operazione chiusa" : "operazioni chiuse"}, ${conSegno(somma, 2)}R in tutto`,
+    `<table><thead><tr><th>Mercato</th><th>Verso</th><th>Dal</th><th>Al</th><th>R</th></tr></thead><tbody>
+    ${v.slice().reverse().map(o => `<tr><td>${esc(o.nome)}</td><td>${o.lato === 1 ? "long" : "short"}</td><td>${dataCorta(o.dal)}</td><td>${dataCorta(o.al)}</td><td>${conSegno(o.R, 2)}</td></tr>`).join("")}
+    </tbody></table>`);
+}
+function htmlMovimenti() {
+  const v = stato.dati.asset.filter(a => a.stato !== "errore" && a.ultimo && a.ultimo.z != null)
+    .sort((x, y) => Math.abs(y.ultimo.z) - Math.abs(x.ultimo.z));
+  if (!v.length) return "";
+  const oltre = v.filter(a => Math.abs(a.ultimo.z) >= 2);
+  return `<h2>${oltre.length ? `Sedute oltre 2σ: ${oltre.length}` : "Nessuna seduta oltre 2σ: i tre movimenti più ampi"}</h2>
+    <div class="lista">${(oltre.length ? oltre : v.slice(0, 3)).map(rigaAsset).join("")}</div>`;
+}
+
+/* ---------- pagina Mercati ---------- */
+function paginaMercati() {
+  const d = stato.dati, gruppi = [...new Set(d.asset.map(a => a.gruppo))];
+  app.innerHTML = `${testata("Mercati", `<button class="btn" onclick="apriInfo('mercati')">Come si legge</button>`)}
+    ${gruppi.map(g => `<h2>${esc(g)}</h2><div class="lista">${d.asset.filter(a => a.gruppo === g).map(rigaAsset).join("")}</div>`).join("")}`;
+}
+
+/* ---------- pagina di un mercato ---------- */
+function numeriChiave(a) {
+  const v = a.vol, f = a.domani, q = f.t || f.n, dist = a.distribuzione, out = [];
+  out.push(tessera("Volatilità attesa domani", volp(v.garch_domani != null ? v.garch_domani : v.ewma), `${pctNoSegno(f.sigma, 1)} al giorno`));
+  out.push(tessera("Domani, al 90%", `${prezzo(q["5"])} – ${prezzo(q["95"])}`));
+  const cc = dist.grezzi.code.find(x => x.k === 3), pG = stato.dati.gaussiana_code["3"];
+  if (cc && pG) {
+    const pOss = (cc.sinistra + cc.destra) / dist.n;
+    out.push(tessera("Sedute oltre 3σ", pOss > 0 ? `1 ogni ${ogni(pOss)}` : "nessuna", `gaussiana: 1 ogni ${ogni(2 * pG)}`));
+  }
+  if (a.curva) out.push(tessera("Curva dei futures", a.curva.struttura, `secondo contratto ${pct(a.curva.spread12, 1)}`));
+  else if (a.implicita) out.push(tessera(`Implicita ${esc(a.implicita.nome)}`, volp(a.implicita.valore), a.implicita.differenza != null ? `${conSegno(a.implicita.differenza, 1)} punti sul GARCH` : ""));
+  else out.push(tessera("VaR 1%, un giorno", pctNoSegno(dist.var1), `perdita media oltre: ${pctNoSegno(dist.es1)}`));
+  return `<div class="tiles chiave">${out.join("")}</div>`;
+}
+function sintesiVol(a) {
+  const v = a.vol;
+  return `${a.garch ? `GARCH ${volp(v.garch_domani)}, ` : ""}EWMA ${volp(v.ewma)}, realizzata ${volp(v.realizzata)}`;
+}
+/* sedute dell'ultimo anno oltre ±2σ, contro quante ne aspettano gaussiana e t di Student */
+function oltreDue(a) {
+  const s = a.serie;
+  if (!s.z) return null;
+  const n = s.z.filter(z => z != null).length;
+  const oltre = s.z.map((z, i) => ({z, i})).filter(o => o.z != null && Math.abs(o.z) >= 2);
+  const ct = a.distribuzione.garch && a.distribuzione.garch.code_t;
+  return {n, oltre, g: stato.dati.gaussiana_code["2"] * 2 * n, t: ct ? (ct[0].sinistra + ct[0].destra) * n : null};
+}
+function sintesiGrappoli(a) {
+  const o = oltreDue(a);
+  return o ? `ultimo anno: ${o.oltre.length} sedute oltre 2σ, ${nf(o.g, 1)} attese dalla gaussiana` : "rendimenti e fascia di ±2σ";
+}
+function sintesiCurva(a) {
+  const cv = a.curva, rt = a.rettifica, v = [];
+  if (cv) v.push(`${cv.struttura}, secondo contratto ${pct(cv.spread12, 1)}`);
+  if (rt && rt.prossimo_roll) v.push(`CFD chiuso d'ufficio il ${dataIt(rt.prossimo_roll.data, {day: "numeric", month: "short"})}`);
+  return v.join("; ");
+}
+function sintesiDist(a) {
+  const h = a.distribuzione.hill, f = v => v.q25 != null ? nf(v.q25, 1) : "–";
+  return `indice di coda α: ribassi ${f(h.sinistra)}, rialzi ${f(h.destra)}`;
+}
+function corpoDomani(a) {
+  const f = a.domani, q = f.t || f.n, conT = !!f.t;
+  return `<div class="legenda">${conT ? `<span><i class="lin" style="border-color:var(--s2)"></i>t di Student, ν ${nf(f.nu, 1)}</span>` : ""}
+      <span><i class="lin tr" style="border-color:var(--text2)"></i>Gaussiana</span>
+      <span><i class="q" style="background:${conT ? "var(--s2)" : "var(--text2)"};opacity:.25"></i>90% centrale</span></div>
+    <div class="grafico" style="height:180px"><canvas id="gDomani" role="img" aria-label="Densità prevista della chiusura di domani"></canvas></div>
+    <dl class="kv">${riga("σ della prossima seduta", pctNoSegno(f.sigma))}
+      ${riga("Al 90%", `${prezzo(q["5"])} – ${prezzo(q["95"])}`)}
+      ${riga("Al 98%", `${prezzo(q["1"])} – ${prezzo(q["99"])}`)}
+      ${conT ? riga("Al 98% con la gaussiana", `${prezzo(f.n["1"])} – ${prezzo(f.n["99"])}`) : ""}</dl>
+    ${comeSiLegge("domani")}`;
+}
+function corpoGrappoli(a) {
+  const f = stato.grappoli || "1", o = oltreDue(a), s = a.serie;
+  return `<div class="seg" role="group" aria-label="Periodo">${FINESTRE_GRAPPOLI.map(([v, t]) =>
+      `<button aria-pressed="${f === v}" onclick="finestraGrappoli('${v}')">${t}</button>`).join("")}</div>
+    <div class="legenda"><span><i class="q" style="background:var(--text2);opacity:.55"></i>Rendimento</span>
+      <span><i class="q" style="background:var(--neg)"></i>Fuori dalla fascia</span>
+      <span><i class="lin" style="border-color:var(--s1)"></i>±2σ prevista</span></div>
+    <div class="grafico" style="height:220px"><canvas id="gGrappoli" role="img" aria-label="Rendimenti giornalieri con la fascia di due sigma prevista"></canvas></div>
+    ${o ? `<p class="piccolo" style="margin-top:6px">Ultimo anno: ${o.oltre.length} sedute oltre ±2σ su ${o.n}. Attese: ${nf(o.g, 1)} con la gaussiana${o.t != null ? `, ${nf(o.t, 1)} con la t di Student` : ""}.</p>` : ""}
+    ${o && o.oltre.length ? `<details><summary>Elenco delle sedute oltre ±2σ</summary><table><thead><tr><th>Seduta</th><th>z</th><th>Rendimento</th></tr></thead><tbody>
+      ${o.oltre.slice().reverse().map(x => `<tr><td>${dataBreve(s.date[x.i])}</td><td>${sigma(x.z)}</td><td>${pct(s.rendimento[x.i])}</td></tr>`).join("")}
+    </tbody></table></details>` : ""}
+    <h3 style="font-size:14px;margin-top:14px">Memoria dell'ampiezza e della direzione</h3>
+    <div class="legenda"><span><i class="q" style="background:var(--s1)"></i>Ampiezza, |r|</span><span><i class="q" style="background:var(--s2)"></i>Direzione, r</span>
+      <span><i class="q" style="background:var(--text2);opacity:.25"></i>Rumore, ±2/√n</span></div>
+    <div class="grafico" style="height:200px"><canvas id="gAcf" role="img" aria-label="Autocorrelazione dei rendimenti e dei rendimenti assoluti per ritardo"></canvas></div>
+    <div id="grappoli-testo"><p class="piccolo">Carico lo storico…</p></div>
+    ${comeSiLegge("grappoli")}`;
+}
+function corpoCurva(a) {
+  const cv = a.curva, rt = a.rettifica, cf = rt && rt.confronto;
+  let html = "";
+  if (cv) {
+    html += `<p class="piccolo">Chiusure del ${dataBreve(cv.data)}${cv.mese_fa ? `, confrontate con il ${dataBreve(cv.mese_fa.data)}` : ""}.</p>
+      <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Oggi</span>${cv.mese_fa ? `<span><i class="lin tr" style="border-color:var(--text2)"></i>Un mese fa</span>` : ""}</div>
+      <div class="grafico" style="height:190px"><canvas id="gCurva" role="img" aria-label="Prezzi dei prossimi contratti futures"></canvas></div>`;
+  }
+  html += `<dl class="kv">
+    ${cv ? riga("Struttura", cv.struttura) + riga("Dal primo al secondo contratto", pct(cv.spread12)) +
+      riga(`Dal primo all'ultimo, ${cv.mesi_pendenza} mesi`, pct(cv.pendenza, 1)) + riga("Roll per il long, media annua sulla curva", pct(cv.roll_annuo, 1)) : ""}
+    ${rt ? riga("Contratto del CFD oggi", meseIt(rt.contratto.consegna)) + (rt.prossimo_roll ? riga("Chiusura d'ufficio del CFD", dataBreve(rt.prossimo_roll.data)) : "") : ""}
+    ${rt && !cv && rt.spread_oggi != null ? riga("Dal primo al secondo contratto", conSegno(rt.spread_oggi, 2) + "%") : ""}
+    ${cf ? riga(`Sempre long dal ${cf.dal.slice(0, 4)}, serie continua`, pct(cf.grezza, 1) + " l'anno") + riga("Sempre long rinnovando il CFD", pct(cf.rinnovata, 1) + " l'anno") : ""}
+  </dl>`;
+  return html + comeSiLegge("curva");
+}
+function corpoPrezzo(a) {
+  return `<div class="grafico" style="height:180px;margin-top:4px"><canvas id="gPrezzo" role="img" aria-label="Chiusure dell'ultimo anno"></canvas></div>
+    ${a.rettifica ? comeSiLegge("prezzo") : ""}`;
+}
+function dettaglio(sim) {
+  const d = stato.dati, a = d.asset.find(x => x.simbolo === sim);
+  if (!a || !a.ultimo) { location.hash = "mercati"; return; }
+  const u = a.ultimo, cl = u.var > 0 ? "su" : u.var < 0 ? "giu" : "";
+  const q = a.domani.t || a.domani.n, anno = a.serie.chiusura.filter(x => x != null);
+  app.innerHTML = `
+    <button class="indietro" onclick="indietro()">‹ Indietro</button>
+    <h1>${esc(a.nome)}</h1>
+    <p class="meta">Chiusura di ${dataIt(u.data)}${a.rettifica ? ", serie rinnovata a ogni scadenza" : ""}</p>
+    <div class="hero"><span class="prezzo">${prezzo(u.chiusura)}</span><span class="${cl}">${pct(u.var)}</span>
+      <span class="piccolo">${termine("z")} ${sigma(u.z)}</span>${chipZ(u.z)}</div>
+    ${a.stato === "vecchio" ? `<div class="avviso">Oggi il download non è riuscito: questi sono i dati dell'ultimo aggiornamento riuscito.</div>` : ""}
+    ${numeriChiave(a)}
+    ${a.storia ? `<button class="azione" onclick="apriStrategia('${esc(a.simbolo)}')">Strategia su questo mercato</button>` : ""}
+    ${piega("domani", "Chiusura di domani", `al 90% tra ${prezzo(q["5"])} e ${prezzo(q["95"])}`, corpoDomani(a))}
+    ${piega("vol", "Volatilità", sintesiVol(a), corpoVol(a))}
+    ${a.storia ? piega("grappoli", "Grappoli di volatilità", sintesiGrappoli(a), corpoGrappoli(a)) : ""}
+    ${a.curva || a.rettifica ? piega("curva", "Curva e scadenze", sintesiCurva(a), corpoCurva(a)) : ""}
+    ${piega("dist", "Distribuzione e code", sintesiDist(a), corpoDistribuzione(a))}
+    ${piega("prezzo", "Prezzo", anno.length > 1 ? `ultimo anno ${pct(anno[anno.length - 1] / anno[0] - 1, 1)}` : "", corpoPrezzo(a))}
+    <div class="fila"><button class="link" onclick="apriInfo('dati')">Dati e limiti</button></div>`;
+  const c = impostaChart();
+  graficoDomani(a, c);
+  graficoVol(a, c);
+  caricaGrappoli(a);
+  graficoCurva(a, c);
+  graficoDistribuzione(a, c);
+  graficoPrezzo(a, c);
+  attivaPieghe();
+}
+function apriStrategia(sim) { stato.labScheda = "regola"; location.hash = "lab=" + encodeURIComponent(sim); }
+
+function graficoDomani(a, c) {
+  const f = a.domani, P = f.prezzo, s = f.sigma, nu = f.nu, conT = !!f.t;
+  const xs = [], dt = [], dn = [], area = [];
+  const lo = conT ? Math.log(f.t["5"] / P) / s : -1.6449, hi = conT ? Math.log(f.t["95"] / P) / s : 1.6449;
+  for (let i = 0; i <= 240; i++) {
+    const x = -5 + i * 10 / 240, p = P * Math.exp(x * s);
+    const jac = 1 / (s * p);
+    const vt = conT ? tStdPdf(x, nu) * jac : null, vn = normPdf(x) * jac;
+    xs.push(p);
+    dt.push({x: p, y: vt});
+    dn.push({x: p, y: vn});
+    area.push({x: p, y: x >= lo && x <= hi ? (conT ? vt : vn) : null});
+  }
+  const ds = [
+    {data: area, borderWidth: 0, pointRadius: 0, fill: "origin", backgroundColor: alfa(conT ? c.s2 : c.text2, 0.18), spanGaps: false},
+    {data: dn, borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0},
+  ];
+  if (conT) ds.push({data: dt, borderColor: c.s2, borderWidth: 2, pointRadius: 0});
+  ds.push({data: [{x: P, y: 0}, {x: P, y: Math.max(...dn.map(p => p.y)) * 1.15}], borderColor: c.axis, borderWidth: 1, pointRadius: 0});
+  nuovoGrafico("gDomani", {type: "line", data: {datasets: ds},
+    options: {parsing: false, plugins: {tooltip: {enabled: false}},
+      scales: assi(c, {x: {type: "linear", min: xs[0], max: xs[xs.length - 1], ticks: {callback: v => prezzo(v)},
+          afterBuildTicks: ax => { ax.ticks = [P * Math.exp(lo * s), P, P * Math.exp(hi * s)].map(value => ({value})); }},
+        y: {beginAtZero: true, ticks: {display: false}, grid: {display: false}}})}});
+}
+
+function corpoVol(a) {
+  const v = a.vol, g = a.garch, im = a.implicita;
+  const tile = (l, val, s) => `<div class="tile"><div class="l">${l}</div><div class="v">${val}</div>${s ? `<div class="s">${s}</div>` : ""}</div>`;
+  let html = `<div class="tiles">
+      ${tile("Realizzata 21 sedute", volp(v.realizzata))}
+      ${tile("EWMA, λ 0,94", volp(v.ewma))}
+      ${g ? tile("GARCH domani", volp(v.garch_domani)) : ""}
+      ${g ? tile("GARCH prossime 21 sedute", volp(v.garch_mese)) : ""}
+      ${g ? tile("GARCH di lungo periodo", volp(v.garch_lungo), g.emivita ? `emivita ${nf(g.emivita, 0)} sedute` : "") : ""}
+      ${im ? tile(`Implicita ${esc(im.nome)}`, volp(im.valore), im.differenza != null ? `${conSegno(im.differenza, 1)} punti sul GARCH a 21 sedute` : "") : ""}
+    </div>
+    <div class="legenda">${g ? `<span><i class="lin" style="border-color:var(--s1)"></i>GARCH</span>` : ""}
+      <span><i class="lin" style="border-color:var(--s2)"></i>EWMA</span>
+      <span><i class="lin" style="border-color:var(--s3)"></i>Realizzata 21 sedute</span></div>
+    <div class="grafico" style="height:200px"><canvas id="gVol" role="img" aria-label="Volatilità annualizzata nell'ultimo anno"></canvas></div>`;
+  if (g) {
+    html += `<details><summary>Parametri GJR-GARCH(1,1) t</summary><dl class="kv">
+      <dt>ω (varianza base, %²)</dt><dd>${nf(g.omega, 4)}</dd>
+      <dt>α (reazione allo shock)</dt><dd>${nf(g.alpha, 3)}</dd>
+      <dt>γ (shock negativi in più)</dt><dd>${conSegno(g.gamma, 3)}</dd>
+      <dt>β (memoria)</dt><dd>${nf(g.beta, 3)}</dd>
+      <dt>ν (gradi di libertà della t)</dt><dd>${nf(g.nu, 1)}</dd>
+      <dt>Persistenza α + γ/2 + β</dt><dd>${nf(g.persistenza, 3)}</dd>
+      <dt>Emivita di uno shock</dt><dd>${g.emivita ? nf(g.emivita, 0) + " sedute" : "–"}</dd>
+      <dt>Stima convergente</dt><dd>${g.convergenza ? "sì" : "no"}</dd></dl>
+      <p class="piccolo" style="margin-top:6px">${g.gamma < 0 ? "γ negativo: qui sono i rialzi ad alzare di più la volatilità." : "γ positivo: i ribassi alzano la volatilità più dei rialzi."}</p></details>`;
+  }
+  return html + comeSiLegge("vol");
+}
+
+function graficoVol(a, c) {
+  const s = a.serie, ds = [];
+  if (s.garch) ds.push({label: "GARCH", data: s.garch, borderColor: c.s1, borderWidth: 2, pointRadius: 0});
+  ds.push({label: "EWMA", data: s.ewma, borderColor: c.s2, borderWidth: 2, pointRadius: 0});
+  ds.push({label: "Realizzata", data: s.realizzata, borderColor: c.s3, borderWidth: 2, pointRadius: 0});
+  nuovoGrafico("gVol", {type: "line", data: {labels: s.date, datasets: ds},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => dataBreve(it[0].label), label: it => `${it.dataset.label} ${volp(it.raw)}`}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
+        y: {beginAtZero: true, ticks: {callback: v => nf(v, 0) + "%", maxTicksLimit: 5}}})}});
+}
+
+const FINESTRE_GRAPPOLI = [["1", "1 anno"], ["3", "3 anni"], ["10", "10 anni"], ["tutto", "Tutto"]];
+
+function finestraGrappoli(v) {
+  stato.grappoli = v;
+  ricorda();
+  const y = window.scrollY; rotta(); window.scrollTo(0, y);
+}
+
+async function caricaGrappoli(a) {
+  if (!a.storia || !document.getElementById("gGrappoli")) return;
+  let st;
+  try { st = await caricaStoria(a); }
+  catch (e) {
+    const el = document.getElementById("grappoli-testo");
+    if (el) el.innerHTML = `<div class="errore">Storico non disponibile (${esc(e.message)}).</div>`;
+    return;
+  }
+  if (decodeURIComponent(location.hash.slice(1)) !== "m=" + a.simbolo || !document.getElementById("gGrappoli")) return;
+  graficiGrappoli(a, st);
+}
+
+function graficiGrappoli(a, st) {
+  if (Chart.getChart(document.getElementById("gGrappoli"))) return;      /* già disegnati */
+  const c = colori(), n = st.c.length, usaG = !!(st.zg && st.sg);
+  const sig = usaG ? st.sg : st.se;
+  /* rendimento della seduta t e σ prevista per t la sera prima (sig[t-1]) */
+  const r = [], sd = [], date = [];
+  for (let t = 1; t < n; t++) { r.push(Math.log(st.c[t] / st.c[t - 1]) * 100); sd.push(sig[t - 1]); date.push(st.date[t]); }
+  const f = stato.grappoli || "1", quante = f === "tutto" ? r.length : Math.min(r.length, Number(f) * SEDUTE_ANNO);
+  const i0 = r.length - quante, R = r.slice(i0), SD = sd.slice(i0), D = date.slice(i0);
+  const fuori = R.map((x, i) => SD[i] != null && Math.abs(x) > 2 * SD[i]);
+  const anniTick = (v, i) => { const d = D[i]; if (!d || i === 0 || D[i - 1].slice(0, 4) === d.slice(0, 4)) return "";
+    const y = Number(d.slice(0, 4)), passo = quante > 2600 ? 5 : quante > 800 ? 1 : 0;
+    return passo === 0 ? "" : y % passo === 0 ? d.slice(0, 4) : ""; };
+  nuovoGrafico("gGrappoli", {data: {labels: D, datasets: [
+      {type: "bar", data: R, backgroundColor: fuori.map(x => x ? c.neg : alfa(c.text2, 0.55)), barPercentage: 1, categoryPercentage: 1, order: 2},
+      {type: "line", data: SD.map(x => x == null ? null : 2 * x), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1},
+      {type: "line", data: SD.map(x => x == null ? null : -2 * x), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {title: it => dataBreve(it[0].label),
+        label: it => { const i = it.dataIndex; return [`rendimento ${conSegno(R[i], 2)}%`, `fascia ±${nf(2 * SD[i], 2)}%`, `z ${conSegno(R[i] / SD[i], 2)}`]; }}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: quante <= 300 ? tickMese(D) : anniTick}},
+        y: {ticks: {maxTicksLimit: 6, callback: v => conSegno(v, 0) + "%"}}})}});
+
+  /* autocorrelazione su tutta la storia */
+  const L = 60, ar = autocorrelazione(r, L), aa = autocorrelazione(r.map(Math.abs), L), banda = 2 / Math.sqrt(r.length);
+  const lag = Array.from({length: L}, (_, i) => i + 1);
+  nuovoGrafico("gAcf", {data: {labels: lag, datasets: [
+      {type: "line", data: lag.map(() => banda), borderWidth: 0, pointRadius: 0, fill: "+1", backgroundColor: alfa(c.text2, 0.18), order: 3},
+      {type: "line", data: lag.map(() => -banda), borderWidth: 0, pointRadius: 0, order: 3},
+      {type: "bar", label: "Ampiezza", data: aa, backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 0.9, order: 1},
+      {type: "bar", label: "Direzione", data: ar, backgroundColor: c.s2, barPercentage: 0.9, categoryPercentage: 0.9, order: 2}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex >= 2, callbacks: {title: it => `Ritardo ${it[0].label} ${it[0].label === "1" ? "seduta" : "sedute"}`,
+        label: it => `${it.dataset.label}: ${conSegno(it.raw, 3)}`}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: (v, i) => (i + 1) % 10 === 0 || i === 0 ? String(i + 1) : ""}},
+        y: {ticks: {maxTicksLimit: 5, callback: v => nf(v, 2)}}})}});
+
+  /* lettura */
+  let memoria = 0;
+  while (memoria < L && aa[memoria] > banda) memoria++;
+  const dirFuori = lag.filter((_, i) => Math.abs(ar[i]) > banda);
+  /* raggruppamento grezzo, senza modello: sedute oltre due deviazioni standard di tutta la storia;
+     dopo una di queste, quante volte ne arriva un'altra entro 5 sedute, contro la frequenza se fossero sparse a caso */
+  const m0 = r.reduce((x, y) => x + y, 0) / r.length, dev = Math.sqrt(r.reduce((x, y) => x + (y - m0) ** 2, 0) / (r.length - 1));
+  const grande = r.map(x => Math.abs(x - m0) > 2 * dev), quotaGrandi = grande.filter(Boolean).length / r.length;
+  let dopo = 0, casi = 0;
+  for (let i = 0; i < grande.length - 5; i++) if (grande[i]) { casi++; if (grande.slice(i + 1, i + 6).some(Boolean)) dopo++; }
+  const attesa = 1 - Math.pow(1 - quotaGrandi, 5);
+  const g = a.garch;
+  const el = document.getElementById("grappoli-testo");
+  if (!el) return;
+  const ampiezza = memoria >= 5 ? `L'ampiezza ha memoria per ${memoria === L ? `almeno ${L}` : `circa ${memoria}`} sedute` : "L'ampiezza ha poca memoria";
+  const direzione = dirFuori.length <= Math.round(L * 0.05) ? "la direzione no" : `la direzione quasi nulla${ar[0] < -banda ? ", con un lieve rientro il giorno dopo" : ""}`;
+  el.innerHTML = `<dl class="kv">
+      ${riga("Ampiezza a 1, 20 e 60 sedute", `${nf(aa[0], 2)} / ${nf(aa[19], 2)} / ${nf(aa[59], 2)}`)}
+      ${riga("Ampiezza fuori dal rumore", memoria === L ? `tutti i ${L} ritardi` : `i primi ${memoria} ritardi`)}
+      ${riga("Direzione a 1 seduta", conSegno(ar[0], 3) + (Math.abs(ar[0]) > banda ? "" : " (rumore)"))}
+      ${riga("Direzione fuori dal rumore", `${dirFuori.length} ritardi su ${L} <span class="piccolo">(per caso ${Math.round(L * 0.05)})</span>`)}
+      ${g && g.emivita ? riga("Emivita di uno shock (GARCH)", nf(g.emivita, 0) + " sedute") : ""}
+      ${casi >= 10 ? riga(`Dopo una seduta oltre ${nf(2 * dev, 1)}%, un'altra entro 5`, `${pctNoSegno(dopo / casi, 0)} <span class="piccolo">(${pctNoSegno(attesa, 0)} a caso)</span>`) : ""}
+    </dl>
+    <div class="regola">${ampiezza}, ${direzione}: volatilità a grappoli non vuol dire trend.</div>`;
+}
+
+function graficoCurva(a, c) {
+  const cv = a.curva;
+  if (!cv) return;
+  const etichetta = m => dataIt(m + "-01", {month: "short"}) + " " + m.slice(2, 4);
+  const oggi = Object.fromEntries(cv.punti.map(x => [x.mese, x.prezzo]));
+  const prima = cv.mese_fa ? Object.fromEntries(cv.mese_fa.punti) : {};
+  const mesi = [...new Set([...Object.keys(oggi), ...Object.keys(prima)])].sort();
+  const ds = [{label: "Oggi", data: mesi.map(m => oggi[m] ?? null), borderColor: c.s1, backgroundColor: c.s1, borderWidth: 2, pointRadius: 3, spanGaps: true}];
+  if (cv.mese_fa) ds.push({label: "Un mese fa", data: mesi.map(m => prima[m] ?? null), borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, spanGaps: true});
+  nuovoGrafico("gCurva", {type: "line", data: {labels: mesi.map(etichetta), datasets: ds},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {label: it => `${it.dataset.label}: ${prezzo(it.raw)}`}}},
+      scales: assi(c, {x: {ticks: {maxRotation: 0, autoSkip: true, maxTicksLimit: 6}}, y: {ticks: {maxTicksLimit: 5, callback: tickPrezzo}}})}});
+}
+
+function corpoDistribuzione(a) {
+  const dist = a.distribuzione, haGarch = !!dist.garch;
+  const modo = haGarch ? stato.modo : "grezzi";
+  const blocco = dist[modo], n = modo === "grezzi" ? dist.n : dist.garch.n;
+  const gc = stato.dati.gaussiana_code;
+  const nuTxt = modo === "grezzi" ? nf(dist.grezzi.t.df, 1) : nf(dist.garch.nu, 1);
+  const righe = [];
+  for (const lato of ["sinistra", "destra"]) {
+    blocco.code.forEach((cc, i) => {
+      const oss = cc[lato], pOss = oss / n, pG = gc[String(cc.k)];
+      const pT = blocco.code_t ? blocco.code_t[i][lato] : null;
+      righe.push(`<tr><td>${lato === "sinistra" ? "Sotto " + MENO : "Sopra +"}${cc.k}σ</td><td>${ogni(pOss)}</td>
+        <td>${pT == null ? "–" : ogni(pT)}</td><td>${ogni(pG)}</td><td>${rapporto(pOss / pG)}</td></tr>`);
+    });
+  }
+  const hill = dist.hill, h = lato => {
+    const v = hill[lato], vals = [v.q1, v.q25, v.q5].filter(x => x != null);
+    if (v.q25 == null) return "–";
+    return `${nf(v.q25, 1)} <span class="piccolo">(${nf(Math.min(...vals), 1)}–${nf(Math.max(...vals), 1)})</span>`;
+  };
+  const sottoQuattro = ["sinistra", "destra"].filter(l => hill[l].q25 != null && hill[l].q25 < 4);
+  const ms = dist.max_somma;
+  const fuori = blocco.sotto + blocco.sopra;
+  return `<div class="controlli">
+      ${haGarch ? `<div class="seg" role="group" aria-label="Standardizzazione">
+        <button aria-pressed="${modo === "grezzi"}" onclick="cambia('modo','grezzi')">Grezzi</button>
+        <button aria-pressed="${modo === "garch"}" onclick="cambia('modo','garch')">Divisi per σ GARCH</button></div>` : ""}
+      <div class="seg" role="group" aria-label="Scala verticale">
+        <button aria-pressed="${stato.scala === "lin"}" onclick="cambia('scala','lin')">Lineare</button>
+        <button aria-pressed="${stato.scala === "log"}" onclick="cambia('scala','log')">Logaritmica</button></div>
+    </div>
+    <div class="legenda"><span><i class="q" style="background:var(--s1);opacity:.55"></i>Osservati</span>
+      <span><i class="lin tr" style="border-color:var(--text2)"></i>Gaussiana</span>
+      <span><i class="lin" style="border-color:var(--s2)"></i>t di Student, ν ${nuTxt}</span></div>
+    <div class="grafico" style="height:240px"><canvas id="gDist" role="img" aria-label="Istogramma dei rendimenti standardizzati con gaussiana e t di Student"></canvas></div>
+    <p class="piccolo" style="margin-top:4px">Campione dal ${dataBreve(dist.dal)}, ${nf(dist.n, 0)} sedute; deviazione standard ${pctNoSegno(dist.dev_std)} al giorno.${fuori ? ` Oltre ±8σ, fuori dal grafico: ${nf(fuori, 0)} sedute.` : ""}</p>
+    <h3 style="margin-top:14px;font-size:14px">Le code</h3>
+    <table><thead><tr><th rowspan="2" style="vertical-align:bottom">Soglia</th><th colspan="3" style="text-align:center;border-bottom:0;padding-bottom:0">Una seduta ogni…</th><th rowspan="2" style="vertical-align:bottom">Volte</th></tr>
+      <tr><th>osservata</th><th>t</th><th>gaussiana</th></tr></thead>
+      <tbody>${righe.join("")}</tbody></table>
+    <dl class="kv" style="margin-top:12px">
+      <dt>Indice di coda α (Hill), ribassi</dt><dd>${h("sinistra")}</dd>
+      <dt>Indice di coda α (Hill), rialzi</dt><dd>${h("destra")}</dd>
+      <dt>Asimmetria</dt><dd>${conSegno(dist.asimmetria, 2)}</dd>
+      <dt>Curtosi in eccesso</dt><dd>${nf(dist.curtosi, 1)}</dd>
+      <dt>VaR storico 1%, un giorno</dt><dd>${pctNoSegno(dist.var1)}</dd>
+      <dt>Perdita media oltre il VaR (ES)</dt><dd>${pctNoSegno(dist.es1)}</dd>
+    </dl>
+    ${sottoQuattro.length ? `<div class="avviso">α sotto 4 sulla coda dei ${sottoQuattro.map(l => l === "sinistra" ? "ribassi" : "rialzi").join(" e dei ")}: il momento quarto non è finito e, secondo Taleb, la varianza stimata dal campione è instabile. La curtosi qui sopra è solo indicativa.</div>` : ""}
+    <p class="piccolo" style="margin-top:8px">Il giorno più estremo del campione (${dataBreve(ms.data)}, ${pct(ms.rendimento)}) da solo vale il ${pctNoSegno(ms.quota, 0)} della somma dei rendimenti alla quarta, cioè della curtosi.</p>
+    <details><summary>Tabella dell'istogramma</summary><table><thead><tr><th>Classe</th><th>Sedute</th></tr></thead><tbody>
+      ${blocco.conteggi.map((k, i) => k ? `<tr><td>${conSegno(stato.dati.bordi[i], 2)} / ${conSegno(stato.dati.bordi[i + 1], 2)}σ</td><td>${nf(k, 0)}</td></tr>` : "").join("")}
+    </tbody></table></details>
+    ${comeSiLegge("dist")}`;
+}
+
+function cambia(chiave, valore) {
+  stato[chiave] = valore;
+  ricorda();
+  const y = window.scrollY;
+  rotta();
+  window.scrollTo(0, y);
+}
+function graficoDistribuzione(a, c) {
+  const dist = a.distribuzione, modo = dist.garch ? stato.modo : "grezzi";
+  const blocco = dist[modo], n = modo === "grezzi" ? dist.n : dist.garch.n;
+  const bordi = stato.dati.bordi, larg = bordi[1] - bordi[0], log = stato.scala === "log";
+  const barre = blocco.conteggi.map((k, i) => ({x: (bordi[i] + bordi[i + 1]) / 2, y: k ? k / (n * larg) : (log ? null : 0), k}));
+  const lim = log ? 8 : 5, gauss = [], tt = [];
+  let pdfT;
+  if (modo === "grezzi") { const t = dist.grezzi.t; pdfT = x => tPdf((x - t.loc) / t.scala, t.df) / t.scala; }
+  else { pdfT = x => tStdPdf(x, dist.garch.nu); }
+  for (let i = 0; i <= 320; i++) {
+    const x = -lim + i * 2 * lim / 320;
+    gauss.push({x, y: normPdf(x)});
+    tt.push({x, y: pdfT(x)});
+  }
+  const ymin = 1e-5;
+  const fmtLog = v => {
+    const e = Math.round(Math.log10(v));
+    if (Math.abs(Math.log10(v) - e) > 1e-9) return "";
+    return e >= -2 ? nf(v, Math.max(0, -e)) : "10" + String(e).replace("-", "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+  };
+  nuovoGrafico("gDist", {data: {datasets: [
+      {type: "bar", label: "Osservati", data: barre, backgroundColor: alfa(c.s1, 0.55), barPercentage: 1, categoryPercentage: 0.88, borderRadius: 0},
+      {type: "line", label: "Gaussiana", data: gauss, borderColor: c.text2, borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0},
+      {type: "line", label: "t di Student", data: tt, borderColor: c.s2, borderWidth: 2, pointRadius: 0},
+    ]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {
+        title: it => { const x = it[0].raw.x; return `Tra ${conSegno(x - larg / 2, 2)} e ${conSegno(x + larg / 2, 2)}σ`; },
+        label: it => `${nf(it.raw.k, 0)} sedute, ${pctNoSegno(it.raw.k / n, it.raw.k / n < 0.001 ? 3 : 2)}`}}},
+      scales: assi(c, {x: {type: "linear", min: -lim, max: lim, ticks: {stepSize: 2, callback: v => v === 0 ? "0" : conSegno(v, 0) + "σ"}},
+        y: log ? {type: "logarithmic", min: ymin, max: 1, ticks: {callback: fmtLog, autoSkip: false},
+                  grid: {color: ctx => ctx.tick && potenzaDi10(ctx.tick.value) ? c.grid : "transparent", drawTicks: false}}
+               : {beginAtZero: true, ticks: {maxTicksLimit: 5, callback: v => nf(v, 1)}}})}});
+}
+
+function graficoPrezzo(a, c) {
+  const s = a.serie;
+  nuovoGrafico("gPrezzo", {type: "line", data: {labels: s.date, datasets: [
+      {data: s.chiusura, borderColor: c.s1, borderWidth: 2, pointRadius: 0, fill: "origin", backgroundColor: alfa(c.s1, 0.08)}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => dataBreve(it[0].label), label: it => prezzo(it.raw)}}},
+      scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: tickMese(s.date)}},
+        y: {ticks: {maxTicksLimit: 5, callback: tickPrezzo}}})}});
+}
+
+const CURSORI = [
+  {id: "k", label: "Ingresso oltre", min: 1, max: 4, step: 0.25, fmt: sgm, mostra: p => p.ingresso !== "rottura"},
+  {id: "Nr", label: "Rottura di", min: 10, max: 250, step: 5, fmt: v => v + " sedute", mostra: p => p.ingresso === "rottura"},
+  {id: "S", label: "Stop iniziale", min: 0.5, max: 6, step: 0.25, fmt: sgm},
+  {id: "T", label: "Trailing stop", min: 0, max: 8, step: 0.25, fmt: v => v ? sgm(v) : "spento"},
+  {id: "G", label: "Target", min: 0, max: 10, step: 0.25, fmt: v => v ? sgm(v) : "nessuno"},
+  {id: "H", label: "Durata massima", min: 0, max: 120, step: 1, fmt: v => v ? v + " sedute" : "nessuna"},
+  {id: "costo", label: "Spread per operazione", min: 0, max: 1, step: 0.05, fmt: v => nf(v, 2) + "%"},
+  {id: "finanz", label: "Finanziamento long", min: 0, max: 10, step: 0.05, fmt: v => nf(v, 2) + "% annuo"},
+  {id: "finanzShort", label: "Finanziamento short", min: -5, max: 10, step: 0.05, fmt: v => finTesto(v) + " annuo"},
+];
+function seg(chiave, opzioni, etichetta) {
+  return `<div class="seg" role="group" aria-label="${etichetta}">${opzioni.map(([v, t]) =>
+    `<button aria-pressed="${stato.lab[chiave] === v}" onclick="impostaLab('${chiave}','${v}')">${t}</button>`).join("")}</div>`;
+}
+function impostaLab(chiave, valore) {
+  stato.lab[chiave] = valore;
+  const y = window.scrollY; rotta(); window.scrollTo(0, y);
+}
+function presetLab(nome) {
+  Object.assign(stato.lab, PRESET[nome]);
+  const y = window.scrollY; rotta(); window.scrollTo(0, y);
+}
+const CURSORI_FASE = [{id: "N", label: "Finestra della fase", min: 20, max: 250, step: 5, fmt: v => v + " sedute"}];
+const CURSORI_OGGI = [{id: "capitale", label: "Capitale", min: 250, max: 10000, step: 250, fmt: v => nf(v, 0) + " €"},
+  {id: "rischio", label: "Rischio per operazione", min: 0.25, max: 3, step: 0.25, fmt: v => nf(v, 2) + "%"}];
+const rigaCursore = (c, p) => `<div class="cursore"><label for="c-${c.id}">${c.label}</label>
+  <input type="range" id="c-${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${p[c.id]}" oninput="cursore('${c.id}', this.value)">
+  <output id="o-${c.id}">${c.fmt(p[c.id])}</output></div>`;
+function cursore(id, valore) {
+  stato.lab[id] = Number(valore);
+  const c = [...CURSORI, ...CURSORI_FASE, ...CURSORI_OGGI].find(x => x.id === id);
+  document.getElementById("o-" + id).textContent = c.fmt(stato.lab[id]);
+  clearTimeout(timerLab);
+  timerLab = setTimeout(ricalcolaLab, 80);
+}
+
+function diagnosiVolatilita(st, p, ops) {
+  const el = document.getElementById("lab-volreg"), g = stato.labGrafici, sint = document.getElementById("s-volreg");
+  if (!el || !g || !g.VolReg) return;
+  const usaG = p.sigma === "garch" && !!st.zg, v = perVolatilita(ops, st, usaG);
+  if (!v) { el.innerHTML = `<p class="piccolo">Storia troppo corta per dividere la volatilità in tre parti.</p>`; sint.textContent = ""; return; }
+  const k3 = ["bassa", "media", "alta"], gr = v.gruppi, c = g.colori;
+  g.VolReg.$gruppi = gr;
+  g.VolReg.data.datasets[0].data = k3.map(k => gr[k].n ? gr[k].media : null);
+  g.VolReg.data.datasets[0].backgroundColor = k3.map(k => gr[k].media >= 0 ? c.s1 : c.neg);
+  g.VolReg.update("none");
+  const cella = d => d.n ? `${conSegno(d.media, 2)}R` : "–", tCella = d => d.n > 1 ? conSegno(d.t, 1) : "–";
+  const a = gr.alta, b = gr.bassa, MIN = 10, tot = a.n + gr.media.n + b.n;
+  let verdetto, breve;
+  if (a.n < MIN || b.n < MIN) {
+    verdetto = "Operazioni insufficienti per confrontare volatilità alta e bassa.";
+    breve = "operazioni insufficienti";
+  } else {
+    /* una differenza conta solo se supera due volte il suo errore standard */
+    const d = a.media - b.media, es = Math.sqrt(a.es ** 2 + b.es ** 2), rumore = Math.abs(d) <= 2 * es;
+    verdetto = rumore ? `Tra volatilità alta e bassa la differenza (${conSegno(d, 2)}R) sta dentro il rumore (±${nf(2 * es, 2)}R).`
+      : `Con volatilità alta la regola fa ${d > 0 ? "meglio" : "peggio"} che con volatilità bassa: ${conSegno(d, 2)}R, oltre due errori standard.`;
+    breve = rumore ? "tra alta e bassa la differenza è nel rumore" : `con volatilità alta va ${d > 0 ? "meglio" : "peggio"}`;
+  }
+  sint.textContent = breve;
+  el.innerHTML = `<table style="margin-top:8px"><thead><tr><th>Volatilità all'ingresso</th><th>Operazioni</th><th>R medio</th><th>t</th></tr></thead><tbody>
+      <tr><td>Bassa, sotto ${nf(v.soglie[0], 2)} volte la mediana</td><td>${b.n}</td><td>${cella(b)}</td><td>${tCella(b)}</td></tr>
+      <tr><td>Media</td><td>${gr.media.n}</td><td>${cella(gr.media)}</td><td>${tCella(gr.media)}</td></tr>
+      <tr><td>Alta, sopra ${nf(v.soglie[1], 2)} volte la mediana</td><td>${a.n}</td><td>${cella(a)}</td><td>${tCella(a)}</td></tr>
+    </tbody></table>
+    <p class="piccolo" style="margin-top:6px">${tot ? `Ingressi nel terzo più volatile: ${pctNoSegno(a.n / tot, 0)}. ` : ""}Oggi la σ è ${v.oggi != null ? nf(v.oggi, 2) : "–"} volte la mediana dell'ultimo anno: volatilità ${v.regimeOggi || "–"}.</p>
+    <div class="regola">${verdetto}</div>`;
+}
+
+function diagnosiFasi(st, p) {
+  const g = stato.labGrafici, el = document.getElementById("lab-fasi");
+  if (!el || !g || !g.Fasi) return;
+  const base = {...p, fase: "tutte", dirTrend: "tutte"};
+  const dc = perFase(simulaStrategia(st, {...base, strategia: "contrarian"}).ops);
+  const dt = perFase(simulaStrategia(st, {...base, strategia: "trend"}).ops);
+  const MIN = 10, fasi = ["laterale", "intermedia", "trend"], nomi = nomiFase(p);
+  g.Fasi.data.labels = fasi.map(k => nomi[k]);
+  g.Fasi.$n = [dc, dt];
+  g.Fasi.data.datasets[0].data = fasi.map(k => dc[k].media);
+  g.Fasi.data.datasets[1].data = fasi.map(k => dt[k].media);
+  g.Fasi.update("none");
+  const cella = d => d.n ? `${conSegno(d.media, 2)}R <span class="piccolo">(${d.n})</span>` : "–";
+  /* una differenza conta solo se supera due volte il suo errore standard */
+  const meglio = k => {
+    const a = dc[k], b = dt[k];
+    if (a.n < MIN || b.n < MIN) return {ok: false, vince: null, testo: "poche operazioni"};
+    const d = a.media - b.media, es = Math.sqrt(a.es ** 2 + b.es ** 2);
+    if (Math.abs(d) <= 2 * es) return {ok: true, vince: null, testo: "nel rumore"};
+    return {ok: true, vince: d > 0 ? "contrarian" : "trend", testo: d > 0 ? "contrarian" : "trend"};
+  };
+  const righe = [...fasi.map(k => [nomi[k], k]), ["A favore del trend", "favore"], ["Contro il trend", "contro"]];
+  const esiti = Object.fromEntries(righe.map(([, k]) => [k, meglio(k)]));
+  const abbastanza = esiti.laterale.ok && esiti.trend.ok;
+  const separa = esiti.laterale.vince === "contrarian" && esiti.trend.vince === "trend";
+  const misura = p.indicatore === "autocorrelazione" ? "l'autocorrelazione" : "la forza del trend";
+  document.getElementById("s-fasi").textContent = !abbastanza ? "operazioni insufficienti"
+    : separa ? "la fase separa contrarian e trend" : "la fase non separa contrarian e trend";
+  el.innerHTML = `<table style="margin-top:8px"><thead><tr><th>Fase all'ingresso</th><th>Contrarian</th><th>Trend</th><th>Meglio</th></tr></thead><tbody>
+      ${righe.map(([nome, k]) => `<tr><td>${nome}</td><td>${cella(dc[k])}</td><td>${cella(dt[k])}</td><td>${esiti[k].testo}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="piccolo" style="margin-top:6px">Tra parentesi il numero di operazioni. A favore: nello stesso verso del prezzo nelle ultime ${p.N} sedute.</p>
+    <div class="regola">${!abbastanza ? "Operazioni insufficienti per confrontare le fasi."
+      : separa ? `Qui ${misura} separa le due strategie: contrarian nella prima fase, trend nella terza. Da verificare sulle due metà del periodo.`
+      : `Qui ${misura} non separa le due strategie in modo affidabile.`}</div>`;
+}
+
+/* ---------- pagina Strategia ---------- */
+async function laboratorio(sim) {
+  const mercati = stato.dati.asset.filter(x => x.storia && x.ultimo);
+  const a = mercati.find(x => x.simbolo === sim) || mercati.find(x => x.simbolo === stato.seguita.sim) || mercati[0];
+  if (!a) { app.innerHTML = `${testata("Strategia")}<p class="vuoto">Nessun mercato con lo storico disponibile.</p>`; return; }
+  sim = a.simbolo;
+  const p = stato.lab;
+  if (p.sigma === "garch" && a.garch == null) p.sigma = "ewma";
+  if (stato.labMercato !== sim) { p.costo = COSTO_DEFAULT[sim] ?? 0.10; stato.labMercato = sim; }
+  if (p.lato === "curva" && !a.rettifica) p.lato = "entrambi";      /* serve lo spread tra i contratti */
+  stato.labSim = sim;
+  stato.labAsset = a;
+  const sch = stato.labScheda || "regola", nome = nomeRegola(p), nomi = nomiFase(p);
+  const cur = ids => CURSORI.filter(c => ids.includes(c.id) && (!c.mostra || c.mostra(p))).map(c => rigaCursore(c, p)).join("");
+  const sotto = t => `<h3 style="font-size:14px;margin-top:14px">${t}</h3>`;
+  app.innerHTML = `
+    <div class="fissa">
+      <select id="lab-mercato" aria-label="Mercato" onchange="location.hash='lab=' + encodeURIComponent(this.value)">
+        ${mercati.map(m => `<option value="${esc(m.simbolo)}"${m.simbolo === sim ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select>
+      <div class="seg largo" role="group" aria-label="Scheda">
+        ${[["regola", "Regola"], ["risultati", "Risultati"], ["oggi", "Oggi"]].map(([k, t]) =>
+          `<button id="tab-${k}" aria-pressed="${sch === k}" onclick="schedaLab('${k}')">${t}</button>`).join("")}</div>
+      <div class="esito" id="lab-esito" aria-live="polite"></div>
+    </div>
+    <div id="lab-avvisi"></div>
+    <div id="sch-regola"${sch === "regola" ? "" : " hidden"}>
+      <section class="card">
+        <div class="chips">${Object.keys(PRESET).map(n => `<button class="chip-btn" aria-pressed="${n === nome}" onclick="presetLab('${n}')">${n}</button>`).join("")}</div>
+        <div class="controlli">
+          ${seg("strategia", [["contrarian", "Contrarian"], ["trend", "Trend"], ["combinata", "Combinata"]], "Strategia")}
+          ${seg("ingresso", [["shock", "Shock in σ"], ["rottura", "Rottura"]], "Ingresso")}
+          ${seg("lato", [["long", "Long"], ["short", "Short"], ["entrambi", "Entrambi"], ...(a.rettifica ? [["curva", "Verso della curva"]] : [])], "Lato")}
+        </div>
+        ${cur(["k", "Nr", "S", "T"])}
+        <div class="regola" id="lab-regola"></div>
+        <button class="azione" id="lab-segui" onclick="seguiRegola()">Segui questa regola in «Oggi»</button>
+        ${comeSiLegge("regola")}
+      </section>
+      ${piega("lab-avanzate", "Avanzate", "target, durata, σ, periodo, costi, fasi di mercato", `
+        ${cur(["G", "H"])}
+        <div class="controlli">
+          ${seg("sigma", a.garch ? [["garch", "σ GARCH"], ["ewma", "σ EWMA"]] : [["ewma", "σ EWMA"]], "Volatilità")}
+          ${seg("periodo", [["tutto", "Tutto"], ["prima", "Prima metà"], ["seconda", "Seconda metà"]], "Periodo")}
+        </div>
+        ${cur(["costo", "finanz", "finanzShort"])}
+        ${sotto("Fasi di mercato")}
+        <div class="controlli">${seg("indicatore", [["forza", "Forza del trend"], ["autocorrelazione", "Autocorrelazione"]], "Misura della fase")}</div>
+        ${CURSORI_FASE.map(c => rigaCursore(c, p)).join("")}
+        <div class="controlli">
+          ${p.strategia === "combinata" ? "" : seg("fase", [["tutte", "Tutte"], ...["laterale", "intermedia", "trend"].map(k => [k, nomi[k]])], "Fase")}
+          ${seg("dirTrend", [["tutte", "Ogni direzione"], ["favore", "A favore del trend"], ["contro", "Contro"]], "Direzione rispetto al trend")}
+        </div>
+        ${comeSiLegge("fasi")}`)}
+    </div>
+    <div id="sch-risultati"${sch === "risultati" ? "" : " hidden"}>
+      <section class="card">
+        <p class="nota" id="lab-periodo"></p>
+        <div class="tiles" id="lab-tiles"></div>
+        <h3 style="font-size:14px;margin-top:4px">Distribuzione dei risultati, in R</h3>
+        <div class="legenda"><span><i class="q" style="background:var(--s1)"></i>Guadagni</span><span><i class="q" style="background:var(--neg)"></i>Perdite</span>
+          <span><i class="lin tr" style="border-color:var(--text)"></i>Media</span></div>
+        <div class="grafico" style="height:200px"><canvas id="gR" role="img" aria-label="Istogramma dei risultati delle operazioni in R"></canvas></div>
+        ${sotto("Risultato cumulato, in R")}
+        <div class="grafico" style="height:170px;margin-top:6px"><canvas id="gEq" role="img" aria-label="Somma dei risultati in R operazione dopo operazione"></canvas></div>
+        ${comeSiLegge("risultati")}
+      </section>
+      ${piega("lab-ops", "Ultime operazioni", "", `<div id="lab-ops"></div>`, "s-ops")}
+      ${piega("lab-fasi", "Per fase di mercato", "", `
+        <div class="legenda"><span><i class="q" style="background:var(--s2)"></i>Contrarian</span><span><i class="q" style="background:var(--s1)"></i>Trend following</span></div>
+        <div class="grafico" style="height:190px"><canvas id="gFasi" role="img" aria-label="Risultato medio di contrarian e trend following in ogni fase di mercato"></canvas></div>
+        <div id="lab-fasi"></div>${comeSiLegge("fasi")}`, "s-fasi")}
+      ${piega("lab-volreg", "Per volatilità all'ingresso", "", `
+        <div class="grafico" style="height:170px"><canvas id="gVolReg" role="img" aria-label="Risultato medio per regime di volatilità all'ingresso"></canvas></div>
+        <div id="lab-volreg"></div>${comeSiLegge("volreg")}`, "s-volreg")}
+      ${piega("lab-mc", "Prossime 200 operazioni", "", `
+        <p class="piccolo" id="lab-mc-nota"></p>
+        <div class="legenda"><span><i class="lin" style="border-color:var(--s1)"></i>Mediana</span>
+          <span><i class="q" style="background:var(--s1);opacity:.35"></i>50% centrale</span>
+          <span><i class="q" style="background:var(--s1);opacity:.15"></i>90% centrale</span></div>
+        <div class="grafico" style="height:200px"><canvas id="gFan" role="img" aria-label="Ventaglio del capitale in 200 operazioni simulate"></canvas></div>
+        ${sotto("Capitale dopo 200 operazioni")}
+        <div class="grafico" style="height:180px;margin-top:6px"><canvas id="gFin" role="img" aria-label="Distribuzione del capitale finale nelle simulazioni"></canvas></div>
+        <dl class="kv" id="lab-mc"></dl>${comeSiLegge("montecarlo")}`, "s-mc")}
+    </div>
+    <div id="sch-oggi"${sch === "oggi" ? "" : " hidden"}>
+      <section class="card">
+        <div id="lab-oggi"></div>
+        ${sotto("Capitale e rischio")}
+        ${CURSORI_OGGI.map(c => rigaCursore(c, p)).join("")}
+        ${comeSiLegge("oggi")}
+      </section>
+    </div>`;
+  attivaPieghe();
+  let st;
+  try { st = await caricaStoria(a); }
+  catch (e) {
+    const el = document.getElementById("lab-avvisi");
+    if (el) el.innerHTML = `<div class="errore">Storico di questo mercato non disponibile (${esc(e.message)}).</div>`;
+    return;
+  }
+  if (stato.labAsset !== a || !document.getElementById("gR")) return;       /* nel frattempo è cambiata pagina */
+  stato.labStoria = st;
+  creaGraficiLab();
+  ricalcolaLab();
+}
+/* cambia scheda senza ridisegnare la pagina: i cursori restano dove sono */
+function schedaLab(k) {
+  stato.labScheda = k;
+  for (const x of ["regola", "risultati", "oggi"]) {
+    document.getElementById("sch-" + x).hidden = x !== k;
+    document.getElementById("tab-" + x).setAttribute("aria-pressed", String(x === k));
+  }
+  ridimensiona(document.getElementById("sch-" + k));
+  window.scrollTo(0, 0);
+}
+function seguiRegola() {
+  stato.seguita = {sim: stato.labSim, p: {...stato.lab, periodo: "tutto"}};
+  ricorda();
+  aggiornaSegui();
+}
+function aggiornaSegui() {
+  const b = document.getElementById("lab-segui");
+  if (!b) return;
+  const uguale = stato.seguita.sim === stato.labSim && CHIAVI_REGOLA.every(k => stato.seguita.p[k] === stato.lab[k]);
+  b.textContent = uguale ? "Regola seguita in «Oggi»" : "Segui questa regola in «Oggi»";
+  b.disabled = uguale;
+}
+
+function creaGraficiLab() {
+  if (Chart.getChart(document.getElementById("gR"))) return;              /* già creati */
+  const c = impostaChart();
+  const g = {};
+  g.R = nuovoGrafico("gR", {data: {datasets: [
+      {type: "bar", data: [], backgroundColor: [], barPercentage: 1, categoryPercentage: 0.88},
+      {type: "line", data: [], borderColor: c.text, borderDash: [4, 3], borderWidth: 1.5, pointRadius: 0}]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {
+        title: it => `Tra ${conSegno(it[0].raw.da, 2)} e ${conSegno(it[0].raw.a, 2)}R`,
+        label: it => `${nf(it.raw.y, 0)} operazioni`}}},
+      scales: assi(c, {x: {type: "linear", ticks: {maxTicksLimit: 7, callback: v => conSegno(v, 0) + "R"}},
+        y: {beginAtZero: true, ticks: {maxTicksLimit: 5, precision: 0}}})}});
+  g.Eq = nuovoGrafico("gEq", {type: "line", data: {labels: [], datasets: [
+      {data: [], borderColor: c.s1, borderWidth: 2, pointRadius: 0}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => it[0].label, label: it => `cumulato ${conSegno(it.raw, 1)}R`}}},
+      scales: assi(c, {x: {ticks: {maxTicksLimit: 4, maxRotation: 0, callback: function (v) { const l = this.getLabelForValue(v); return l ? l.slice(-4) : ""; }}},
+        y: {ticks: {maxTicksLimit: 5, callback: v => conSegno(v, 0) + "R"}}})}});
+  const banda = (alfaF, riemp) => ({data: [], borderWidth: 0, pointRadius: 0, fill: riemp, backgroundColor: alfa(c.s1, alfaF)});
+  g.Fan = nuovoGrafico("gFan", {type: "line", data: {labels: Array.from({length: 201}, (_, i) => i), datasets: [
+      banda(0, false), banda(0.15, "-1"), banda(0, false), banda(0.35, "-1"),
+      {data: [], borderColor: c.s1, borderWidth: 2, pointRadius: 0},
+      {data: Array(201).fill(100), borderColor: c.text2, borderDash: [4, 4], borderWidth: 1, pointRadius: 0}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {filter: it => it.datasetIndex === 4, callbacks: {title: it => `Dopo ${it[0].label} operazioni`,
+        label: it => { const b = g.Fan.$bande, i = it.dataIndex; return [`mediana ${nf(b.p50[i] - 100, 1)}%`, `90% tra ${nf(b.p5[i] - 100, 1)}% e ${nf(b.p95[i] - 100, 1)}%`]; }}}},
+      scales: assi(c, {x: {title: {display: true, text: "operazioni", color: c.muted, font: {size: 11}}, ticks: {autoSkip: false, maxRotation: 0, callback: v => v % 50 === 0 ? String(v) : ""}},
+        y: {ticks: {maxTicksLimit: 6, callback: v => conSegno(v - 100, 0) + "%"}}})}});
+  g.Fin = nuovoGrafico("gFin", {data: {datasets: [
+      {type: "bar", data: [], backgroundColor: [], barPercentage: 1, categoryPercentage: 0.88}]},
+    options: {parsing: false, interaction: {mode: "nearest", axis: "x", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => `Tra ${conSegno(it[0].raw.da, 0)}% e ${conSegno(it[0].raw.a, 0)}%`,
+        label: it => `${pctNoSegno(it.raw.y / 4000, 1)} delle simulazioni`}}},
+      scales: assi(c, {x: {type: "linear", ticks: {maxTicksLimit: 6, callback: v => conSegno(v, 0) + "%"}},
+        y: {beginAtZero: true, ticks: {display: false}, grid: {display: false}}})}});
+  g.Fasi = nuovoGrafico("gFasi", {type: "bar", data: {labels: ["Laterale", "Intermedia", "Trend"], datasets: [
+      {label: "Contrarian", data: [], backgroundColor: c.s2, barPercentage: 0.9, categoryPercentage: 0.7},
+      {label: "Trend following", data: [], backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 0.7}]},
+    options: {interaction: {mode: "index", intersect: false},
+      plugins: {tooltip: {callbacks: {title: it => it[0].label, label: it => {
+        const d = g.Fasi.$n[it.datasetIndex][["laterale", "intermedia", "trend"][it.dataIndex]];
+        return d.n ? `${it.dataset.label}: ${conSegno(d.media, 2)}R su ${d.n} operazioni` : `${it.dataset.label}: nessuna operazione`; }}}},
+      scales: assi(c, {y: {ticks: {maxTicksLimit: 5, callback: v => conSegno(v, 2) + "R"}}})}});
+  g.VolReg = nuovoGrafico("gVolReg", {type: "bar", data: {labels: ["Bassa", "Media", "Alta"], datasets: [
+      {data: [], backgroundColor: [], barPercentage: 0.8, categoryPercentage: 0.8}]},
+    options: {plugins: {tooltip: {callbacks: {title: it => `Volatilità ${it[0].label.toLowerCase()}`, label: it => {
+        const d = g.VolReg.$gruppi[["bassa", "media", "alta"][it.dataIndex]];
+        return d.n ? `${conSegno(d.media, 2)}R su ${d.n} operazioni` : "nessuna operazione"; }}}},
+      scales: assi(c, {y: {ticks: {maxTicksLimit: 5, callback: v => conSegno(v, 2) + "R"}}})}});
+  g.colori = c;
+  stato.labGrafici = g;
+}
+
+function ricalcolaLab() {
+  const st = stato.labStoria, g = stato.labGrafici, p = stato.lab;
+  if (!st || !g || !document.getElementById("gR")) return;
+  const c = g.colori;
+  document.getElementById("lab-regola").textContent = descriviRegole(p, !!(stato.labAsset && stato.labAsset.rettifica));
+  const ris = simulaStrategia(st, p), {ops, i0, i1, anni} = ris;
+  document.getElementById("lab-oggi").innerHTML = htmlSegnale(stato.labAsset, st, p, false);
+  const s = statisticheOps(ops, anni);
+  document.getElementById("lab-esito").innerHTML = s
+    ? `<span><b>${nf(s.n, 0)}</b> operazioni</span><span><b>${conSegno(s.media, 2)}R</b> in media</span><span>t <b>${conSegno(s.t, 1)}</b></span><span><b>${pctNoSegno(s.vincenti, 0)}</b> in guadagno</span>`
+    : "Nessuna operazione con queste regole";
+  aggiornaSegui();
+  ricorda();
+  diagnosiFasi(st, p);
+  diagnosiVolatilita(st, p, ops);
+  document.getElementById("lab-periodo").textContent =
+    `Dal ${dataBreve(st.date[i0])} al ${dataBreve(st.date[i1])}, ${nf(i1 - i0 + 1, 0)} sedute.`;
+  const avvisi = [];
+  if (!s) avvisi.push(`<div class="avviso">Nessuna operazione con queste regole: soglia di ingresso troppo alta o filtri troppo stretti.</div>`);
+  else if (s.n < 30) avvisi.push(`<div class="avviso">Solo ${s.n} operazioni: troppo poche per giudicare.</div>`);
+  document.getElementById("lab-avvisi").innerHTML = avvisi.join("");
+  const tile = (l, v, sub) => `<div class="tile"><div class="l">${l}</div><div class="v">${v}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>`;
+  if (!s) {
+    document.getElementById("lab-tiles").innerHTML = "";
+    document.getElementById("lab-ops").innerHTML = "";
+    document.getElementById("lab-mc").innerHTML = "";
+    document.getElementById("lab-mc-nota").textContent = "";
+    ["s-ops", "s-mc"].forEach(id => { document.getElementById(id).textContent = ""; });
+    [g.R, g.Eq, g.Fan, g.Fin].forEach(ch => { ch.data.datasets.forEach((d, i) => { if (!(ch === g.Fan && i === 5)) d.data = []; }); ch.update("none"); });
+    return;
+  }
+  document.getElementById("lab-tiles").innerHTML =
+    tile("Operazioni", nf(s.n, 0), s.perAnno != null ? `${nf(s.perAnno, 1)} l'anno` : "") +
+    tile("Vincenti", pctNoSegno(s.vincenti, 0), `media ${conSegno(s.mediaV, 2)}R / ${conSegno(s.mediaP, 2)}R`) +
+    tile("Media per operazione", conSegno(s.media, 2) + "R", `${pct(s.mediaPct)} del prezzo`) +
+    tile("Profit factor", isFinite(s.pf) ? nf(s.pf, 2) : "–", "guadagni / perdite") +
+    tile("Peggiore / migliore", `${conSegno(s.peggiore, 1)}R`, `migliore ${conSegno(s.migliore, 1)}R`) +
+    tile("Asimmetria", s.skew != null ? conSegno(s.skew, 2) : "–", s.skew == null ? "" : s.skew < 0 ? "profilo concavo" : "profilo convesso") +
+    tile("Durata media", nf(s.durata, 1) + " sedute") +
+    tile("Discesa massima", `${conSegno(-s.ddR, 1)}R`, "sul cumulato storico");
+  /* istogramma dei risultati */
+  const R = ops.map(o => o.R), bin = classi(R, [0.1, 0.2, 0.25, 0.5, 1, 2, 5]);
+  g.R.data.datasets[0].data = bin;
+  g.R.data.datasets[0].backgroundColor = bin.map(b => alfa(b.x >= 0 ? c.s1 : c.neg, 0.85));
+  g.R.data.datasets[1].data = [{x: s.media, y: 0}, {x: s.media, y: Math.max(...bin.map(b => b.y)) * 1.08}];
+  g.R.update("none");
+  /* cumulato */
+  g.Eq.data.labels = ops.map(o => dataBreve(st.date[o.iu]));
+  g.Eq.data.datasets[0].data = s.curva;
+  g.Eq.update("none");
+  /* Monte Carlo */
+  const f = p.rischio / 100, mc = montecarlo(R, f), b = mc.bande;
+  g.Fan.$bande = b;
+  [b.p5, b.p95, b.p25, b.p75, b.p50].forEach((serie, i) => { g.Fan.data.datasets[i].data = serie; });
+  g.Fan.update("none");
+  const fin = Array.from(mc.finali, e => (e - 1) * 100), binF = classi(fin, [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000, 5000]);
+  g.Fin.data.datasets[0].data = binF;
+  g.Fin.data.datasets[0].backgroundColor = binF.map(x => alfa(x.x >= 0 ? c.s1 : c.neg, 0.85));
+  g.Fin.update("none");
+  const anniMc = s.perAnno ? 200 / s.perAnno : null;
+  document.getElementById("lab-mc-nota").textContent =
+    `4.000 percorsi da 200 operazioni, rischio ${nf(p.rischio, 2)}% del capitale per operazione.` +
+    (anniMc ? ` Al ritmo storico sono circa ${nf(anniMc, anniMc < 10 ? 1 : 0)} anni.` : "");
+  document.getElementById("s-mc").textContent =
+    `capitale finale: mediana ${pct(quantile(mc.finali, 0.5) - 1, 0)}, 5% peggiore ${pct(quantile(mc.finali, 0.05) - 1, 0)}`;
+  const qf = q => pct(quantile(mc.finali, q) - 1, 0), qd = q => pctNoSegno(quantile(mc.dd, q), 0);
+  document.getElementById("lab-mc").innerHTML = `
+    <dt>Capitale finale, 5% peggiore</dt><dd>${qf(0.05)}</dd>
+    <dt>Capitale finale, mediana</dt><dd>${qf(0.5)}</dd>
+    <dt>Capitale finale, 5% migliore</dt><dd>${qf(0.95)}</dd>
+    <dt>Probabilità di chiudere in perdita</dt><dd>${pctNoSegno(mc.pPerdita, 0)}</dd>
+    <dt>Discesa massima, mediana</dt><dd>${qd(0.5)}</dd>
+    <dt>Discesa massima, 5% peggiore</dt><dd>${qd(0.95)}</dd>
+    <dt>Probabilità di perdere metà del capitale</dt><dd>${pctNoSegno(mc.pMeta, 1)}</dd>`;
+  /* ultime operazioni */
+  const ultime = ops.slice(-30).reverse();
+  document.getElementById("lab-ops").innerHTML = `<table><thead><tr><th>Ingresso</th><th>Lato</th><th>Sedute</th><th>R</th><th>Uscita</th></tr></thead><tbody>${
+    ultime.map(o => `<tr><td>${dataBreve(st.date[o.ie])}</td><td>${o.lato === 1 ? "long" : "short"}</td><td>${o.durata}</td>
+      <td>${conSegno(o.R, 2)}</td><td>${o.motivo}</td></tr>`).join("")}</tbody></table>`;
+  document.getElementById("s-ops").textContent = ultime.length
+    ? `l'ultima: ${dataBreve(st.date[ultime[0].ie])}, ${conSegno(ultime[0].R, 2)}R` : "";
+}
+
+/* ---------- navigazione ---------- */
+function rotta() {
+  if (!stato.dati) return;
+  const h = decodeURIComponent(location.hash.slice(1));
+  distruggi();
+  let voce = "oggi";
+  if (h.startsWith("m=")) { voce = "mercati"; dettaglio(h.slice(2)); }
+  else if (h === "mercati") { voce = "mercati"; paginaMercati(); }
+  else if (h.startsWith("lab=")) { voce = "strategia"; laboratorio(h.slice(4)); }
+  else if (h === "strategia") { voce = "strategia"; laboratorio(stato.labSim); }
+  else paginaOggi();
+  for (const k of ["oggi", "mercati", "strategia"]) {
+    const el = document.getElementById("nav-" + k);
+    if (k === voce) el.setAttribute("aria-current", "page"); else el.removeAttribute("aria-current");
+  }
+}
+window.addEventListener("hashchange", () => {
+  const h = location.hash;
+  rotta();
+  window.scrollTo(0, h === "#mercati" ? stato.scrollElenco : 0);
+});
+function apri(sim) {
+  if (location.hash === "#mercati") stato.scrollElenco = window.scrollY;
+  location.hash = "m=" + encodeURIComponent(sim);
+}
+function indietro() { if (history.length > 1) history.back(); else location.hash = "mercati"; }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => rotta());
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register(BASE + "sw.js").catch(() => {});
+avvia();
+</script>
+</body>
+</html>

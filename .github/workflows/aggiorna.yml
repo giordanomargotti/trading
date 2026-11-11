@@ -35,7 +35,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Controlla i calcoli
-        run: python tests/test_calcoli.py
+        run: python tests/test_calcoli.py && node tests/test_motore.js
 
       - name: Scarica le chiusure e ricalcola
         run: python scripts/aggiorna_dati.py --out docs/data.json
