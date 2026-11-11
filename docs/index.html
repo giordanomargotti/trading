@@ -422,6 +422,7 @@ const REGOLA_PREDEFINITA = {sim: "NG=F", p: {...stato.lab, ...PRESET["Trend foll
   stato.diario = Array.isArray(m.diario) ? m.diario : [];
   stato.aperte = new Set(Array.isArray(m.aperte) ? m.aperte : []);
   stato.grappoli = m.grappoli || "1";
+  stato.unitaGrappoli = m.unitaGrappoli === "sigma" ? "sigma" : "pct";
   stato.mainSim = m.mainSim || null;
   if (m.modo) stato.modo = m.modo;
   if (m.scala) stato.scala = m.scala;
@@ -429,7 +430,7 @@ const REGOLA_PREDEFINITA = {sim: "NG=F", p: {...stato.lab, ...PRESET["Trend foll
 function ricorda() {
   try {
     localStorage.setItem(CHIAVE_MEMORIA, JSON.stringify({lab: stato.lab, labSim: stato.labSim, seguita: stato.seguita,
-      posizione: stato.posizione, diario: stato.diario, aperte: [...stato.aperte], grappoli: stato.grappoli, mainSim: stato.mainSim,
+      posizione: stato.posizione, diario: stato.diario, aperte: [...stato.aperte], grappoli: stato.grappoli, unitaGrappoli: stato.unitaGrappoli, mainSim: stato.mainSim,
       modo: stato.modo, scala: stato.scala}));
   } catch (e) { /* senza memoria l'app funziona lo stesso, ma non ricorda le scelte */ }
 }
@@ -890,12 +891,15 @@ function corpoDomani(a) {
     ${comeSiLegge("domani")}`;
 }
 function corpoGrappoli(a) {
-  const f = stato.grappoli || "1", o = oltreDue(a), s = a.serie;
-  return `<div class="seg" role="group" aria-label="Periodo">${FINESTRE_GRAPPOLI.map(([v, t]) =>
+  const f = stato.grappoli || "1", o = oltreDue(a), s = a.serie, inSigma = stato.unitaGrappoli === "sigma";
+  return `<div class="controlli"><div class="seg" role="group" aria-label="Periodo">${FINESTRE_GRAPPOLI.map(([v, t]) =>
       `<button aria-pressed="${f === v}" onclick="finestraGrappoli('${v}')">${t}</button>`).join("")}</div>
-    <div class="legenda"><span><i class="q" style="background:var(--text2);opacity:.55"></i>Rendimento</span>
-      <span><i class="q" style="background:var(--neg)"></i>Fuori dalla fascia</span>
-      <span><i class="lin" style="border-color:var(--s1)"></i>±2σ prevista</span></div>
+    <div class="seg" role="group" aria-label="Unità delle barre">
+      <button aria-pressed="${!inSigma}" onclick="cambia('unitaGrappoli','pct')">Barre in %</button>
+      <button aria-pressed="${inSigma}" onclick="cambia('unitaGrappoli','sigma')">Barre in σ</button></div></div>
+    <div class="legenda"><span><i class="q" style="background:var(--text2);opacity:.55"></i>${inSigma ? "Rendimento diviso per la σ prevista" : "Rendimento"}</span>
+      <span><i class="q" style="background:var(--neg)"></i>${inSigma ? "Oltre ±2σ" : "Fuori dalla fascia"}</span>
+      <span><i class="lin" style="border-color:var(--s1)"></i>${inSigma ? "±2σ" : "±2σ prevista"}</span></div>
     <div class="grafico" style="height:220px"><canvas id="gGrappoli" role="img" aria-label="Rendimenti giornalieri con la fascia di due sigma prevista"></canvas></div>
     ${o ? `<p class="piccolo" style="margin-top:6px">Ultimo anno: ${o.oltre.length} sedute oltre ±2σ su ${o.n}. Attese: ${nf(o.g, 1)} con la gaussiana${o.t != null ? `, ${nf(o.t, 1)} con la t di Student` : ""}.</p>` : ""}
     ${o && o.oltre.length ? `<details><summary>Elenco delle sedute oltre ±2σ</summary><table><thead><tr><th>Seduta</th><th>z</th><th>Rendimento</th></tr></thead><tbody>
@@ -1063,15 +1067,19 @@ function graficiGrappoli(a, st) {
   const anniTick = (v, i) => { const d = D[i]; if (!d || i === 0 || D[i - 1].slice(0, 4) === d.slice(0, 4)) return "";
     const y = Number(d.slice(0, 4)), passo = quante > 2600 ? 5 : quante > 800 ? 1 : 0;
     return passo === 0 ? "" : y % passo === 0 ? d.slice(0, 4) : ""; };
+  /* in σ: ogni rendimento diviso per la σ prevista la sera prima; la fascia diventa due rette a ±2 */
+  const inSigma = stato.unitaGrappoli === "sigma";
+  const Z = R.map((x, i) => SD[i] != null && SD[i] > 0 ? x / SD[i] : null);
+  const barre = inSigma ? Z : R, fascia = k => SD.map(x => x == null ? null : inSigma ? k : k * x);
   nuovoGrafico("gGrappoli", {data: {labels: D, datasets: [
-      {type: "bar", data: R, backgroundColor: fuori.map(x => x ? c.neg : alfa(c.text2, 0.55)), barPercentage: 1, categoryPercentage: 1, order: 2},
-      {type: "line", data: SD.map(x => x == null ? null : 2 * x), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1},
-      {type: "line", data: SD.map(x => x == null ? null : -2 * x), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1}]},
+      {type: "bar", data: barre, backgroundColor: fuori.map(x => x ? c.neg : alfa(c.text2, 0.55)), barPercentage: 1, categoryPercentage: 1, order: 2},
+      {type: "line", data: fascia(2), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1},
+      {type: "line", data: fascia(-2), borderColor: c.s1, borderWidth: 1.2, pointRadius: 0, order: 1}]},
     options: {interaction: {mode: "index", intersect: false},
       plugins: {tooltip: {filter: it => it.datasetIndex === 0, callbacks: {title: it => dataBreve(it[0].label),
         label: it => { const i = it.dataIndex; return [`rendimento ${conSegno(R[i], 2)}%`, `fascia ±${nf(2 * SD[i], 2)}%`, `z ${conSegno(R[i] / SD[i], 2)}`]; }}}},
       scales: assi(c, {x: {ticks: {autoSkip: false, maxRotation: 0, callback: quante <= 300 ? tickMese(D) : anniTick}},
-        y: {ticks: {maxTicksLimit: 6, callback: v => conSegno(v, 0) + "%"}}})}});
+        y: {ticks: {maxTicksLimit: 6, callback: v => v === 0 && inSigma ? "0" : conSegno(v, 0) + (inSigma ? "σ" : "%")}}})}});
 
   /* autocorrelazione su tutta la storia */
   const L = 60, ar = autocorrelazione(r, L), aa = autocorrelazione(r.map(Math.abs), L), banda = 2 / Math.sqrt(r.length);
