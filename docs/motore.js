@@ -292,6 +292,52 @@ function montecarlo(R, f, nOp = 200, nPerc = 4000) {
 }
 
 /* istogramma con classi di larghezza "tonda", al massimo una quarantina */
+/* Volatilità relativa all'ingresso: σ prevista dopo la chiusura di t (quella che fissa stop e
+   dimensione) divisa per la mediana delle stesse σ nelle 252 sedute precedenti. Usa solo dati già
+   noti alla chiusura di t. Una cache per tipo di σ. */
+function volRelativa(st, usaG) {
+  const chiave = usaG ? "_vrG" : "_vrE";
+  if (st[chiave]) return st[chiave];
+  const s = usaG ? st.sg : st.se, n = s.length, out = new Array(n).fill(null), W = SEDUTE_ANNO, fin = [];
+  const posizione = v => { let lo = 0, hi = fin.length; while (lo < hi) { const m = (lo + hi) >> 1; if (fin[m] < v) lo = m + 1; else hi = m; } return lo; };
+  for (let t = 1; t < n; t++) {
+    const entra = s[t - 1], esce = t - 1 - W >= 0 ? s[t - 1 - W] : null;     /* finestra: sedute t-W .. t-1 */
+    if (entra != null && entra > 0) fin.splice(posizione(entra), 0, entra);
+    if (esce != null && esce > 0) fin.splice(posizione(esce), 1);
+    if (t >= W && fin.length >= 0.8 * W && s[t] != null && s[t] > 0) out[t] = s[t] / fin[fin.length >> 1];
+  }
+  return (st[chiave] = out);
+}
+
+/* Risultato delle operazioni per terzo di volatilità relativa all'ingresso. Le soglie sono i terzili
+   della volatilità relativa su tutta la storia del mercato: servono a descrivere, non a scegliere. */
+function perVolatilita(ops, st, usaG) {
+  const vr = volRelativa(st, usaG), ord = vr.filter(x => x != null).sort((a, b) => a - b);
+  if (ord.length < 300) return null;
+  const soglie = [quantile(ord, 1 / 3), quantile(ord, 2 / 3)];
+  const regime = x => x == null ? null : x < soglie[0] ? "bassa" : x < soglie[1] ? "media" : "alta";
+  const g = {bassa: [], media: [], alta: []};
+  for (const o of ops) { const k = regime(vr[o.ie]); if (k) g[k].push(o.R); }
+  const stat = v => {
+    if (!v.length) return {n: 0, media: 0, es: 0, t: 0};
+    const m = v.reduce((a, b) => a + b, 0) / v.length, sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)) : 0;
+    const es = sd / Math.sqrt(v.length);
+    return {n: v.length, media: m, es, t: es > 0 ? m / es : 0};
+  };
+  const oggi = vr[vr.length - 1];
+  return {soglie, gruppi: {bassa: stat(g.bassa), media: stat(g.media), alta: stat(g.alta)}, oggi, regimeOggi: regime(oggi)};
+}
+
+/* Autocorrelazione per ritardo 1..L */
+function autocorrelazione(x, L) {
+  const n = x.length, m = x.reduce((a, b) => a + b, 0) / n;
+  let v = 0;
+  for (const a of x) v += (a - m) ** 2;
+  const out = [];
+  for (let l = 1; l <= L; l++) { let c = 0; for (let t = l; t < n; t++) c += (x[t] - m) * (x[t - l] - m); out.push(c / v); }
+  return out;
+}
+
 function classi(valori, larghezze) {
   let lo = Infinity, hi = -Infinity;
   for (const v of valori) { if (v < lo) lo = v; if (v > hi) hi = v; }
@@ -304,5 +350,6 @@ function classi(valori, larghezze) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {SOGLIA_LATERALE, SOGLIA_TREND, Q_VR, SEDUTE_ANNO, mulberry32, quantile, forzaTrend, faseDi, serieVR, soglieVR,
-    fasiSerie, estremi, rollCumulati, versoCurva, simulaStrategia, statisticheOps, perFase, montecarlo, classi};
+    fasiSerie, estremi, rollCumulati, versoCurva, simulaStrategia, statisticheOps, perFase, volRelativa, perVolatilita,
+    autocorrelazione, montecarlo, classi};
 }
