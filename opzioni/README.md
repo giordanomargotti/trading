@@ -10,7 +10,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 | `paper/paper_it.pdf`, `paper/paper_en.pdf` | documento completo in italiano e in inglese (sorgenti `.tex` accanto) |
 | `paper/abstract_it.pdf`, `paper/abstract_en.pdf` | sintesi di due pagine con grafici (sorgenti `.tex` accanto) |
 | `paper/figure/` | figure in PDF, nelle due lingue |
-| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), parametri GARCH, controlli di qualità |
+| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
 | `codice/` | pipeline Python completa e modelli dei documenti |
 
 ## Risultati principali
@@ -20,6 +20,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 - 434 configurazioni, 1.310.509 operazioni simulate. Sharpe mediano +0,39 ai prezzi mid e −0,40 ai prezzi bid-ask.
 - Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi mid, 2,5% ai prezzi bid-ask.
 - Filtro di sospensione sulla volatilità realizzata (HV21 oltre il 25%): Sharpe mediano da −0,30 a −0,34, mese peggiore invariato. Gli strike scelti per delta si allargano già con la volatilità implicita.
+- Distribuzione dei rendimenti: asimmetria per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: asimmetria −9,5 e curtosi in eccesso 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
 
 ## Riproduzione
 
@@ -36,6 +37,7 @@ python $S/garch.py out                                        # GJR-GARCH-t senz
 python $S/vrp.py out $S                                       # statistiche sul premio
 python $S/bt.py out && python $S/cal.py out                   # backtest
 python $S/stat_bt.py out $S && python $S/filtro_vol.py out $S # sintesi, filtro sulla volatilità realizzata
+python $S/distribuzioni.py out $S                             # distribuzione dei rendimenti e code
 python $S/sintesi.py out                                      # dati del sito, figure
 python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
 python $S/costruisci_sito.py $S/modelli/tpl.html out/sito.json <chart.umd.min.js> index.html
@@ -49,6 +51,6 @@ Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (gru
 
 ## Fonti non incluse
 
-La cartella Google Drive e il repository `AlexCrescentini/backtest_put_credit_spread` non erano accessibili al momento dell'elaborazione.
+La option chain XSP (IVolatility, 2014–2026) del repository `AlexCrescentini/backtest_put_credit_spread` è archiviata con Git LFS e non è inclusa nell'archivio ZIP esaminato. Il materiale della cartella Google Drive del progetto (script, snapshot giornalieri, documenti) non è integrato in questa versione.
 
 Documento di ricerca. Non costituisce consulenza in materia di investimenti.

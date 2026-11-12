@@ -291,6 +291,52 @@ The 0.16-delta, 45-day short put is profitable in 94\% of trades, with a mean re
 
 In short, positive results coincide with structures that have positive beta and for which a material part of the return is equity market exposure in a period when the index returned 11.4\% per year. This is the conclusion of Israelov and Nielsen (2015) and Jurek and Stafford (2015) applied to these strategies.
 
+\subsection{Distribution of returns and tails}\label{sec:code}
+
+Mean and Sharpe ratio do not describe a strategy that collects a small premium often and suffers a large loss rarely. The shape of the distribution is measured at two levels: per trade, as the return on margin at bid-ask prices with commissions, and per month, on the constant-capital ladder. The reference is a normal distribution with the same mean and variance, together with index returns over the same calendar horizon. Table~\ref{tab:code} reports skewness, excess kurtosis, the frequency of returns more than three standard deviations below the mean relative to that of the normal (0.135\%), and the 1\% expected shortfall in standard deviations relative to that of the normal (2.665). Daily entries overlap and are not independent, so the Jarque--Bera (1987) test is applied only to the monthly series.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Shape of the return distribution. Per trade: return on margin at bid-ask prices, commissions included; frequency of returns more than three standard deviations below the mean and 1\% expected shortfall in standard deviations, both relative to the normal; worst trade as a percentage of margin. Monthly: constant-capital ladder; $p$-value of the Jarque--Bera test. Last row: 30-day S\&P 500 returns from each session and monthly price returns.}\label{tab:code}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{Per trade} & \multicolumn{3}{c}{Monthly} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}
+Family & Parameters & Skew. & Ex. kurt. & $<-3\sigma$ & ES 1\% & Worst \% & Skew. & Ex. kurt. & JB $p$ \\ \midrule
+Short put & $\Delta$0.10, 7 d & $-$9.69 & 121.7 & 12.3 & 3.08 & $-$40 & $-$4.04 & 21.0 & $<$0.001 \\
+Short put & $\Delta$0.16, 45 d & $-$9.47 & 108.5 & 9.8 & 3.05 & $-$125 & $-$8.67 & 91.3 & $<$0.001 \\
+Short strangle & $\Delta$0.16, 30 d & $-$8.01 & 101.7 & 8.4 & 2.57 & $-$134 & $-$7.67 & 78.0 & $<$0.001 \\
+Put credit spread & $\Delta$0.20/0.05, 30 d & $-$4.60 & 22.0 & 23.4 & 2.34 & $-$102 & $-$4.05 & 20.8 & $<$0.001 \\
+Put credit spread & $\Delta$0.20, 1\%, 30 d & $-$2.85 & 6.6 & 53.4 & 1.35 & $-$123 & $-$2.42 & 6.1 & $<$0.001 \\
+Put credit spread & $\Delta$0.20/0.05, 30, TP50 d & $-$6.11 & 39.0 & 18.4 & 2.84 & $-$102 & $-$4.24 & 21.4 & $<$0.001 \\
+Put credit spread & $\Delta$0.20/0.05, 30, TP50/SL200 d & $-$2.52 & 5.5 & 18.4 & 1.62 & $-$44 & $-$1.60 & 2.7 & $<$0.001 \\
+Short ATM straddle & ATM, 30 d & $-$2.92 & 23.9 & 8.3 & 2.03 & $-$148 & $-$4.20 & 33.1 & $<$0.001 \\
+Iron condor & $\Delta$0.16/0.05, 30 d & $-$2.82 & 9.7 & 16.7 & 2.00 & $-$103 & $-$2.57 & 11.0 & $<$0.001 \\
+Iron condor & $\Delta$0.16, 1\%, 30 d & $-$1.13 & $-$0.4 & 0.2 & 0.90 & $-$186 & $-$1.11 & 0.5 & $<$0.001 \\
+Iron butterfly & ATM/$\Delta$0.10, 30 d & $-$0.41 & $-$0.1 & 0.0 & 0.97 & $-$107 & $-$0.68 & 0.8 & $<$0.001 \\
+Call credit spread & $\Delta$0.16/0.05, 30 d & $-$1.99 & 2.6 & 1.9 & 1.12 & $-$110 & $-$1.89 & 3.0 & $<$0.001 \\
+Long ATM calendar & ATM, 30/60 d & 0.49 & $-$0.1 & 0.0 & 0.81 & $-$189 & $-$0.22 & 0.2 & 0.473 \\
+Long put & $\Delta$0.10, 30 d & 16.40 & 312.1 & 0.0 & 0.06 & $-$198 & 11.63 & 141.2 & $<$0.001 \\
+\midrule
+S\&P 500 & 30 d & $-$1.22 & 6.9 & 6.2 & 1.64 & $-$34 & $-$0.33 & 0.4 & 0.118 \\
+\bottomrule\end{tabular}}\end{table}
+
+Structures that sell volatility without protection have left tails far longer than those of the normal and of the index. For the 0.16-delta, 45-day short put, per-trade skewness is $-$9.5 and excess kurtosis 108, against $-$1.1 and 4.8 for index returns over 45 days; losses beyond three standard deviations are 9.8 times as frequent as under the normal and the 1\% expected shortfall is 3.0 times the normal one (Figures~\ref{fig:code} and~\ref{fig:qq}). The shape persists in the monthly series of the ladder (skewness $-$8.7, excess kurtosis 91), whereas monthly index returns are close to normal over the period (skewness $-$0.33, excess kurtosis 0.40, Jarque--Bera $p$ = 0.12). Across all 434 configurations, 96\% have negative per-trade skewness and the Jarque--Bera test rejects normality of the monthly series at the 1\% level in 92\%.
+
+The tail of the losses is not heavier than that of the index in the asymptotic sense. Beyond the strike the loss of a position held to expiry is linear in the final price, so it inherits the tail index of the underlying: the Hill (1975) estimator on 30-day index returns, with 2.5\% of the observations in the tail, gives 2.9 (between 2.3 and 2.9 with 1 to 5\%), in line with the value close to three documented for equity indices (Gopikrishnan et al., 1999; Cont, 2001). What changes is the body of the distribution: almost all outcomes are concentrated on the premium collected, the standard deviation is small, and the rare losses lie many standard deviations away. With a tail index below four the population kurtosis is not finite (Mandelbrot, 1963), so the sample values describe 2010--2023 and depend on a few episodes; the informative part is the comparison across structures and with the index. On strategy returns the Hill estimator depends on the threshold, because the body is compressed on the premium and overlapping trades replicate the same episode, and it is not reported.
+
+\begin{figure}[ht]\centering
+\includegraphics[width=\textwidth]{code_en.pdf}
+\caption{Per-trade returns in standard deviations from the mean, bid-ask prices; number of trades on a logarithmic scale. The curve is the number expected under a normal distribution with the same mean and variance. Last panel: 30-day S\&P 500 returns from each session.}\label{fig:code}
+\end{figure}
+
+Defined-risk structures truncate the tail at the width of the spread, but truncation alone does not make the distribution normal. With 0.05-delta wings excess kurtosis remains high (22.0 for the 0.20-delta put credit spread, with losses beyond three standard deviations 23.4 times as frequent as under the normal). With wings at 1\% of spot the maximum loss becomes frequent rather than rare: 17.8\% of the trades of the 0.16-delta iron condor lose more than 90\% of margin, against 6.2\% under the normal, and excess kurtosis falls to $-$0.39. The risk is no longer a distant tail but a large probability mass at the maximum loss, which kurtosis does not capture. Exiting at a loss of 200\% of the premium brings the excess kurtosis of the put credit spread from 22.0 to 5.5; the cost of the rule is discussed in the next subsection. Structures that buy volatility have the opposite shape: positive skewness and a long right tail (0.10-delta long put: skewness 16.4), while the long 30/60-day at-the-money calendar is close to normal (Jarque--Bera $p$ = 0.47 on the monthly series).
+
+\begin{figure}[ht]\centering
+\includegraphics[width=0.7\textwidth]{qq_en.pdf}
+\caption{Quantile--quantile plot of standardized per-trade returns against the standard normal; the dashed diagonal corresponds to the normal.}\label{fig:qq}
+\end{figure}
+
+Two consequences follow. Rankings based on mean and standard deviation, the Sharpe ratio included, overstate the quality of short-volatility structures: selling out-of-the-money options is the standard example of how a negatively skewed return can raise the Sharpe ratio without adding value (Goetzmann et al., 2007). The deflated Sharpe ratio of Section~\ref{sec:rob} corrects for the skewness and kurtosis of the monthly series. In the project's selection procedure, a criterion that divides expected value by a power of the standard deviation inherits the same limitation: tail risk should be measured directly, through the expected shortfall or the probability of the maximum loss under the GJR-GARCH density, and kept separate from the expected-value filter.
+
 \subsection{Exit rules}
 
 The median Sharpe ratio of credit structures is +0.41, +0.44 and +0.43 at mid prices for hold-to-expiry, 50\% profit-taking, and profit-taking with a 200\% loss limit respectively; at bid-ask prices it becomes $-$0.05, $-$0.44 and $-$0.73. At mid prices exit rules do not change expected return, as must be the case for a rule that contains no information; at bid-ask prices they worsen it, because every early exit pays a second spread, whereas cash settlement at expiry pays none. The rules reduce maximum drawdown, but at a certain cost.
@@ -403,6 +449,8 @@ On SPX chains from 2010 to 2023 the volatility risk premium exists in the form d
 
 For the project's strategies there are three consequences. First, symmetric defined-risk structures, the iron condor in particular, sell both the part of the surface that contains the premium (puts) and the part that does not (calls), and pay the spread on four legs; the net result is zero or negative. Second, structures that sell puts keep a positive result after costs, but a material part is equity market exposure and the residual alpha is not statistically distinguishable from zero in the great majority of configurations. Third, exit rules and filters change the distribution of results but do not create expected return; suspending entries when realized volatility is high reduces exposure without avoiding extreme events, because delta-selected strikes already widen with implied volatility; the filter based on the comparison with GARCH has the correct sign and deserves a forward test.
 
+The distribution of returns qualifies every Sharpe ratio in this paper. Structures that sell volatility have per-trade skewness and kurtosis far beyond those of the index, and the monthly series is not normal in 92\% of configurations: tail risk has to be measured directly, not inferred from the standard deviation.
+
 The working hypothesis that the premium exists but that the attempt to capture it systematically tends, over the long run and net of costs, to a zero result is not rejected by the data.
 
 \appendix
@@ -432,6 +480,7 @@ maximum loss $\max(B-A,\,D-C)-c$, break-evens $B-c$ and $C+c$. The iron butterfl
 \bibitem{} Carr, P. and Wu, L. (2009). Variance risk premiums. \emph{Review of Financial Studies}, 22(3), 1311--1341.
 \bibitem{} Christensen, B. J. and Prabhala, N. R. (1998). The relation between implied and realized volatility. \emph{Journal of Financial Economics}, 50(2), 125--150.
 \bibitem{} Constantinides, G. M., Jackwerth, J. C. and Savov, A. (2013). The puzzle of index option returns. \emph{Review of Asset Pricing Studies}, 3(2), 229--257.
+\bibitem{} Cont, R. (2001). Empirical properties of asset returns: stylized facts and statistical issues. \emph{Quantitative Finance}, 1(2), 223--236.
 \bibitem{} Coval, J. D. and Shumway, T. (2001). Expected option returns. \emph{Journal of Finance}, 56(3), 983--1009.
 \bibitem{} Dew-Becker, I. and Giglio, S. (2023). Risk preferences implied by synthetic options. NBER Working Paper 31833.
 \bibitem{} Dew-Becker, I. and Giglio, S. (2025). The decline of the variance risk premium: evidence from traded and synthetic options. Federal Reserve Bank of Chicago, Working Paper 2025-17.
@@ -440,11 +489,16 @@ maximum loss $\max(B-A,\,D-C)-c$, break-evens $B-c$ and $C+c$. The iron butterfl
 \bibitem{} Fama, E. F. (1970). Efficient capital markets: a review of theory and empirical work. \emph{Journal of Finance}, 25(2), 383--417.
 \bibitem{} Gârleanu, N., Pedersen, L. H. and Poteshman, A. M. (2009). Demand-based option pricing. \emph{Review of Financial Studies}, 22(10), 4259--4299.
 \bibitem{} Glosten, L. R., Jagannathan, R. and Runkle, D. E. (1993). On the relation between the expected value and the volatility of the nominal excess return on stocks. \emph{Journal of Finance}, 48(5), 1779--1801.
+\bibitem{} Goetzmann, W., Ingersoll, J., Spiegel, M. and Welch, I. (2007). Portfolio performance manipulation and manipulation-proof performance measures. \emph{Review of Financial Studies}, 20(5), 1503--1546.
+\bibitem{} Gopikrishnan, P., Plerou, V., Amaral, L. A. N., Meyer, M. and Stanley, H. E. (1999). Scaling of the distribution of fluctuations of financial market indices. \emph{Physical Review E}, 60(5), 5305--5316.
+\bibitem{} Hill, B. M. (1975). A simple general approach to inference about the tail of a distribution. \emph{Annals of Statistics}, 3(5), 1163--1174.
 \bibitem{} Ilmanen, A. (2012). Do financial markets reward buying or selling insurance and lottery tickets? \emph{Financial Analysts Journal}, 68(5), 26--36.
 \bibitem{} Israelov, R. and Nielsen, L. N. (2015). Covered calls uncovered. \emph{Financial Analysts Journal}, 71(6), 44--57.
 \bibitem{} Jackwerth, J. C. (2000). Recovering risk aversion from option prices and realized returns. \emph{Review of Financial Studies}, 13(2), 433--451.
+\bibitem{} Jarque, C. M. and Bera, A. K. (1987). A test for normality of observations and regression residuals. \emph{International Statistical Review}, 55(2), 163--172.
 \bibitem{} Jiang, G. J. and Tian, Y. S. (2005). The model-free implied volatility and its information content. \emph{Review of Financial Studies}, 18(4), 1305--1342.
 \bibitem{} Jurek, J. W. and Stafford, E. (2015). The cost of capital for alternative investments. \emph{Journal of Finance}, 70(5), 2185--2226.
+\bibitem{} Mandelbrot, B. (1963). The variation of certain speculative prices. \emph{Journal of Business}, 36(4), 394--419.
 \bibitem{} Mincer, J. and Zarnowitz, V. (1969). The evaluation of economic forecasts. In J. Mincer (ed.), \emph{Economic Forecasts and Expectations}. NBER.
 \bibitem{} Newey, W. K. and West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. \emph{Econometrica}, 55(3), 703--708.
 \bibitem{} Poon, S.-H. and Granger, C. W. J. (2003). Forecasting volatility in financial markets: a review. \emph{Journal of Economic Literature}, 41(2), 478--539.

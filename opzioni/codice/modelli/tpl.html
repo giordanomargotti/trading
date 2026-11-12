@@ -47,8 +47,8 @@ th,td{padding:6px 10px; text-align:right; border-bottom:1px solid var(--line); w
 th:first-child,td:first-child{text-align:left} th{font-weight:600; color:var(--ink2); font-size:13px}
 th.sort{cursor:pointer} th.sort:hover{color:var(--accent)}
 .controls{display:flex; flex-wrap:wrap; gap:14px 18px; align-items:end; margin-bottom:8px}
-.controls label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink2)}
-select,input[type=range]{font:inherit} select{padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink)}
+.controls label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink2); min-width:0; max-width:100%}
+select,input[type=range]{font:inherit} select{max-width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:4px; background:var(--surface); color:var(--ink)}
 input[type=range]{width:190px; accent-color:var(--accent)}
 .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; margin:14px 0}
 .stat b{display:block; font:600 22px/1.1 var(--serif); font-variant-numeric:tabular-nums} .stat span{font-size:12.5px; color:var(--ink2)}
@@ -58,7 +58,7 @@ input[type=range]{width:190px; accent-color:var(--accent)}
 .docs{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px}
 .doc{border:1px solid var(--line); border-radius:6px; padding:14px; background:var(--surface)}
 .doc b{display:block; margin-bottom:6px} .doc a{display:inline-block; margin-right:14px}
-a{color:var(--accent)} code{font:13.5px var(--mono); background:var(--mid); padding:1px 4px; border-radius:3px}
+a{color:var(--accent)} code{font:13.5px var(--mono); background:var(--mid); padding:1px 4px; border-radius:3px; overflow-wrap:anywhere}
 .legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink2); margin:0 0 8px}
 .legend i{display:inline-block; width:14px; height:3px; vertical-align:middle; margin-right:6px}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
@@ -68,7 +68,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 </head>
 <body>
 <nav><div class="in">
-<a href="#sintesi">Sintesi</a><a href="#dati">Dati e metodo</a><a href="#vrp">VRP sullo storico</a><a href="#esplora">Strategie</a><a href="#confronto">Confronto</a><a href="#letteratura">Letteratura</a><a href="#codice">Codice esistente</a><a href="#documenti">Documenti</a><a href="#limiti">Limiti</a>
+<a href="#sintesi">Sintesi</a><a href="#dati">Dati e metodo</a><a href="#vrp">VRP sullo storico</a><a href="#esplora">Strategie</a><a href="#confronto">Confronto</a><a href="#distribuzioni">Distribuzioni</a><a href="#letteratura">Letteratura</a><a href="#codice">Codice esistente</a><a href="#documenti">Documenti</a><a href="#limiti">Limiti</a>
 </div></nav>
 <main>
 <section id="sintesi">
@@ -180,6 +180,29 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <p>Ordinabile per colonna; segue il costo di esecuzione impostato nell'esploratore.</p>
 <div class="controls"><label>Famiglia<select id="s-tf"></select></label><label>Righe<select id="s-tn"><option>25</option><option>60</option><option>500</option></select></label></div>
 <div class="tw"><table id="t-all"></table></div>
+</section>
+
+<section id="distribuzioni">
+<h2>Distribuzione dei rendimenti e code</h2>
+<p>Chi vende volatilità incassa spesso poco e perde raramente molto: media e Sharpe non descrivono questo profilo. Qui si misura la forma della distribuzione dei rendimenti per operazione (sul margine, prezzi bid-ask, commissioni incluse) e della serie mensile a capitale costante. Il riferimento è una normale con la stessa media e la stessa varianza, insieme all'S&amp;P 500 sullo stesso orizzonte.</p>
+<div class="stats" id="d-stats"></div>
+<div class="panel">
+<div class="controls"><label>Configurazione<select id="s-dist"></select></label></div>
+<div class="stats" id="d-cfg"></div>
+<div class="grid2">
+<figure><div class="legend"><span><i style="background:var(--s1)"></i>Operazioni</span><span><i style="background:var(--s2)"></i>Normale di pari media e varianza</span></div>
+<div class="chart"><canvas id="c-dist" role="img" aria-label="Istogramma dei rendimenti per operazione in deviazioni standard dalla media"></canvas></div>
+<figcaption>Rendimenti per operazione in deviazioni standard dalla media; numero di operazioni in scala logaritmica. La curva è il numero atteso sotto la normale.</figcaption></figure>
+<figure><div class="legend"><span><i style="background:var(--s1)"></i>Configurazione</span><span><i style="background:var(--neutral)"></i>S&amp;P 500 sullo stesso orizzonte</span></div>
+<div class="chart"><canvas id="c-qq" role="img" aria-label="QQ plot dei rendimenti rispetto alla normale"></canvas></div>
+<figcaption>Quantili empirici standardizzati contro quantili della normale standard; la diagonale corrisponde alla normale.</figcaption></figure>
+</div>
+</div>
+<h3>Mediane per famiglia</h3>
+<p>Mediane su tutte le configurazioni di ciascuna famiglia, senza selezione a posteriori.</p>
+<div class="tw"><table id="t-code"></table></div>
+<p id="x-code"></p>
+<p class="note">Le operazioni giornaliere si sovrappongono e non sono indipendenti: il test di Jarque-Bera si applica solo alle serie mensili. L'indice di coda di Hill si calcola solo sull'S&amp;P 500: per le strutture tenute a scadenza la perdita oltre lo strike è lineare nel prezzo finale e ha lo stesso indice di coda del sottostante, mentre sui rendimenti delle strategie la stima dipende dalla soglia scelta. Con un indice di coda inferiore a 4 la curtosi della popolazione non è finita: i valori campionari descrivono il periodo 2010–2023 e dipendono da pochi episodi.</p>
 </section>
 
 <section id="letteratura">
@@ -436,6 +459,7 @@ const REFS = [
 "Carr, P. e Wu, L. (2009). Variance risk premiums. <i>Review of Financial Studies</i>, 22(3), 1311–1341.",
 "Christensen, B. J. e Prabhala, N. R. (1998). The relation between implied and realized volatility. <i>Journal of Financial Economics</i>, 50(2), 125–150.",
 "Constantinides, G. M., Jackwerth, J. C. e Savov, A. (2013). The puzzle of index option returns. <i>Review of Asset Pricing Studies</i>, 3(2), 229–257.",
+"Cont, R. (2001). Empirical properties of asset returns: stylized facts and statistical issues. <i>Quantitative Finance</i>, 1(2), 223–236.",
 "Coval, J. D. e Shumway, T. (2001). Expected option returns. <i>Journal of Finance</i>, 56(3), 983–1009.",
 "Dew-Becker, I. e Giglio, S. (2023). Risk preferences implied by synthetic options. NBER Working Paper 31833.",
 "Dew-Becker, I. e Giglio, S. (2025). The decline of the variance risk premium: evidence from traded and synthetic options. Federal Reserve Bank of Chicago, Working Paper 2025-17.",
@@ -444,20 +468,68 @@ const REFS = [
 "Fama, E. F. (1970). Efficient capital markets: a review of theory and empirical work. <i>Journal of Finance</i>, 25(2), 383–417.",
 "Gârleanu, N., Pedersen, L. H. e Poteshman, A. M. (2009). Demand-based option pricing. <i>Review of Financial Studies</i>, 22(10), 4259–4299.",
 "Glosten, L. R., Jagannathan, R. e Runkle, D. E. (1993). On the relation between the expected value and the volatility of the nominal excess return on stocks. <i>Journal of Finance</i>, 48(5), 1779–1801.",
+"Goetzmann, W., Ingersoll, J., Spiegel, M. e Welch, I. (2007). Portfolio performance manipulation and manipulation-proof performance measures. <i>Review of Financial Studies</i>, 20(5), 1503–1546.",
+"Gopikrishnan, P., Plerou, V., Amaral, L. A. N., Meyer, M. e Stanley, H. E. (1999). Scaling of the distribution of fluctuations of financial market indices. <i>Physical Review E</i>, 60(5), 5305–5316.",
+"Hill, B. M. (1975). A simple general approach to inference about the tail of a distribution. <i>Annals of Statistics</i>, 3(5), 1163–1174.",
 "Ilmanen, A. (2012). Do financial markets reward buying or selling insurance and lottery tickets? <i>Financial Analysts Journal</i>, 68(5), 26–36.",
 "Israelov, R. e Nielsen, L. N. (2015). Covered calls uncovered. <i>Financial Analysts Journal</i>, 71(6), 44–57.",
 "Jackwerth, J. C. (2000). Recovering risk aversion from option prices and realized returns. <i>Review of Financial Studies</i>, 13(2), 433–451.",
+"Jarque, C. M. e Bera, A. K. (1987). A test for normality of observations and regression residuals. <i>International Statistical Review</i>, 55(2), 163–172.",
 "Jiang, G. J. e Tian, Y. S. (2005). The model-free implied volatility and its information content. <i>Review of Financial Studies</i>, 18(4), 1305–1342.",
 "Jurek, J. W. e Stafford, E. (2015). The cost of capital for alternative investments. <i>Journal of Finance</i>, 70(5), 2185–2226.",
+"Mandelbrot, B. (1963). The variation of certain speculative prices. <i>Journal of Business</i>, 36(4), 394–419.",
 "Newey, W. K. e West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. <i>Econometrica</i>, 55(3), 703–708.",
 "Poon, S.-H. e Granger, C. W. J. (2003). Forecasting volatility in financial markets: a review. <i>Journal of Economic Literature</i>, 41(2), 478–539.",
 "Santa-Clara, P. e Saretto, A. (2009). Option strategies: good deals and margin calls. <i>Journal of Financial Markets</i>, 12(3), 391–417.",
 "Todorov, V. (2010). Variance risk-premium dynamics: the role of jumps. <i>Review of Financial Studies</i>, 23(1), 345–383."];
+// ------------------------------------------------------------ distribuzioni
+const ORD_F = ["SP","STRG","STRD","PCS","IC","IFLY","CCS","CAL","DPS","LP"];
+const cfgLabel = k => { const [f,p,a,d,g] = k.split("|"), par = f === "STRD" || f === "CAL" ? "ATM" : (f === "IFLY" ? "ATM, wing Δ" + nf(+p) : "Δ" + nf(+p));
+  return `${FAM[f]}, ${par}${a !== "-" ? ", wing " + ALA[a].toLowerCase() : ""}, ${d} giorni, ${GEST[g].toLowerCase()}`; };
+const tiles = a => a.map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");
+function codeInit(){
+  const keys = Object.keys(D.code.config);
+  $("s-dist").innerHTML = ORD_F.map(f => `<optgroup label="${FAM[f]}">` + keys.filter(k => k.startsWith(f + "|")).map(k => `<option value="${k}">${cfgLabel(k)}</option>`).join("") + "</optgroup>").join("");
+  $("s-dist").value = "SP|0.16|-|45|hold"; $("s-dist").onchange = codeCfg;
+}
+function code(){
+  const Z = D.code, I = Z.indice, T = Z.totale, C = Z.config, F = Z.famiglie;
+  const sp = C["SP|0.16|-|45|hold"], pcs = C["PCS|0.20|d05|30|hold"], pcsl = C["PCS|0.20|d05|30|tp50sl200"], icw = C["IC|0.16|w1|30|hold"], lp = C["LP|0.10|-|30|hold"], cal = C["CAL|0.50|-|30|hold"];
+  $("d-stats").innerHTML = tiles([[nf(T.quota_jb_1*100,0)+"%", "Configurazioni con normalità mensile rifiutata (Jarque-Bera, 1%)"], [nf(T.quota_asim_op_negativa*100,0)+"%", "Configurazioni con asimmetria negativa per operazione"],
+    [nf(sp.op.curtosi_ecc,0)+" / "+nf(I.D45.curtosi_ecc,1), "Curtosi in eccesso: short put Δ0,16 a 45 giorni / S&amp;P 500 a 45 giorni"], [nf(I.D30.hill_sx,1), "Indice di coda delle perdite dell'S&amp;P 500 a 30 giorni (Hill)"]]);
+  table("t-code", ["Famiglia","Configurazioni","Asimmetria per operazione","Curtosi in eccesso per operazione","Perdite oltre 3σ (× normale)","ES 1% (× normale)","Asimmetria mensile","Curtosi in eccesso mensile","Normalità mensile rifiutata (JB 1%)"],
+    ORD_F.map(f => { const x = F[f]; return [FAM[f], x.n, nf(x.asim_op,2,true), nf(x.curt_op,1), nf(x.rapp_3s_sx,1), nf(x.rapp_es1,2), nf(x.asim_mese,2,true), nf(x.curt_mese,1), nf(x.quota_jb_1*100,0)+"%"]; })
+    .concat([["S&amp;P 500, 30 giorni", "–", nf(I.D30.asimmetria,2,true), nf(I.D30.curtosi_ecc,1), nf(I.D30.rapp_3s_sx,1), nf(I.D30.rapp_es1,2), "–", "–", "–"],
+             ["S&amp;P 500, mensile", "–", "–", "–", "–", "–", nf(I.mensile.asimmetria,2,true), nf(I.mensile.curtosi_ecc,1), I.mensile.jb_p < 0.01 ? "sì" : "no (p " + nf(I.mensile.jb_p,2) + ")"]]));
+  $("x-code").innerHTML = `Le strutture che vendono volatilità senza copertura hanno code sinistre molto più lunghe della normale e dell'indice: per la short put Δ0,16 a 45 giorni la curtosi in eccesso per operazione è ${nf(sp.op.curtosi_ecc,0)} contro ${nf(I.D45.curtosi_ecc,1)} dell'S&amp;P 500 sullo stesso orizzonte, e le perdite oltre 3 deviazioni standard sono ${nf(sp.op.rapp_3s_sx,1)} volte quelle di una normale. La coda non è più pesante di quella dell'indice in senso asintotico, perché oltre lo strike la perdita segue linearmente il prezzo: è il corpo della distribuzione a essere concentrato sul premio incassato, con una deviazione standard piccola, e le perdite rare risultano lontane molte deviazioni standard. Le strutture a rischio definito troncano la coda alla larghezza dello spread. Con ali a delta 0,05 la curtosi resta alta (put credit spread Δ0,20: ${nf(pcs.op.curtosi_ecc,1)}); con ali all'1% dello spot la perdita massima diventa frequente (${nf(icw.perdita_90.osservata*100,1)}% delle operazioni dell'iron condor Δ0,16 perde oltre il 90% del margine, contro ${nf(icw.perdita_90.normale*100,1)}% sotto la normale) e la curtosi scende a ${nf(icw.op.curtosi_ecc,2)}. L'uscita con perdita al 200% del premio porta la curtosi del put credit spread da ${nf(pcs.op.curtosi_ecc,1)} a ${nf(pcsl.op.curtosi_ecc,1)}. Le strutture che comprano volatilità hanno la forma opposta: asimmetria positiva e coda destra lunga (long put Δ0,10: asimmetria ${nf(lp.op.asimmetria,1,true)}). Il calendar ATM a 30/60 giorni è vicino alla normale (Jarque-Bera mensile, p = ${nf(cal.mese.jb_p,2)}).`;
+  codeCfg();
+}
+function codeCfg(){
+  const Z = D.code, k = $("s-dist").value, c = Z.config[k], h = c.isto, Dd = +k.split("|")[3], ind = Z.indice["D" + Dd];
+  const t = [[nf(c.op.asimmetria,2,true), "Asimmetria per operazione"], [nf(c.op.curtosi_ecc,1), "Curtosi in eccesso per operazione"], [nf(c.op.rapp_3s_sx,1)+" / "+nf(c.op.rapp_3s_dx,1), "Frequenza oltre 3σ, sinistra / destra (× normale)"],
+    [nf(c.op.rapp_es1,2), "Expected shortfall 1% (× normale)"], [nf(c.op.cvar1*100,1)+"%", "CVaR 1% sul margine"], [nf(c.op.minimo*100,0)+"%", "Operazione peggiore sul margine"],
+    [nf(c.mese.curtosi_ecc,1), "Curtosi in eccesso mensile"], [c.mese.jb_p < 0.001 ? "&lt; 0,001" : nf(c.mese.jb_p,3), "p-value Jarque-Bera mensile"]];
+  if(c.perdita_90) t.push([nf(c.perdita_90.osservata*100,1)+"% / "+nf(c.perdita_90.normale*100,1)+"%", "Perdite oltre il 90% del margine: osservate / normale"]);
+  $("d-cfg").innerHTML = tiles(t);
+  const cen = h.n.map((_,i) => +(h.lo + 0.25 + 0.5*i).toFixed(2)), step = cen.length > 40 ? 5 : 2;
+  mk("c-dist", {type:"bar", data:{labels:cen, datasets:[
+      {type:"bar", label:"Operazioni", data:h.n.map(v => v > 0 ? v : null), backgroundColor:css("--s1"), barPercentage:1, categoryPercentage:1, order:2},
+      {type:"line", label:"Normale", data:h.normale.map(v => v >= 0.01 ? v : null), borderColor:css("--s2"), backgroundColor:css("--s2"), borderWidth:2, pointRadius:0, order:1}]},
+    options:{scales:{x:{title:{display:true, text:"Deviazioni standard dalla media"}, grid:{display:false}, ticks:{autoSkip:false, maxRotation:0, callback(v){ const l = +this.getLabelForValue(v) - 0.25; return Number.isInteger(l) && l % step === 0 ? l : ""; }}},
+      y:{type:"logarithmic", min:0.5, title:{display:true, text:"Operazioni (scala logaritmica)"}, ticks:{callback(v){ return [1,10,100,1000].includes(v) ? ni(v) : ""; }}}},
+      plugins:{tooltip:{callbacks:{title:i => `da ${nf(+i[0].label-0.25,2)} a ${nf(+i[0].label+0.25,2)} σ`, label:i => i.datasetIndex === 0 ? `Operazioni: ${ni(i.raw)}` : `Normale: ${nf(i.raw, i.raw < 10 ? 2 : 0)}`}}}}});
+  const pts = q => Z.qn.map((x,i) => ({x:+x.toFixed(3), y:q[i]}));
+  const ds = [{label:"Configurazione", data:pts(h.qq), borderColor:css("--s1"), backgroundColor:css("--s1"), showLine:true, borderWidth:2, pointRadius:2.5}];
+  if(ind) ds.push({label:`S&P 500, ${Dd} giorni`, data:pts(ind.isto.qq), borderColor:css("--neutral"), backgroundColor:css("--neutral"), showLine:true, borderWidth:1.5, pointRadius:2, borderDash:[5,4]});
+  ds.push({label:"Normale", data:[{x:-3.6,y:-3.6},{x:3.6,y:3.6}], borderColor:css("--ink2"), backgroundColor:css("--ink2"), showLine:true, pointRadius:0, borderWidth:1});
+  mk("c-qq", {type:"scatter", data:{datasets:ds}, options:{scales:{x:{title:{display:true, text:"Quantili della normale standard"}}, y:{title:{display:true, text:"Quantili empirici standardizzati"}}},
+    plugins:{tooltip:{callbacks:{label:i => `${i.dataset.label}: ${nf(i.raw.y,2)} contro ${nf(i.raw.x,2)}`}}}}});
+}
 // ------------------------------------------------------------ avvio
-function all(){ base(); sintesi(); vrp(); confronto(); letteratura(); filtroVol(); explorer(); }
+function all(){ base(); sintesi(); vrp(); confronto(); letteratura(); filtroVol(); explorer(); code(); }
 opts("s-fam", ["PCS","IC","SP","STRG","STRD","IFLY","CCS","CAL","DPS","LP"], v => FAM[v], "PCS");
 $("s-tf").innerHTML = '<option value="">Tutte</option>' + Object.keys(FAM).map(k => `<option value="${k}">${FAM[k]}</option>`).join("");
-refreshSelectors(); $("s-d").value = "30"; $("s-par").value = "0.2"; $("s-ala").value = "d05";
+codeInit(); refreshSelectors(); $("s-d").value = "30"; $("s-par").value = "0.2"; $("s-ala").value = "d05";
 $("s-fam").onchange = () => { refreshSelectors(); explorer(); };
 ["s-d","s-par","s-ala","s-gest","r-x","r-f"].forEach(id => $(id).oninput = explorer);
 ["s-tf","s-tn"].forEach(id => $(id).onchange = allTable);

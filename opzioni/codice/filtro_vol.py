@@ -3,28 +3,26 @@ ripresa quando rientra. Confronto con l'assenza di filtro, prezzi bid-ask, scala
 import sys, json, numpy as np, pandas as pd
 from scipy import stats
 sys.path.insert(0, sys.argv[2])
-from lib import hac_mean
+from lib import rendimenti_operazioni, scala_mensile, statistiche_mensili
 out = sys.argv[1]; FEE = 1.0
 tr = pd.read_parquet(out + '/operazioni.parquet')
 g = pd.read_parquet(out + '/garch.parquet')
 hv = g.hv21.dropna()
 rank = hv.expanding(252).apply(lambda x: (x[:-1] < x[-1]).mean(), raw=True)     # percentile su dati gia' osservati
 tr = tr.merge(g[['hv21', 'hv10']], left_on='t', right_index=True, how='left').merge(rank.rename('rk'), left_on='t', right_index=True, how='left')
-tr['rho1'] = tr.pnl_mid / tr.margine - tr.hs / tr.margine - FEE * (tr.gambe + tr.gambe_chiusura) / (100 * tr.margine)
-tr['mese'] = (tr.t + pd.to_timedelta(tr.giorni, unit='D')).dt.to_period('M')
+tr = rendimenti_operazioni(tr, FEE)
 months = pd.period_range('2011-03', '2023-12', freq='M')     # da quando il percentile espandente e' definito
 tr = tr[tr.rk.notna() & ~tr.fam.isin(['LP', 'DPS', 'CAL'])]
 F = {'nessuno': lambda d: np.ones(len(d), bool), 'hv21<=20': lambda d: d.hv21 <= 0.20, 'hv21<=25': lambda d: d.hv21 <= 0.25, 'hv21<=30': lambda d: d.hv21 <= 0.30,
      'hv21<=p90': lambda d: d.rk <= 0.90, 'hv10<=25': lambda d: d.hv10 <= 0.25, 'solo_hv21>25': lambda d: d.hv21 > 0.25}
 def ms(R):
-    m = R.mean(); sd = R.std(ddof=1); cum = np.concatenate([[0], np.cumsum(R)]); q = np.quantile(R, .05)
-    return dict(sharpe=float(np.sqrt(12) * m / sd) if sd > 0 else 0.0, ann=float(12 * m), dd=float((np.maximum.accumulate(cum) - cum).max()), peggiore=float(R.min()), cvar5=float(R[R <= q].mean()))
+    x = statistiche_mensili(R)
+    return dict(sharpe=x['sharpe'], ann=x['media_annua'], dd=x['max_dd'], peggiore=x['mese_peggiore'], cvar5=x['cvar5'])
 rows = []
 for (fam, par, ala, D, gest), d in tr.groupby(['fam', 'par', 'ala', 'D', 'gest']):
-    slots = D * 252 / 365
     for name, f in F.items():
         s = d[np.asarray(f(d))]
-        R = (s.groupby('mese').rho1.sum() / slots).reindex(months, fill_value=0.0).values
+        R = scala_mensile(s, 'rho1', D, months)
         rows.append(dict(fam=fam, par=par, ala=ala, D=D, gest=gest, filtro=name, quota=len(s) / len(d), rho=float(s.rho1.mean()) if len(s) else np.nan, **ms(R)))
 r = pd.DataFrame(rows)
 piv = lambda col: r.pivot_table(index=['fam', 'par', 'ala', 'D', 'gest'], columns='filtro', values=col)

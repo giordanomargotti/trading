@@ -9,7 +9,7 @@ for f in glob.glob(out + '/fig/*.pdf'): shutil.copy(f, dst + '/figure/')
 for lang in ('it', 'en'):
     K = P.numbers(S, lang)
     K.update(TAB_ORIZ=P.tab_orizzonti(S, lang), TAB_MZ=P.tab_mz(S, lang), TAB_ANNI=P.tab_anni(S, lang), TAB_FAM=P.tab_famiglie(S, lang),
-             TAB_SEL=P.tab_selezione(S, lang), TAB_INS=P.tab_ins(S, lang), TAB_FILT=P.tab_filtri(S, lang), TAB_FVOL=P.tab_fvol(S, lang), TAB_HV=P.tab_hv(S, lang))
+             TAB_SEL=P.tab_selezione(S, lang), TAB_INS=P.tab_ins(S, lang), TAB_FILT=P.tab_filtri(S, lang), TAB_FVOL=P.tab_fvol(S, lang), TAB_HV=P.tab_hv(S, lang), TAB_CODE=P.tab_code(S, lang))
     for src, name in ((f'tpl_{lang}.tex', f'paper_{lang}.tex'), (f'tpl_abs_{lang}.tex', f'abstract_{lang}.tex')):
         s = open(f'{tpl}/{src}', encoding='utf-8').read()
         miss = set()

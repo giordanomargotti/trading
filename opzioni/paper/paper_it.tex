@@ -291,6 +291,52 @@ La short put con delta 0{,}16 a 45 giorni chiude in utile il 94\% delle operazio
 
 In sintesi, i risultati positivi coincidono con le strutture che hanno beta positivo e per le quali una parte rilevante del rendimento è esposizione al mercato azionario in un periodo in cui l'indice ha reso l'11{,}4\% annuo. È la conclusione di Israelov e Nielsen (2015) e di Jurek e Stafford (2015) applicata a queste strategie.
 
+\subsection{Distribuzione dei rendimenti e code}\label{sec:code}
+
+Media e Sharpe non descrivono una strategia che incassa spesso un premio piccolo e subisce raramente una perdita grande. La forma della distribuzione si misura su due livelli: per operazione, come rendimento sul margine ai prezzi bid-ask con le commissioni, e per mese, sulla scala a capitale costante. Il riferimento è una normale con la stessa media e la stessa varianza, insieme ai rendimenti dell'indice sullo stesso orizzonte di calendario. La tabella~\ref{tab:code} riporta asimmetria, curtosi in eccesso, frequenza dei rendimenti inferiori alla media di oltre tre deviazioni standard rapportata a quella della normale (0{,}135\%) ed \emph{expected shortfall} all'1\% in deviazioni standard rapportato a quello della normale (2{,}665). Gli ingressi giornalieri si sovrappongono e non sono indipendenti: il test di Jarque--Bera (1987) si applica quindi solo alle serie mensili.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Forma della distribuzione dei rendimenti. Per operazione: rendimento sul margine ai prezzi bid-ask, commissioni incluse; frequenza dei rendimenti inferiori alla media di oltre tre deviazioni standard ed \emph{expected shortfall} all'1\% in deviazioni standard, entrambi rapportati alla normale; operazione peggiore in percentuale del margine. Mensile: scala a capitale costante; $p$-value del test di Jarque--Bera. Ultima riga: rendimenti a 30 giorni dell'S\&P 500 da ogni seduta e rendimenti mensili di prezzo.}\label{tab:code}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{Per operazione} & \multicolumn{3}{c}{Mensile} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}
+Famiglia & Parametri & Asimm. & Curt. ecc. & $<-3\sigma$ & ES 1\% & Peggiore \% & Asimm. & Curt. ecc. & JB $p$ \\ \midrule
+Short put & $\Delta$0{,}10, 7 gg & $-$9{,}69 & 121{,}7 & 12{,}3 & 3{,}08 & $-$40 & $-$4{,}04 & 21{,}0 & $<$0{,}001 \\
+Short put & $\Delta$0{,}16, 45 gg & $-$9{,}47 & 108{,}5 & 9{,}8 & 3{,}05 & $-$125 & $-$8{,}67 & 91{,}3 & $<$0{,}001 \\
+Short strangle & $\Delta$0{,}16, 30 gg & $-$8{,}01 & 101{,}7 & 8{,}4 & 2{,}57 & $-$134 & $-$7{,}67 & 78{,}0 & $<$0{,}001 \\
+Put credit spread & $\Delta$0{,}20/0{,}05, 30 gg & $-$4{,}60 & 22{,}0 & 23{,}4 & 2{,}34 & $-$102 & $-$4{,}05 & 20{,}8 & $<$0{,}001 \\
+Put credit spread & $\Delta$0{,}20, 1\%, 30 gg & $-$2{,}85 & 6{,}6 & 53{,}4 & 1{,}35 & $-$123 & $-$2{,}42 & 6{,}1 & $<$0{,}001 \\
+Put credit spread & $\Delta$0{,}20/0{,}05, 30, TP50 gg & $-$6{,}11 & 39{,}0 & 18{,}4 & 2{,}84 & $-$102 & $-$4{,}24 & 21{,}4 & $<$0{,}001 \\
+Put credit spread & $\Delta$0{,}20/0{,}05, 30, TP50/SL200 gg & $-$2{,}52 & 5{,}5 & 18{,}4 & 1{,}62 & $-$44 & $-$1{,}60 & 2{,}7 & $<$0{,}001 \\
+Short straddle ATM & ATM, 30 gg & $-$2{,}92 & 23{,}9 & 8{,}3 & 2{,}03 & $-$148 & $-$4{,}20 & 33{,}1 & $<$0{,}001 \\
+Iron condor & $\Delta$0{,}16/0{,}05, 30 gg & $-$2{,}82 & 9{,}7 & 16{,}7 & 2{,}00 & $-$103 & $-$2{,}57 & 11{,}0 & $<$0{,}001 \\
+Iron condor & $\Delta$0{,}16, 1\%, 30 gg & $-$1{,}13 & $-$0{,}4 & 0{,}2 & 0{,}90 & $-$186 & $-$1{,}11 & 0{,}5 & $<$0{,}001 \\
+Iron butterfly & ATM/$\Delta$0{,}10, 30 gg & $-$0{,}41 & $-$0{,}1 & 0{,}0 & 0{,}97 & $-$107 & $-$0{,}68 & 0{,}8 & $<$0{,}001 \\
+Call credit spread & $\Delta$0{,}16/0{,}05, 30 gg & $-$1{,}99 & 2{,}6 & 1{,}9 & 1{,}12 & $-$110 & $-$1{,}89 & 3{,}0 & $<$0{,}001 \\
+Long calendar ATM & ATM, 30/60 gg & 0{,}49 & $-$0{,}1 & 0{,}0 & 0{,}81 & $-$189 & $-$0{,}22 & 0{,}2 & 0{,}473 \\
+Long put & $\Delta$0{,}10, 30 gg & 16{,}40 & 312{,}1 & 0{,}0 & 0{,}06 & $-$198 & 11{,}63 & 141{,}2 & $<$0{,}001 \\
+\midrule
+S\&P 500 & 30 gg & $-$1{,}22 & 6{,}9 & 6{,}2 & 1{,}64 & $-$34 & $-$0{,}33 & 0{,}4 & 0{,}118 \\
+\bottomrule\end{tabular}}\end{table}
+
+Le strutture che vendono volatilità senza protezione hanno code sinistre molto più lunghe di quelle della normale e dell'indice. Per la short put con delta 0{,}16 a 45 giorni l'asimmetria per operazione è $-$9{,}5 e la curtosi in eccesso 108, contro $-$1{,}1 e 4{,}8 per i rendimenti dell'indice a 45 giorni; le perdite oltre tre deviazioni standard sono 9{,}8 volte più frequenti che sotto la normale e l'\emph{expected shortfall} all'1\% è 3{,}0 volte quello della normale (figure~\ref{fig:code} e~\ref{fig:qq}). La forma si conserva nella serie mensile della scala (asimmetria $-$8{,}7, curtosi in eccesso 91), mentre i rendimenti mensili dell'indice nel periodo sono vicini alla normale (asimmetria $-$0{,}33, curtosi in eccesso 0{,}40, Jarque--Bera $p$ = 0{,}12). Sull'insieme delle 434 configurazioni, il 96\% ha asimmetria per operazione negativa e il test di Jarque--Bera rifiuta la normalità della serie mensile al livello dell'1\% nel 92\% dei casi.
+
+La coda delle perdite non è più pesante di quella dell'indice in senso asintotico. Oltre lo strike la perdita di una posizione tenuta a scadenza è lineare nel prezzo finale e ne eredita l'indice di coda: lo stimatore di Hill (1975) sui rendimenti a 30 giorni dell'indice, con il 2{,}5\% delle osservazioni nella coda, dà 2{,}9 (tra 2{,}3 e 2{,}9 con quote dall'1 al 5\%), in linea con il valore vicino a tre documentato per gli indici azionari (Gopikrishnan et al., 1999; Cont, 2001). Cambia invece il corpo della distribuzione: quasi tutti gli esiti sono concentrati sul premio incassato, la deviazione standard è piccola e le perdite rare si trovano a molte deviazioni standard di distanza. Con un indice di coda inferiore a quattro la curtosi della popolazione non è finita (Mandelbrot, 1963): i valori campionari descrivono il periodo 2010--2023 e dipendono da pochi episodi, e la parte informativa è il confronto tra strutture e con l'indice. Sui rendimenti delle strategie lo stimatore di Hill dipende dalla soglia, perché il corpo è schiacciato sul premio e le operazioni sovrapposte replicano lo stesso episodio, e non viene riportato.
+
+\begin{figure}[ht]\centering
+\includegraphics[width=\textwidth]{code_it.pdf}
+\caption{Rendimenti per operazione in deviazioni standard dalla media, prezzi bid-ask; numero di operazioni in scala logaritmica. La curva è il numero atteso sotto una normale con la stessa media e la stessa varianza. Ultimo pannello: rendimenti a 30 giorni dell'S\&P 500 da ogni seduta.}\label{fig:code}
+\end{figure}
+
+Le strutture a rischio definito troncano la coda alla larghezza dello spread, ma il troncamento da solo non rende normale la distribuzione. Con \emph{wing} a delta 0{,}05 la curtosi in eccesso resta alta (22{,}0 per il put credit spread con delta 0{,}20, con perdite oltre tre deviazioni standard 23{,}4 volte più frequenti che sotto la normale). Con \emph{wing} all'1\% dello spot la perdita massima diventa frequente invece che rara: il 17{,}8\% delle operazioni dell'iron condor con delta 0{,}16 perde oltre il 90\% del margine, contro il 6{,}2\% sotto la normale, e la curtosi in eccesso scende a $-$0{,}39. Il rischio non è più una coda lontana ma una massa di probabilità ampia sulla perdita massima, che la curtosi non coglie. L'uscita con perdita pari al 200\% del premio porta la curtosi in eccesso del put credit spread da 22{,}0 a 5{,}5; il costo della regola è discusso nella sottosezione seguente. Le strutture che comprano volatilità hanno la forma opposta: asimmetria positiva e coda destra lunga (long put con delta 0{,}10: asimmetria 16{,}4), mentre il long calendar \emph{at-the-money} 30/60 giorni è vicino alla normale (Jarque--Bera $p$ = 0{,}47 sulla serie mensile).
+
+\begin{figure}[ht]\centering
+\includegraphics[width=0.7\textwidth]{qq_it.pdf}
+\caption{Grafico quantile--quantile dei rendimenti per operazione standardizzati contro la normale standard; la diagonale tratteggiata corrisponde alla normale.}\label{fig:qq}
+\end{figure}
+
+Ne seguono due conseguenze. Gli ordinamenti basati su media e deviazione standard, Sharpe compreso, sopravvalutano le strutture che vendono volatilità: la vendita di opzioni \emph{out-of-the-money} è l'esempio classico di come un rendimento con asimmetria negativa possa aumentare lo Sharpe senza aggiungere valore (Goetzmann et al., 2007). Lo Sharpe deflazionato della sezione~\ref{sec:rob} corregge per asimmetria e curtosi della serie mensile. Nella procedura di selezione del progetto, un criterio che divide il valore atteso per una potenza della deviazione standard eredita lo stesso limite: il rischio di coda va misurato direttamente, con l'\emph{expected shortfall} o con la probabilità della perdita massima sotto la densità GJR-GARCH, e tenuto separato dal filtro sul valore atteso.
+
 \subsection{Regole di uscita}
 
 Lo Sharpe mediano delle strutture a credito è +0{,}41, +0{,}44 e +0{,}43 ai prezzi mid rispettivamente per il mantenimento a scadenza, per la presa di profitto al 50\% e per la presa di profitto con limite di perdita al 200\%; ai prezzi bid-ask diventa $-$0{,}05, $-$0{,}44 e $-$0{,}73. Ai prezzi mid le regole di uscita non modificano il rendimento atteso, come deve essere per una regola che non contiene informazione; ai prezzi bid-ask lo peggiorano, perché ogni chiusura anticipata paga un secondo spread, mentre il regolamento in contanti a scadenza non ne paga. Le regole riducono il \emph{drawdown} massimo, ma a un costo certo.
@@ -403,6 +449,8 @@ Sulle \emph{option chain} SPX dal 2010 al 2023 il premio per il rischio di volat
 
 Per le strategie del progetto le conseguenze sono tre. La prima: le strutture simmetriche a rischio definito, in particolare l'iron condor, vendono insieme la parte della superficie che contiene il premio (le put) e quella che non lo contiene (le call), e pagano lo spread su quattro gambe; il risultato netto è nullo o negativo. La seconda: le strutture che vendono put conservano un risultato positivo anche dopo i costi, ma una parte rilevante è esposizione al mercato azionario e l'alfa residuo non è statisticamente distinguibile da zero nella grande maggioranza delle configurazioni. La terza: regole di uscita e filtri modificano la distribuzione dei risultati ma non creano rendimento atteso; la sospensione degli ingressi quando la volatilità realizzata è elevata riduce l'esposizione senza evitare gli eventi estremi, perché gli strike scelti per delta si allargano già con la volatilità implicita; il filtro basato sul confronto con il GARCH ha il segno corretto e merita una verifica prospettica.
 
+La distribuzione dei rendimenti qualifica ogni Sharpe riportato in questo lavoro. Le strutture che vendono volatilità hanno asimmetria e curtosi per operazione molto superiori a quelle dell'indice, e la serie mensile non è normale nel 92\% delle configurazioni: il rischio di coda va misurato direttamente e non dedotto dalla deviazione standard.
+
 L'ipotesi di lavoro secondo cui il premio esiste ma il tentativo di incassarlo in modo sistematico tende, nel lungo periodo e al netto dei costi, a un risultato nullo non è rifiutata dai dati.
 
 \appendix
@@ -432,6 +480,7 @@ perdita massima $\max(B-A,\,D-C)-c$, punti di pareggio $B-c$ e $C+c$. L'iron but
 \bibitem{} Carr, P. e Wu, L. (2009). Variance risk premiums. \emph{Review of Financial Studies}, 22(3), 1311--1341.
 \bibitem{} Christensen, B. J. e Prabhala, N. R. (1998). The relation between implied and realized volatility. \emph{Journal of Financial Economics}, 50(2), 125--150.
 \bibitem{} Constantinides, G. M., Jackwerth, J. C. e Savov, A. (2013). The puzzle of index option returns. \emph{Review of Asset Pricing Studies}, 3(2), 229--257.
+\bibitem{} Cont, R. (2001). Empirical properties of asset returns: stylized facts and statistical issues. \emph{Quantitative Finance}, 1(2), 223--236.
 \bibitem{} Coval, J. D. e Shumway, T. (2001). Expected option returns. \emph{Journal of Finance}, 56(3), 983--1009.
 \bibitem{} Dew-Becker, I. e Giglio, S. (2023). Risk preferences implied by synthetic options. NBER Working Paper 31833.
 \bibitem{} Dew-Becker, I. e Giglio, S. (2025). The decline of the variance risk premium: evidence from traded and synthetic options. Federal Reserve Bank of Chicago, Working Paper 2025-17.
@@ -440,11 +489,16 @@ perdita massima $\max(B-A,\,D-C)-c$, punti di pareggio $B-c$ e $C+c$. L'iron but
 \bibitem{} Fama, E. F. (1970). Efficient capital markets: a review of theory and empirical work. \emph{Journal of Finance}, 25(2), 383--417.
 \bibitem{} Gârleanu, N., Pedersen, L. H. e Poteshman, A. M. (2009). Demand-based option pricing. \emph{Review of Financial Studies}, 22(10), 4259--4299.
 \bibitem{} Glosten, L. R., Jagannathan, R. e Runkle, D. E. (1993). On the relation between the expected value and the volatility of the nominal excess return on stocks. \emph{Journal of Finance}, 48(5), 1779--1801.
+\bibitem{} Goetzmann, W., Ingersoll, J., Spiegel, M. e Welch, I. (2007). Portfolio performance manipulation and manipulation-proof performance measures. \emph{Review of Financial Studies}, 20(5), 1503--1546.
+\bibitem{} Gopikrishnan, P., Plerou, V., Amaral, L. A. N., Meyer, M. e Stanley, H. E. (1999). Scaling of the distribution of fluctuations of financial market indices. \emph{Physical Review E}, 60(5), 5305--5316.
+\bibitem{} Hill, B. M. (1975). A simple general approach to inference about the tail of a distribution. \emph{Annals of Statistics}, 3(5), 1163--1174.
 \bibitem{} Ilmanen, A. (2012). Do financial markets reward buying or selling insurance and lottery tickets? \emph{Financial Analysts Journal}, 68(5), 26--36.
 \bibitem{} Israelov, R. e Nielsen, L. N. (2015). Covered calls uncovered. \emph{Financial Analysts Journal}, 71(6), 44--57.
 \bibitem{} Jackwerth, J. C. (2000). Recovering risk aversion from option prices and realized returns. \emph{Review of Financial Studies}, 13(2), 433--451.
+\bibitem{} Jarque, C. M. e Bera, A. K. (1987). A test for normality of observations and regression residuals. \emph{International Statistical Review}, 55(2), 163--172.
 \bibitem{} Jiang, G. J. e Tian, Y. S. (2005). The model-free implied volatility and its information content. \emph{Review of Financial Studies}, 18(4), 1305--1342.
 \bibitem{} Jurek, J. W. e Stafford, E. (2015). The cost of capital for alternative investments. \emph{Journal of Finance}, 70(5), 2185--2226.
+\bibitem{} Mandelbrot, B. (1963). The variation of certain speculative prices. \emph{Journal of Business}, 36(4), 394--419.
 \bibitem{} Mincer, J. e Zarnowitz, V. (1969). The evaluation of economic forecasts. In J. Mincer (a cura di), \emph{Economic Forecasts and Expectations}. NBER.
 \bibitem{} Newey, W. K. e West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. \emph{Econometrica}, 55(3), 703--708.
 \bibitem{} Poon, S.-H. e Granger, C. W. J. (2003). Forecasting volatility in financial markets: a review. \emph{Journal of Economic Literature}, 41(2), 478--539.

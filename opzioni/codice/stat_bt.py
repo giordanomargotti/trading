@@ -2,7 +2,7 @@
 import sys, json, numpy as np, pandas as pd
 from scipy import stats
 sys.path.insert(0, sys.argv[2])
-from lib import hac_mean
+from lib import hac_mean, rendimenti_operazioni, scala_mensile, rendimenti_mensili_spx, statistiche_mensili
 out = sys.argv[1]
 FEE = 1.0                                   # dollari per gamba e per contratto (apertura e chiusura anticipata)
 tr = pd.read_parquet(out + '/operazioni.parquet')
@@ -15,26 +15,13 @@ s30 = pd.read_parquet(out + '/serie_30.parquet').iv_atm; s60 = pd.read_parquet(o
 slope = (s60 - s30).dropna().rename('pend')
 tr = tr.merge(tag, on=['t', 'D'], how='left').merge(slope, left_on='t', right_index=True, how='left')
 tr['gap'] = tr.iv_atm - tr.gvol
-tr['a'] = tr.pnl_mid / tr.margine; tr['b'] = tr.hs / tr.margine; tr['f'] = (tr.gambe + tr.gambe_chiusura) / (100 * tr.margine)
-tr['rho1'] = tr.a - tr.b - FEE * tr.f; tr['rho0'] = tr.a - FEE * tr.f
-tr['usd1'] = 100 * (tr.pnl_mid - tr.hs) - FEE * (tr.gambe + tr.gambe_chiusura); tr['usd0'] = 100 * tr.pnl_mid - FEE * (tr.gambe + tr.gambe_chiusura)
-tr['exit'] = tr.t + pd.to_timedelta(tr.giorni, unit='D')
-tr['mese'] = tr.exit.dt.to_period('M')
+tr = rendimenti_operazioni(tr, FEE)
 months = pd.period_range('2010-01', '2023-12', freq='M')
 ivq = {D: tag[tag.D == D].iv_atm.quantile([1 / 3, 2 / 3]).values for D in (7, 14, 30, 45)}
-def mstats(R):
-    R = np.asarray(R, float)
-    m, se, t = hac_mean(R, 3)
-    cum = np.cumsum(R); dd = float((np.maximum.accumulate(np.concatenate([[0], cum])) - np.concatenate([[0], cum])).max())
-    sd = R.std(ddof=1)
-    q = np.quantile(R, .05)
-    return dict(media_annua=float(12 * m), vol_annua=float(np.sqrt(12) * sd), sharpe=float(np.sqrt(12) * m / sd) if sd > 0 else 0.0, t=float(t),
-                max_dd=dd, mese_peggiore=float(R.min()), cvar5=float(R[R <= q].mean()), asimmetria=float(stats.skew(R)), mesi_positivi=float((R > 0).mean()))
+mstats = statistiche_mensili
 def ladder(g, col, D):
-    slots = D * 252 / 365
-    return (g.groupby('mese')[col].sum() / slots).reindex(months, fill_value=0.0).values
-um = u.resample('ME').last(); rbm = um.pct_change(); rbm.iloc[0] = u.iloc[-0 + len(u[u.index < '2010-02-01']) - 1] / u.iloc[0] - 1
-rb = rbm.values
+    return scala_mensile(g, col, D, months)
+rb = rendimenti_mensili_spx(u).values
 def capm(R):
     X = np.column_stack([np.ones(len(rb)), rb])
     from lib import hac_ols
