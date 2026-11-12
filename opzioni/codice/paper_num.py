@@ -1,7 +1,7 @@
 """Numeri e tabelle per i documenti LaTeX, nelle due lingue."""
 import json, numpy as np
 def load(out):
-    return json.load(open(out + '/sito.json'))
+    S = json.load(open(out + '/sito.json')); S['fvol'] = json.load(open(out + '/filtro_vol.json')); return S
 def fmt(x, d, lang, sign=False):
     s = f'{x:+.{d}f}' if sign else f'{x:.{d}f}'
     s = s.replace('-', '$-$')
@@ -9,10 +9,9 @@ def fmt(x, d, lang, sign=False):
 def integer(n, lang):
     s = f'{int(n):,}'
     return s.replace(',', '.') if lang == 'it' else s
-FAM = {'it': {'SP': 'Put venduta', 'STRG': 'Strangle venduto', 'STRD': 'Straddle venduto ATM', 'PCS': 'Put credit spread', 'CCS': 'Call credit spread', 'IC': 'Iron condor',
-              'IFLY': 'Iron butterfly', 'LP': 'Put comprata', 'DPS': 'Debit put spread', 'CAL': 'Calendar lungo ATM'},
-       'en': {'SP': 'Short put', 'STRG': 'Short strangle', 'STRD': 'Short ATM straddle', 'PCS': 'Put credit spread', 'CCS': 'Call credit spread', 'IC': 'Iron condor',
-              'IFLY': 'Iron butterfly', 'LP': 'Long put', 'DPS': 'Debit put spread', 'CAL': 'Long ATM calendar'}}
+_F = {'SP': 'Short put', 'STRG': 'Short strangle', 'STRD': 'Short straddle ATM', 'PCS': 'Put credit spread', 'CCS': 'Call credit spread', 'IC': 'Iron condor',
+      'IFLY': 'Iron butterfly', 'LP': 'Long put', 'DPS': 'Debit put spread', 'CAL': 'Long calendar ATM'}
+FAM = {'it': _F, 'en': dict(_F, STRD='Short ATM straddle', CAL='Long ATM calendar')}
 def numbers(S, lang):
     V = S['vrp']; T = S['test']; o = V['obiettivi']; K = {}
     f = lambda x, d=2, sign=False: fmt(x, d, lang, sign)
@@ -66,7 +65,35 @@ def numbers(S, lang):
     for g in ('hold', 'tp50', 'tp50sl200'):
         x = [c for c in cr if c['gest'] == g]
         K['g0' + g] = f(np.median([c['p0']['sharpe'] for c in x]), 2, True); K['g1' + g] = f(np.median([c['p1']['sharpe'] for c in x]), 2, True)
+    W = S['fvol']; fl = W['filtri']
+    for nm, k in (('f20', 'hv21<=20'), ('f25', 'hv21<=25'), ('f30', 'hv21<=30'), ('f90', 'hv21<=p90'), ('fhi', 'solo_hv21>25')):
+        K[nm + 'sh'] = f(fl[k]['sharpe_mediano'], 2, True); K[nm + 'q'] = f(fl[k]['quota_operazioni'] * 100, 0); K[nm + 'better'] = f(fl[k]['quota_sharpe_migliore'] * 100, 0); K[nm + 'dd'] = f(fl[k]['quota_dd_minore'] * 100, 0)
+    K['f0sh'] = f(fl['nessuno']['sharpe_mediano'], 2, True)
+    sp = W['selezione']['SP|0.16|-|45|hold']
+    K['fsp0'] = f(sp['nessuno']['sharpe'], 2, True); K['fsp25'] = f(sp['hv21<=25']['sharpe'], 2, True); K['fsphi'] = f(sp['solo_hv21>25']['sharpe'], 2, True)
+    K['fspw0'] = f(-sp['nessuno']['peggiore'] * 100, 1); K['fspw25'] = f(-sp['hv21<=25']['peggiore'] * 100, 1)
+    K['fsprho0'] = f(sp['nessuno']['rho'] * 100, 1); K['fsprhohi'] = f(sp['solo_hv21>25']['rho'] * 100, 1)
+    ic = W['selezione']['IC|0.16|d05|30|hold']; K['fic0'] = f(ic['nessuno']['sharpe'], 2, True); K['fic25'] = f(ic['hv21<=25']['sharpe'], 2, True)
+    ds = W['distanza_strike']
+    for i, nm in enumerate(('dlo', 'dmi', 'dhi')):
+        K[nm] = f(ds['terzili'][i]['dist'] * 100, 1); K[nm + 'iv'] = f(ds['terzili'][i]['iv'] * 100, 1)
+    K['dcorr'] = f(ds['corr'], 2)
+    hb = W['vrp_per_hv']; K['hvlo'] = f(hb[0]['vrp_atm'] * 100, 2, True); K['hvhi'] = f(hb[-1]['vrp_atm'] * 100, 2, True); K['hvmid'] = f(hb[4]['vrp_atm'] * 100, 2, True)
     return K
+def tab_fvol(S, lang):
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    lab = {'it': {'nessuno': 'Nessun filtro', 'hv21<=20': r'HV21 $\le$ 20\%', 'hv21<=25': r'HV21 $\le$ 25\%', 'hv21<=30': r'HV21 $\le$ 30\%', 'hv21<=p90': r'HV21 $\le$ 90° percentile', 'hv10<=25': r'HV10 $\le$ 25\%', 'solo_hv21>25': r'Solo HV21 $>$ 25\%'},
+           'en': {'nessuno': 'No filter', 'hv21<=20': r'HV21 $\le$ 20\%', 'hv21<=25': r'HV21 $\le$ 25\%', 'hv21<=30': r'HV21 $\le$ 30\%', 'hv21<=p90': r'HV21 $\le$ 90th percentile', 'hv10<=25': r'HV10 $\le$ 25\%', 'solo_hv21>25': r'Only HV21 $>$ 25\%'}}[lang]
+    rows = []
+    for k, v in S['fvol']['filtri'].items():
+        g = lambda n, d=0: f(v[n] * 100, d) if n in v else '--'
+        rows.append(' & '.join([lab[k], f(v['quota_operazioni'] * 100, 0), f(v['sharpe_mediano'], 2, True), g('quota_sharpe_migliore'), f(v['dd_mediano'] * 100, 0), g('quota_dd_minore'), f(v['peggiore_mediano'] * 100, 0)]) + r' \\')
+    return '\n'.join(rows)
+def tab_hv(S, lang):
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    names = [r'$\le$ 10', '10--15', '15--20', '20--25', '25--30', r'$>$ 30']
+    return '\n'.join(' & '.join([names[i], integer(b['n'], lang), f(b['iv'] * 100), f(b['rv'] * 100), f(b['vrp_atm'] * 100, 2, True), f(b['t']), f(b['vrp_mf'] * 100, 2, True), f(b['quota_pos'] * 100, 0), f(b['p5'] * 100, 1), f(b['minimo'] * 100, 0)]) + r' \\'
+                     for i, b in enumerate(S['fvol']['vrp_per_hv']))
 def tab_orizzonti(S, lang):
     o = S['vrp']['obiettivi']; f = lambda x, d=2, s=False: fmt(x, d, lang, s)
     rows = []
@@ -91,7 +118,7 @@ def tab_famiglie(S, lang):
     f = lambda x, d=2, s=False: fmt(x, d, lang, s)
     rows = []
     order = [('SP', '-'), ('STRG', '-'), ('PCS', 'd05'), ('PCS', 'w1'), ('STRD', '-'), ('IC', 'd05'), ('IC', 'w1'), ('IFLY', '-'), ('CCS', 'd05'), ('CCS', 'w1'), ('CAL', '-'), ('DPS', '-'), ('LP', '-')]
-    wl = {'it': {'d05': r', ala $\Delta$ 0{,}05', 'w1': r', ala 1\% dello spot', '-': ''}, 'en': {'d05': r', $\Delta$ 0.05 wing', 'w1': r', 1\% of spot wing', '-': ''}}[lang]
+    wl = {'it': {'d05': r', wing $\Delta$ 0{,}05', 'w1': r', wing 1\% dello spot', '-': ''}, 'en': {'d05': r', $\Delta$ 0.05 wing', 'w1': r', 1\% of spot wing', '-': ''}}[lang]
     for fam, ala in order:
         x = [c for c in S['config'] if c['fam'] == fam and c['ala'] == ala and c['gest'] == 'hold']
         med = lambda g: float(np.median([g(c) for c in x]))

@@ -10,11 +10,12 @@
 \captionsetup{font=small,labelfont=bf}
 \graphicspath{{figure/}}
 \setlength{\parskip}{0.35em}
-\title{Volatility Risk Premium and Non-Directional Option Strategies\\ on the S\&P 500 Index:\\ Evidence from 2010--2023 Option Chains}
-\author{Giordano Margotti\thanks{The starting code base and the data archives come from the joint work of the \emph{finance-thinking} group (repository \texttt{options\_strategy}). All analyses in this document were recomputed from the option chains; errors and omissions are the author's own. This document is for research purposes and is not investment advice.}}
+\title{Volatility Risk Premium and Non-Directional Option Strategies\\ on the S\&P 500 Index:\\ Evidence from 2010--2023 SPX Option Chains\thanks{Authors: Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (\emph{finance-thinking} working group, repository \texttt{options\_strategy}). All analyses in this document were recomputed from the option chains; errors and omissions are the authors' own. This document is for research purposes and is not investment advice.}}
+\author{}
 \date{November 2026}
 \begin{document}
-\maketitle
+{\let\newpage\relax\maketitle}
+\vspace{-3em}
 
 \begin{abstract}
 \noindent This paper tests, on daily chains of European options on the S\&P 500 index from 2010 to 2023 (3,499 sessions, 47,699 date--expiry pairs), whether a volatility risk premium exists and whether non-directional option-selling strategies capture it net of costs. The answer depends on the measure. The 30-day model-free implied volatility exceeds subsequently realized volatility by +3.45 points on average ($t$-statistic 6.48), whereas at-the-money implied volatility exceeds it by only +0.72 points ($t$ 1.36): the premium sits in the wings of the distribution, in out-of-the-money puts in particular, not in the central level of the surface. The at-the-money premium is significant in 2010--2014 and statistically zero in the two following sub-periods. Across 434 configurations of ten strategy families (1,310,509 simulated trades), the median Sharpe ratio is +0.39 at mid prices and $-$0.40 at bid-ask prices; the share of configurations with a significantly positive alpha against the index falls from 16.4\% to 2.5\%. Positive results are concentrated in structures that sell puts and are largely explained by equity market exposure. The evidence is consistent with a premium that exists as compensation for tail risk, but that the bid-ask spread and ex-post parameter selection make hard to capture systematically.
@@ -70,9 +71,11 @@ Four predictions that can be tested on the available data follow from the litera
 
 \subsection{Data}
 
-The source is the archive of end-of-day SPX option quotes contained in the working group's repository: monthly files from January 2010 to December 2023, with one row per expiry--strike pair and, for each side, bid, ask, the vendor's implied volatility and Greeks. The archive contains 3,499 sessions; the only gap longer than five calendar days falls in January 2011. The analyses use expiries with 1 to 75 calendar days to expiry. The index level is the one reported in the chains at the close.
+The source is OptionsDX (\url{https://www.optionsdx.com}), dataset \emph{SPX Option Chains} at end-of-day frequency: monthly files \texttt{spx\_eod\_YYYYMM} from January 2010 to December 2023, obtained through the working group's repository. Each file contains the full option chain of every session at the close, with one row per expiry--strike pair and, for each side, bid, ask, volume, the vendor's implied volatility and Greeks, together with the level of the underlying.
 
-SPX options are European and cash-settled; the multiplier is 100. Dollar results refer to one SPX contract; for the XSP contract, one tenth the size, values are divided by ten, while per-contract commissions are unchanged and therefore weigh ten times more in relative terms.
+The instrument is the option on the S\&P 500 index listed on the Cboe Options Exchange (ticker SPX): a European-style, cash-settled index option with a multiplier of 100 dollars per index point. The archive includes the standard third-Friday monthly expiries, settled on the opening value, and the weekly and end-of-month expiries (SPXW), settled on the closing value. The archive contains 3,499 sessions; the only gap longer than five calendar days falls in January 2011. The analyses use expiries with 1 to 75 calendar days to expiry. The index level is the one reported in the chains at the close.
+
+Dollar results refer to one SPX contract; for the XSP contract, one tenth the size, values are divided by ten, while per-contract commissions are unchanged and therefore weigh ten times more in relative terms.
 
 \subsection{Forward, implied volatility and delta}
 
@@ -309,6 +312,44 @@ Iron butterfly & 24 & $-$0.25 & $-$0.06 & $-$0.32 & $-$0.14 & $-$0.10 \\
 Call credit spread & 96 & $-$1.27 & $-$0.83 & $-$1.02 & $-$1.00 & $-$0.55 \\
 \bottomrule\end{tabular}\end{table}
 
+\subsection{Operational filter on realized volatility}\label{sec:fvol}
+
+A common prudential rule is to suspend new trades when realized volatility is excessive and to resume when it subsides, with the aim of avoiding extreme events. The rule was tested on all credit configurations: entries are suspended when 21-session historical volatility (HV21) exceeds a threshold and resume when it falls back below; positions already open follow their own management. The thresholds are 20\%, 25\% and 30\% annualized and the 90th percentile computed only on data already observed (Table~\ref{tab:fvol}).
+
+\begin{table}[ht]\centering\small
+\caption{Suspension of entries as a function of realized volatility: medians across credit configurations, bid-ask prices, March 2011--December 2023. Drawdown and worst month as a percentage of capital committed to margin.}\label{tab:fvol}
+\begin{tabular}{lrrrrrr}\toprule
+ & Trades & Median & Sharpe & Median & Drawdown & Worst \\
+Filter & executed \% & Sharpe & better \% & drawdown \% & smaller \% & month \% \\ \midrule
+No filter & 100 & $-$0.30 & -- & 393 & -- & $-$69 \\
+HV21 $\le$ 20\% & 82 & $-$0.37 & 49 & 324 & 85 & $-$64 \\
+HV21 $\le$ 25\% & 91 & $-$0.34 & 45 & 343 & 82 & $-$65 \\
+HV21 $\le$ 30\% & 97 & $-$0.30 & 46 & 370 & 73 & $-$67 \\
+HV21 $\le$ 90th percentile & 90 & $-$0.35 & 42 & 356 & 80 & $-$65 \\
+HV10 $\le$ 25\% & 91 & $-$0.36 & 38 & 377 & 69 & $-$65 \\
+Only HV21 $>$ 25\% & 9 & +0.07 & 76 & 55 & 100 & $-$31 \\
+\bottomrule\end{tabular}\end{table}
+
+There are three results. First, the filter does not improve risk-adjusted return. With the 25\% threshold the median Sharpe ratio moves from $-$0.30 to $-$0.34 and improves in only 45\% of configurations; for the 0.16-delta, 45-day short put it falls from +0.89 to +0.64, for the 0.16-delta, 30-day iron condor from +0.17 to +0.08. Second, drawdown falls in 82\% of configurations, but by an amount close to the reduction in the number of trades (91\% of those without the filter), and the worst month does not change: for the short put it remains 43.9\% of margin capital with and without the filter. The positions that suffered the largest losses, in February 2020, had been opened with low realized volatility: the filter suspends entries after the event, not before. Third, trades opened with HV21 above 25\% have an above-average mean return per trade (for the short put 5.2\% of margin against 1.8\%), so the filter gives up precisely the best-paid trades.
+
+\begin{table}[ht]\centering\small
+\caption{Subsequent 30-day premium by level of 21-session historical volatility at entry. Values in volatility points.}\label{tab:hv}
+\begin{tabular}{lrrrrrrrrr}\toprule
+HV21 (\%) & Sessions & ATM IV & Real. & ATM $-$ real. & $t$ & MF $-$ real. & \% $>0$ & 5th pct. & Min. \\ \midrule
+$\le$ 10 & 998 & 10.79 & 11.01 & $-$0.22 & $-$0.44 & +2.36 & 61 & $-$10.2 & $-$21 \\
+10--15 & 1,041 & 13.77 & 12.72 & +1.05 & 1.47 & +3.56 & 77 & $-$5.8 & $-$77 \\
+15--20 & 529 & 17.26 & 15.71 & +1.55 & 1.85 & +4.35 & 72 & $-$9.2 & $-$72 \\
+20--25 & 269 & 20.91 & 19.69 & +1.21 & 1.05 & +4.47 & 67 & $-$9.3 & $-$70 \\
+25--30 & 176 & 24.09 & 22.50 & +1.58 & 1.43 & +4.75 & 66 & $-$6.9 & $-$68 \\
+$>$ 30 & 115 & 33.14 & 33.45 & $-$0.31 & $-$0.10 & +3.63 & 68 & $-$42.0 & $-$68 \\
+\bottomrule\end{tabular}\end{table}
+
+Table~\ref{tab:hv} shows why. The subsequent at-the-money premium does not decline when realized volatility is high: it is close to zero in the two extreme classes ($-$0.22 points with HV21 below 10\%, $-$0.31 points above 30\%) and positive in the intermediate ones. Extreme losses originate in calm phases: the minimum of the premium belongs to the 10--15\% class. Above 30\% dispersion is very wide and the sample small, and none of the class means is statistically different from zero.
+
+The filter is also redundant given how the strategies are built. Strikes are chosen by delta on market implied volatility, so the structure widens by itself when volatility rises: the distance from the forward of the 0.16-delta, 30-day put averages 3.8\% in the low implied volatility tercile (mean IV 10.0\%), 5.0\% in the middle tercile and 7.5\% in the high tercile (mean IV 22.2\%), with a correlation of 0.98 between distance and implied volatility. In the project's selection procedure the GJR-GARCH density plays the same role on expected value and probabilities: a higher forecast volatility widens the distribution and moves the selection toward wider structures or rules it out. Volatility is therefore already embedded twice, in strike placement and in the expected-value filter.
+
+The operational conclusion is that a suspension based on realized volatility is not necessary and does not protect against extreme events, which by definition arrive from calm conditions. It is equivalent to a reduction in exposure, obtainable more directly through the share of capital committed to margin; protection against the tails rests on the defined risk of the structures and on sizing.
+
 \section{Robustness and multiple testing}\label{sec:rob}
 
 \subsection{Execution cost}
@@ -360,7 +401,7 @@ The group's historical result on the 10-day iron condor (annualized return of 1.
 
 On SPX chains from 2010 to 2023 the volatility risk premium exists in the form described by the literature: model-free implied variance exceeds realized variance by a large and significant amount, out-of-the-money puts returned about half of the premium to buyers, and the distribution of the realized premium is dominated by a few extreme events. By contrast, there is no significant premium in the sample on at-the-money volatility beyond two weeks: at that level implied volatility is an unbiased forecast of realized volatility and outperforms both the GARCH model and historical volatility. The market appears informationally efficient at the center of the surface and rewards tail risk in the wings.
 
-For the project's strategies there are three consequences. First, symmetric defined-risk structures, the iron condor in particular, sell both the part of the surface that contains the premium (puts) and the part that does not (calls), and pay the spread on four legs; the net result is zero or negative. Second, structures that sell puts keep a positive result after costs, but a material part is equity market exposure and the residual alpha is not statistically distinguishable from zero in the great majority of configurations. Third, exit rules and filters change the distribution of results but do not create expected return; the filter based on the comparison with GARCH has the correct sign and deserves a forward test.
+For the project's strategies there are three consequences. First, symmetric defined-risk structures, the iron condor in particular, sell both the part of the surface that contains the premium (puts) and the part that does not (calls), and pay the spread on four legs; the net result is zero or negative. Second, structures that sell puts keep a positive result after costs, but a material part is equity market exposure and the residual alpha is not statistically distinguishable from zero in the great majority of configurations. Third, exit rules and filters change the distribution of results but do not create expected return; suspending entries when realized volatility is high reduces exposure without avoiding extreme events, because delta-selected strikes already widen with implied volatility; the filter based on the comparison with GARCH has the correct sign and deserves a forward test.
 
 The working hypothesis that the premium exists but that the attempt to capture it systematically tends, over the long run and net of costs, to a zero result is not rejected by the data.
 

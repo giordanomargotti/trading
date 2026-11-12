@@ -1,6 +1,6 @@
-# Premio di volatilità e strategie in opzioni su S&P 500
+# Volatility risk premium e strategie in opzioni su S&P 500
 
-Risultati della ricerca sulle catene di fine giornata delle opzioni SPX dal 2010 al 2023: esistenza del premio per il rischio di volatilità, backtest di dieci famiglie di strategie non direzionali, rassegna della letteratura.
+Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010 al 2023 (fonte: [OptionsDX](https://www.optionsdx.com/), dataset SPX Option Chains; opzioni su indice S&P 500 di stile europeo, regolate in contanti, quotate al Cboe): esistenza del volatility risk premium, backtest di dieci famiglie di strategie non direzionali, rassegna della letteratura.
 
 ## Contenuto
 
@@ -8,17 +8,18 @@ Risultati della ricerca sulle catene di fine giornata delle opzioni SPX dal 2010
 |---|---|
 | `index.html` | sito interattivo autonomo: si apre con un doppio clic, senza server e senza rete |
 | `paper/paper_it.pdf`, `paper/paper_en.pdf` | documento completo in italiano e in inglese (sorgenti `.tex` accanto) |
-| `paper/abstract_it.pdf`, `paper/abstract_en.pdf` | sintesi di una pagina (sorgenti `.tex` accanto) |
+| `paper/abstract_it.pdf`, `paper/abstract_en.pdf` | sintesi di due pagine con grafici (sorgenti `.tex` accanto) |
 | `paper/figure/` | figure in PDF, nelle due lingue |
 | `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), parametri GARCH, controlli di qualità |
 | `codice/` | pipeline Python completa e modelli dei documenti |
 
 ## Risultati principali
 
-- Volatilità implicita model-free a 30 giorni meno realizzata: +3,45 punti (t 6,48). Volatilità at-the-money meno realizzata: +0,72 punti (t 1,36). Il premio è nelle ali.
+- Volatilità implicita model-free a 30 giorni meno realizzata: +3,45 punti (t 6,48). Volatilità at-the-money meno realizzata: +0,72 punti (t 1,36). Il premio è nelle wing.
 - Premio at-the-money significativo nel 2010–2014, nullo nel 2015–2019 e nel 2020–2023.
-- 434 configurazioni, 1.310.509 operazioni simulate. Sharpe mediano +0,39 ai prezzi medi e −0,40 ai prezzi denaro-lettera.
-- Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi medi, 2,5% ai prezzi denaro-lettera.
+- 434 configurazioni, 1.310.509 operazioni simulate. Sharpe mediano +0,39 ai prezzi mid e −0,40 ai prezzi bid-ask.
+- Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi mid, 2,5% ai prezzi bid-ask.
+- Filtro di sospensione sulla volatilità realizzata (HV21 oltre il 25%): Sharpe mediano da −0,30 a −0,34, mese peggiore invariato. Gli strike scelti per delta si allargano già con la volatilità implicita.
 
 ## Riproduzione
 
@@ -34,12 +35,17 @@ python $S/pannello.py out                                     # IV ATM, varianza
 python $S/garch.py out                                        # GJR-GARCH-t senza informazioni future
 python $S/vrp.py out $S                                       # statistiche sul premio
 python $S/bt.py out && python $S/cal.py out                   # backtest
-python $S/stat_bt.py out $S && python $S/sintesi.py out       # sintesi, figure
+python $S/stat_bt.py out $S && python $S/filtro_vol.py out $S # sintesi, filtro sulla volatilità realizzata
+python $S/sintesi.py out                                      # dati del sito, figure
 python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
 python $S/costruisci_sito.py $S/modelli/tpl.html out/sito.json <chart.umd.min.js> index.html
 ```
 
 Tempo complessivo: circa mezz'ora; memoria necessaria circa 6 GB.
+
+## Autori
+
+Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (gruppo di lavoro finance-thinking).
 
 ## Fonti non incluse
 

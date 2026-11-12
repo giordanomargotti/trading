@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Premio di volatilità e strategie in opzioni</title>
+<title>Volatility risk premium e strategie in opzioni</title>
 <style>
 /* Impianto: colonna di lettura unica, barra di navigazione fissa in alto, pannelli solo per gli strumenti interattivi. */
 :root{
@@ -72,29 +72,30 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 </div></nav>
 <main>
 <section id="sintesi">
-<div class="kicker">Opzioni SPX · catene di fine giornata 2010–2023</div>
-<h1>Il premio di volatilità esiste nelle ali. Dopo i costi, le strategie non direzionali non lo incassano.</h1>
-<p class="lede">Tutti i test sono stati ricalcolati sulle catene reali delle opzioni sull'indice S&amp;P 500: <span id="k-sedute"></span> sedute, <span id="k-coppie"></span> coppie data–scadenza, <span id="k-cfg"></span> configurazioni di dieci famiglie di strategie, <span id="k-trade"></span> operazioni simulate.</p>
+<div class="kicker">Opzioni SPX · option chain end-of-day 2010–2023 · fonte OptionsDX</div>
+<h1>Il volatility risk premium esiste nelle wing. Dopo i costi, le strategie non direzionali non lo incassano.</h1>
+<p class="lede">Tutti i test sono stati ricalcolati sulle option chain reali delle opzioni sull'indice S&amp;P 500 (SPX): <span id="k-sedute"></span> sedute, <span id="k-coppie"></span> coppie data–scadenza, <span id="k-cfg"></span> configurazioni di dieci famiglie di strategie, <span id="k-trade"></span> operazioni simulate.</p>
 <div class="tiles" id="tiles"></div>
-<p>La volatilità implicita <em>model-free</em> supera stabilmente quella realizzata; la volatilità <em>at-the-money</em> la supera di poco e, oltre le due settimane, in misura non significativa. Il premio è nelle put fuori dal denaro. Le strutture che vendono put hanno risultati positivi, in larga parte spiegati dall'esposizione al mercato azionario; iron condor, straddle e strutture strette perdono il margine nel differenziale denaro-lettera.</p>
+<p>La volatilità implicita <em>model-free</em> supera stabilmente quella realizzata; la volatilità <em>at-the-money</em> la supera di poco e, oltre le due settimane, in misura non significativa. Il premio è nelle put out-of-the-money. Le strutture che vendono put hanno risultati positivi, in larga parte spiegati dall'esposizione al mercato azionario; iron condor, straddle e strutture strette perdono il margine nello spread bid-ask.</p>
 </section>
 
 <section id="dati">
 <h2>Dati e metodo</h2>
-<p>Fonte: archivio SPX di fine giornata del repository <code>finance-thinking/options_strategy</code>, file mensili da gennaio 2010 a dicembre 2023. Ogni grandezza è ricavata dai prezzi denaro e lettera.</p>
+<p><strong>Fonte:</strong> <a href="https://www.optionsdx.com/">OptionsDX</a>, dataset <em>SPX Option Chains</em> con frequenza end-of-day (file mensili <code>spx_eod_AAAAMM</code>, gennaio 2010 – dicembre 2023), acquisito tramite il repository <code>finance-thinking/options_strategy</code>.</p>
+<p><strong>Strumento:</strong> opzioni sull'indice S&amp;P 500 quotate al Cboe Options Exchange (ticker SPX): opzioni su indice di stile europeo, regolate in contanti, moltiplicatore 100 $ per punto indice. Scadenze mensili standard del terzo venerdì (regolamento sul valore di apertura) e scadenze settimanali e di fine mese SPXW (regolamento sul valore di chiusura). Ogni grandezza è ricavata dai prezzi bid e ask.</p>
 <ul>
-<li><strong>Forward</strong> implicito nella parità put-call sullo strike in cui call e put hanno prezzo medio più vicino.</li>
-<li><strong>Volatilità implicita</strong> per inversione della formula di Black (1976) sul prezzo medio; tempo in giorni di calendario su 365.</li>
+<li><strong>Forward</strong> implicito nella parità put-call sullo strike in cui call e put hanno prezzo mid più vicino.</li>
+<li><strong>Volatilità implicita</strong> per inversione della formula di Black (1976) sul prezzo mid; tempo in giorni di calendario su 365.</li>
 <li><strong>Varianza model-free</strong> con la formula dell'indice VIX applicata alla singola scadenza.</li>
 <li><strong>Varianza realizzata</strong>: somma dei quadrati dei rendimenti logaritmici giornalieri dalla seduta successiva fino alla scadenza della stessa opzione, annualizzata sullo stesso tempo di calendario.</li>
 <li><strong>Previsione</strong> GJR-GARCH(1,1) con innovazioni t di Student, finestra espandente, ristima ogni 21 sedute, nessuna informazione futura, nessun fattore correttivo.</li>
-<li><strong>Backtest</strong>: una posizione per seduta e per scadenza obiettivo; strike scelti per delta; risultato registrato al prezzo medio insieme al semi-differenziale di ogni gamba, così che il costo di esecuzione sia un parametro; commissione di 1 $ per gamba.</li>
+<li><strong>Backtest</strong>: una posizione per seduta e per scadenza obiettivo; strike scelti per delta; risultato registrato al prezzo mid insieme al half-spread di ogni gamba, così che il costo di esecuzione sia un parametro; commissione di 1 $ per gamba.</li>
 </ul>
 <div class="note">Controlli di integrità superati: inversione della IV con errore massimo dell'ordine di 10⁻⁵ punti; IV di put e call coincidenti sul forward; delta call meno delta put pari a uno; costo di carry implicito coerente con i tassi anno per anno; ricalcolo manuale di singole operazioni sulla catena.</div>
 </section>
 
 <section id="vrp">
-<h2>Il premio per il rischio di volatilità sullo storico</h2>
+<h2>Il volatility risk premium sullo storico delle option chain</h2>
 <p>Per ogni seduta si confronta la volatilità implicita della scadenza più vicina all'orizzonte scelto con la volatilità che l'indice ha poi realizzato fino a quella scadenza.</p>
 <div class="panel">
 <div class="legend"><span><i style="background:var(--s1)"></i>IV at-the-money</span><span><i style="background:var(--s2)"></i>Volatilità realizzata fino a scadenza</span></div>
@@ -103,7 +104,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 </div>
 <h3>Per orizzonte</h3>
 <div class="tw"><table id="t-oriz"></table></div>
-<p class="note">ATM − realizzata misura il premio al centro della superficie; model-free − realizzata include le ali. Statistica t con errori standard Newey-West, perché le osservazioni giornaliere si sovrappongono.</p>
+<p class="note">ATM − realizzata misura il premio al centro della superficie; model-free − realizzata include le wing. Statistica t con errori standard Newey-West, perché le osservazioni giornaliere si sovrappongono.</p>
 <div class="grid2">
 <div class="panel"><figure><div class="chart"><canvas id="c-strut" role="img" aria-label="Medie per orizzonte"></canvas></div><figcaption>Medie per orizzonte delle tre misure di volatilità.</figcaption></figure></div>
 <div class="panel"><figure><div class="chart"><canvas id="c-isto" role="img" aria-label="Distribuzione del premio"></canvas></div><figcaption>Distribuzione del premio ATM a 30 giorni, in punti di volatilità: molte piccole differenze positive, poche negative molto ampie.</figcaption></figure></div>
@@ -124,7 +125,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <div><p id="x-gap"></p></div>
 </div>
 <h3>Il prezzo dell'assicurazione</h3>
-<p>Rapporto tra le perdite a scadenza e i premi incassati dalle put vendute. Un valore pari a 1 corrisponde a un prezzo equo; valori inferiori misurano il premio trattenuto dal venditore.</p>
+<p>Rapporto tra le perdite a scadenza e i premi incassati dalle short put. Un valore pari a 1 corrisponde a un prezzo equo; valori inferiori misurano il premio trattenuto dal venditore.</p>
 <div class="tw"><table id="t-ins" class="heat"></table></div>
 </section>
 
@@ -135,32 +136,41 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <div class="controls">
 <label>Famiglia<select id="s-fam"></select></label>
 <label>Giorni alla scadenza<select id="s-d"></select></label>
-<label>Delta gamba venduta<select id="s-par"></select></label>
-<label>Ala<select id="s-ala"></select></label>
+<label>Delta della gamba short<select id="s-par"></select></label>
+<label>Wing<select id="s-ala"></select></label>
 <label>Gestione<select id="s-gest"></select></label>
 </div>
 <div class="controls">
-<label><span>Quota di differenziale pagata: <b id="v-x"></b></span><input type="range" id="r-x" min="0" max="1" step="0.05" value="1"></label>
+<label><span>Quota di spread bid-ask pagata: <b id="v-x"></b></span><input type="range" id="r-x" min="0" max="1" step="0.05" value="1"></label>
 <label><span>Capitale impegnato a margine: <b id="v-f"></b></span><input type="range" id="r-f" min="0.1" max="1" step="0.05" value="0.5"></label>
 </div>
 <div class="stats" id="e-stats"></div>
-<div class="legend"><span><i style="background:var(--s1)"></i>Configurazione</span><span><i style="background:var(--s3)"></i>Solo con IV &gt; GARCH (dal 2012, denaro-lettera)</span><span><i style="background:var(--neutral)"></i>S&amp;P 500, solo prezzo</span></div>
+<div class="legend"><span><i style="background:var(--s1)"></i>Configurazione</span><span><i style="background:var(--s3)"></i>Solo con IV &gt; GARCH (dal 2012, bid-ask)</span><span><i style="background:var(--neutral)"></i>S&amp;P 500, solo prezzo</span></div>
 <figure><div class="chart tall"><canvas id="c-eq" role="img" aria-label="Rendimento cumulato"></canvas></div>
 <figcaption>Rendimento cumulato sul capitale (somma aritmetica dei rendimenti mensili), in percentuale.</figcaption></figure>
 <div class="grid2" style="margin-top:14px">
 <figure><div class="chart"><canvas id="c-yr" role="img" aria-label="Rendimento per anno"></canvas></div><figcaption>Rendimento per anno sul capitale, in percentuale.</figcaption></figure>
-<div><div class="tw"><table id="t-reg"></table></div><p class="note">Prezzi denaro-lettera. Rendimento medio per operazione sul margine; Sharpe della serie mensile dal 2012 aprendo posizioni solo in quel regime.</p></div>
+<div><div class="tw"><table id="t-reg"></table></div><p class="note">Prezzi bid-ask. Rendimento medio per operazione sul margine; Sharpe della serie mensile dal 2012 aprendo posizioni solo in quel regime.</p></div>
 </div>
 </div>
+<h3>Filtro operativo sulla volatilità realizzata</h3>
+<p>Verifica della regola «sospendere gli ingressi quando la volatilità realizzata è eccessiva, riprendere quando rientra». Gli ingressi sono sospesi quando la volatilità storica a 21 sedute (HV21) supera la soglia; le posizioni aperte seguono la propria gestione. Mediane sulle configurazioni a credito, prezzi bid-ask, marzo 2011 – dicembre 2023.</p>
+<div class="tw"><table id="t-fvol"></table></div>
+<div class="grid2">
+<div class="panel"><figure><div class="chart"><canvas id="c-hv" role="img" aria-label="Premio successivo per livello di volatilità storica"></canvas></div><figcaption>Premio ATM medio successivo a 30 giorni per livello di HV21 all'ingresso, in punti di volatilità.</figcaption></figure></div>
+<div><p id="x-fvol"></p></div>
+</div>
+<div class="tw"><table id="t-hv"></table></div>
+<p class="note" id="x-dist"></p>
 <h3>Mappa della famiglia</h3>
-<p>Indice di Sharpe per delta e scadenza, con la famiglia, l'ala, la gestione e il costo di esecuzione scelti sopra.</p>
+<p>Indice di Sharpe per delta e scadenza, con la famiglia, la wing, la gestione e il costo di esecuzione scelti sopra.</p>
 <div class="tw"><table id="t-heat" class="heat"></table></div>
 </section>
 
 <section id="confronto">
 <h2>Confronto tra famiglie e test multipli</h2>
 <div class="grid2">
-<div class="panel"><div class="legend"><span><i style="background:var(--s1)"></i>Prezzo medio</span><span><i style="background:var(--s2)"></i>Denaro-lettera</span></div>
+<div class="panel"><div class="legend"><span><i style="background:var(--s1)"></i>Mid price</span><span><i style="background:var(--s2)"></i>Bid-ask</span></div>
 <figure><div class="chart"><canvas id="c-sh" role="img" aria-label="Distribuzione dello Sharpe"></canvas></div><figcaption>Distribuzione dell'indice di Sharpe su tutte le configurazioni.</figcaption></figure></div>
 <div><div class="stats" id="m-stats"></div><p id="x-mt"></p></div>
 </div>
@@ -175,7 +185,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <section id="letteratura">
 <h2>Letteratura: il premio esiste? Perché? I mercati sono efficienti?</h2>
 <h3>Evidenza sull'esistenza</h3>
-<p>La varianza attesa neutrale al rischio è replicabile con un portafoglio statico di opzioni (Britten-Jones e Neuberger, 2000; Jiang e Tian, 2005). Carr e Wu (2009) mostrano che per gli indici azionari la varianza implicita supera sistematicamente la realizzata. Bakshi e Kapadia (2003) trovano guadagni medi negativi per le opzioni comprate e coperte in delta; Coval e Shumway (2001) rendimenti fortemente negativi per gli straddle; Bondarenko (2014) perdite medie mensili di alcune decine di punti percentuali per le put fuori dal denaro. Bollerslev, Tauchen e Zhou (2009) mostrano che la differenza tra varianza implicita e realizzata prevede i rendimenti azionari.</p>
+<p>La varianza attesa neutrale al rischio è replicabile con un portafoglio statico di opzioni (Britten-Jones e Neuberger, 2000; Jiang e Tian, 2005). Carr e Wu (2009) mostrano che per gli indici azionari la varianza implicita supera sistematicamente la realizzata. Bakshi e Kapadia (2003) trovano guadagni medi negativi per le opzioni comprate e coperte in delta; Coval e Shumway (2001) rendimenti fortemente negativi per gli straddle; Bondarenko (2014) perdite medie mensili di alcune decine di punti percentuali per le put out-of-the-money. Bollerslev, Tauchen e Zhou (2009) mostrano che la differenza tra varianza implicita e realizzata prevede i rendimenti azionari.</p>
 <h3>Perché esisterebbe</h3>
 <ul>
 <li><strong>Compenso per un rischio sistematico.</strong> La varianza sale quando i mercati scendono: chi vende quel titolo vende assicurazione. Bates (2000) documenta il timore di salti negativi dopo il 1987; Todorov (2010) e Bollerslev e Todorov (2011) attribuiscono la parte prevalente del premio al rischio di salto; Dew-Becker, Giglio, Le e Rodriguez (2017) lo localizzano sulla varianza realizzata a brevissimo termine.</li>
@@ -210,7 +220,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <li><code>utils_criteria.py</code>: l'argomento <code>payoff</code> è sovrascritto da un vettore di prova.</li>
 <li>La quota Git LFS del repository è esaurita: i file <code>.pkl</code> e <code>.csv</code> non sono più scaricabili. Le analisi partono dagli archivi compressi originali.</li>
 </ol>
-<p class="note">Il risultato storico del gruppo sull'iron condor a 10 giorni (rendimento annualizzato 1,85%, 57,3% di operazioni in utile, riduzione massima oltre metà del capitale) è coerente con quanto ottenuto qui per la stessa famiglia.</p>
+<p class="note">Il risultato storico del gruppo sull'iron condor a 10 giorni (rendimento annualizzato 1,85%, 57,3% di operazioni in utile, drawdown massimo oltre metà del capitale) è coerente con quanto ottenuto qui per la stessa famiglia.</p>
 </section>
 
 <section id="documenti">
@@ -218,8 +228,8 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <div class="docs">
 <div class="doc"><b>Documento completo · italiano</b><a href="paper/paper_it.pdf" download>PDF</a><a href="paper/paper_it.tex" download>LaTeX</a></div>
 <div class="doc"><b>Full paper · English</b><a href="paper/paper_en.pdf" download>PDF</a><a href="paper/paper_en.tex" download>LaTeX</a></div>
-<div class="doc"><b>Sintesi di una pagina · italiano</b><a href="paper/abstract_it.pdf" download>PDF</a><a href="paper/abstract_it.tex" download>LaTeX</a></div>
-<div class="doc"><b>One-page abstract · English</b><a href="paper/abstract_en.pdf" download>PDF</a><a href="paper/abstract_en.tex" download>LaTeX</a></div>
+<div class="doc"><b>Sintesi di due pagine · italiano</b><a href="paper/abstract_it.pdf" download>PDF</a><a href="paper/abstract_it.tex" download>LaTeX</a></div>
+<div class="doc"><b>Two-page abstract · English</b><a href="paper/abstract_en.pdf" download>PDF</a><a href="paper/abstract_en.tex" download>LaTeX</a></div>
 <div class="doc"><b>Codice e risultati</b><a href="https://github.com/giordanomargotti/trading/tree/option-trading/opzioni/codice">Codice Python</a><a href="https://github.com/giordanomargotti/trading/tree/option-trading/opzioni/dati">Risultati JSON</a><a href="https://github.com/giordanomargotti/trading/tree/option-trading/opzioni/paper/figure">Figure</a></div>
 </div>
 </section>
@@ -227,15 +237,16 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <section id="limiti">
 <h2>Limiti</h2>
 <ul>
-<li>Quotazioni di fine giornata: il differenziale alla chiusura è più ampio di quello tipico della seduta; il prezzo effettivo sta tra prezzo medio e denaro-lettera.</li>
+<li>Quotazioni di fine giornata: lo spread alla chiusura è più ampio di quello tipico della seduta; il prezzo effettivo sta tra prezzo mid e bid-ask.</li>
 <li>Margine delle posizioni scoperte approssimato con il 20% del nozionale; le serie non includono il rendimento della liquidità a garanzia.</li>
-<li>La serie mensile non valuta le posizioni aperte ai prezzi di mercato: la riduzione massima infra-mensile è sottostimata.</li>
+<li>La serie mensile non valuta le posizioni aperte ai prezzi di mercato: il drawdown massimo infra-mensile è sottostimata.</li>
 <li>Quattordici anni di mercato prevalentemente in rialzo, con un solo evento della dimensione del marzo 2020.</li>
 <li>Famiglie e parametri sono quelli già esplorati sullo stesso archivio: nessuna parte del campione è realmente fuori campione. La verifica non contaminata è la registrazione dei segnali prima dell'esito.</li>
+<li>Un filtro di sospensione sulla volatilità realizzata è stato verificato e non migliora i risultati (sezione Strategie).</li>
 <li>Risultati su SPX. Per XSP i valori in dollari si dividono per dieci; le commissioni per contratto pesano dieci volte di più.</li>
 <li>Fonti non incluse: cartella Google Drive e repository <code>backtest_put_credit_spread</code>, non accessibili al momento dell'elaborazione.</li>
 </ul>
-<footer>Documento di ricerca. Non costituisce consulenza in materia di investimenti. Grafici: Chart.js (licenza MIT), incluso nella pagina.</footer>
+<footer>Autori: Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (gruppo di lavoro finance-thinking). Documento di ricerca. Non costituisce consulenza in materia di investimenti. Grafici: Chart.js (licenza MIT), incluso nella pagina.</footer>
 </section>
 </main>
 <script>/*CHARTJS*/</script>
@@ -246,7 +257,7 @@ const $ = id => document.getElementById(id);
 const nf = (x, d=2, sign=false) => (x==null||!isFinite(x)) ? "–" : ((sign && x>0 ? "+" : "") + x.toLocaleString("it-IT", {minimumFractionDigits:d, maximumFractionDigits:d})).replace("-", "−");
 const ni = x => Math.round(x).toLocaleString("it-IT").replace("-", "−");
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const FAM = {SP:"Put venduta", STRG:"Strangle venduto", STRD:"Straddle venduto ATM", PCS:"Put credit spread", CCS:"Call credit spread", IC:"Iron condor", IFLY:"Iron butterfly", LP:"Put comprata", DPS:"Debit put spread", CAL:"Calendar lungo ATM"};
+const FAM = {SP:"Short put", STRG:"Short strangle", STRD:"Short straddle ATM", PCS:"Put credit spread", CCS:"Call credit spread", IC:"Iron condor", IFLY:"Iron butterfly", LP:"Long put", DPS:"Debit put spread", CAL:"Long calendar ATM"};
 const ALA = {"d05":"Delta 0,05", "w1":"1% dello spot", "-":"–"};
 const GEST = {hold:"Fino a scadenza", tp50:"Profitto 50%", tp50sl200:"Profitto 50% / perdita 200%"};
 const V = D.vrp, O = V.obiettivi, CFG = D.config, SPX = D.spx.map(v => v/1e4);
@@ -268,7 +279,7 @@ function sintesi(){
   $("k-trade").textContent = ni(CFG.reduce((s,c) => s + c.n, 0));
   const t = [[nf(o.vrp_mfvol.media*100,2,true)+" pt", `IV model-free − realizzata a 30 giorni (t ${nf(o.vrp_mfvol.t_hac)})`],
     [nf(o.vrp_vol.media*100,2,true)+" pt", `IV at-the-money − realizzata a 30 giorni (t ${nf(o.vrp_vol.t_hac)})`],
-    [nf(T.sharpe_mediano_mid,2,true)+" → "+nf(T.sharpe_mediano_ba,2,true), "Sharpe mediano: dal prezzo medio al denaro-lettera"],
+    [nf(T.sharpe_mediano_mid,2,true)+" → "+nf(T.sharpe_mediano_ba,2,true), "Sharpe mediano: dal prezzo mid al bid-ask"],
     [nf(T.quota_talfa2_mid*100,1)+"% → "+nf(T.quota_talfa2_ba*100,1)+"%", "Configurazioni con alfa positivo significativo rispetto all'indice"]];
   $("tiles").innerHTML = t.map(x => `<div class="tile"><b>${x[0]}</b><span>${x[1]}</span></div>`).join("");
 }
@@ -326,18 +337,18 @@ const sel = {};
 function opts(id, vals, lab, keep){ const el = $(id), cur = keep ?? el.value; el.innerHTML = vals.map(v => `<option value="${v}">${lab(v)}</option>`).join(""); if(vals.map(String).includes(String(cur))) el.value = cur; }
 function refreshSelectors(){
   const fam = $("s-fam").value, f = CFG.filter(c => c.fam === fam), u = k => [...new Set(f.map(c => c[k]))];
-  opts("s-d", u("D").sort((a,b) => a-b), v => v + " giorni"); opts("s-par", u("par").sort((a,b) => a-b), v => fam === "STRD" || fam === "CAL" ? "ATM" : (fam === "IFLY" ? "ATM, ali " + nf(+v) : nf(+v)));
+  opts("s-d", u("D").sort((a,b) => a-b), v => v + " giorni"); opts("s-par", u("par").sort((a,b) => a-b), v => fam === "STRD" || fam === "CAL" ? "ATM" : (fam === "IFLY" ? "ATM, wing " + nf(+v) : nf(+v)));
   opts("s-ala", u("ala"), v => ALA[v]); opts("s-gest", u("gest"), v => GEST[v]);
 }
 function current(){ const k = `${$("s-fam").value}|${(+$("s-par").value).toFixed(2)}|${$("s-ala").value}|${$("s-d").value}|${$("s-gest").value}`; return byKey[k]; }
 function explorer(){
   const c = current(), x = +$("r-x").value, f = +$("r-f").value;
-  $("v-x").textContent = x === 0 ? "0% (prezzo medio)" : x === 1 ? "100% (denaro-lettera)" : Math.round(x*100) + "%"; $("v-f").textContent = Math.round(f*100) + "%";
+  $("v-x").textContent = x === 0 ? "0% (prezzo mid)" : x === 1 ? "100% (bid-ask)" : Math.round(x*100) + "%"; $("v-f").textContent = Math.round(f*100) + "%";
   if(!c){ $("e-stats").innerHTML = "<p>Configurazione non disponibile nei dati per questa combinazione.</p>"; return; }
   const R = serie(c, x).map(v => v*f), st = stats(R, SPX), usd = c.t0.media_usd + x*(c.t1.media_usd - c.t0.media_usd);
-  const S = [[nf(st.sharpe,2,true), "Sharpe annualizzato"], [nf(st.ann*100,1,true)+"%", "Rendimento annuo sul capitale"], [nf(st.dd*100,0)+"%", "Riduzione massima"], [nf(st.worst*100,1)+"%", "Mese peggiore"],
-    [nf(st.beta,2,true), "Beta rispetto all'indice"], [nf(st.alfa*100,1,true)+"%", `Alfa annuo (t ${nf(st.talfa,2,true)})`], [nf(c.t1.vincenti*100,0)+"%", "Operazioni in utile (denaro-lettera)"],
-    [ni(usd)+" $", "Risultato medio per contratto SPX"], [ni(c.t1.peggiore_usd)+" $", "Operazione peggiore (denaro-lettera)"], [ni(c.n), `Operazioni dal ${c.dal.slice(0,4)}`]];
+  const S = [[nf(st.sharpe,2,true), "Sharpe annualizzato"], [nf(st.ann*100,1,true)+"%", "Rendimento annuo sul capitale"], [nf(st.dd*100,0)+"%", "Drawdown massimo"], [nf(st.worst*100,1)+"%", "Mese peggiore"],
+    [nf(st.beta,2,true), "Beta rispetto all'indice"], [nf(st.alfa*100,1,true)+"%", `Alfa annuo (t ${nf(st.talfa,2,true)})`], [nf(c.t1.vincenti*100,0)+"%", "Operazioni in utile (bid-ask)"],
+    [ni(usd)+" $", "Risultato medio per contratto SPX"], [ni(c.t1.peggiore_usd)+" $", "Operazione peggiore (bid-ask)"], [ni(c.n), `Operazioni dal ${c.dal.slice(0,4)}`]];
   $("e-stats").innerHTML = S.map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");
   const cum = a => { let t = 0; return a.map(v => +((t += v)*100).toFixed(2)); };
   const ds = [line("Configurazione", cum(R), css("--s1")), line("S&P 500", cum(SPX), css("--neutral"), {borderWidth:1.5, borderDash:[5,4]})];
@@ -349,7 +360,7 @@ function explorer(){
   table("t-reg", ["Regime all'ingresso","Rend. medio","Sharpe con filtro"],
     [["IV bassa (terzile inferiore)", nf(r[0]*100,2,true)+"%", fr("iv_bassa")], ["IV intermedia", nf(r[1]*100,2,true)+"%", "–"], ["IV alta (terzile superiore)", nf(r[2]*100,2,true)+"%", fr("iv_alta")],
      ["IV ≤ GARCH", nf(g[0]*100,2,true)+"%", fr("gap<=0")], ["IV &gt; GARCH", nf(g[1]*100,2,true)+"%", fr("gap>0")], ["IV &gt; GARCH + 2 punti", "–", fr("gap>2pt")],
-     ["Struttura a termine invertita (IV 60 &lt; IV 30)", p[0] == null ? "–" : nf(p[0]*100,2,true)+"%", "–"], ["Struttura a termine crescente", nf(p[1]*100,2,true)+"%", "–"], ["Nessun filtro, dal 2012", "–", fr("nessuno")]]);
+     ["Term structure invertita (IV 60 &lt; IV 30)", p[0] == null ? "–" : nf(p[0]*100,2,true)+"%", "–"], ["Term structure crescente", nf(p[1]*100,2,true)+"%", "–"], ["Nessun filtro, dal 2012", "–", fr("nessuno")]]);
   heatmap(x); allTable();
 }
 function heatmap(x){
@@ -357,13 +368,27 @@ function heatmap(x){
   const Ds = [...new Set(f.map(c => c.D))].sort((a,b) => a-b), ps = [...new Set(f.map(c => c.par))].sort((a,b) => a-b);
   $("t-heat").innerHTML = "<thead><tr><th>Delta \\ giorni</th>" + Ds.map(d => `<th>${d}</th>`).join("") + "</tr></thead><tbody>" + ps.map(p => `<tr><td>${fam === "STRD" || fam === "CAL" ? "ATM" : nf(p)}</td>` + Ds.map(d => { const c = f.find(c => c.D === d && c.par === p); if(!c) return "<td>–</td>"; const s = stats(serie(c, x)).sharpe; return `<td style="background:${heat(s, 1.5)}">${nf(s,2,true)}</td>`; }).join("") + "</tr>").join("") + "</tbody>";
 }
+function filtroVol(){
+  const W = D.fvol, L = {"nessuno":"Nessun filtro","hv21<=20":"HV21 ≤ 20%","hv21<=25":"HV21 ≤ 25%","hv21<=30":"HV21 ≤ 30%","hv21<=p90":"HV21 ≤ 90° percentile","hv10<=25":"HV10 ≤ 25%","solo_hv21>25":"Solo HV21 > 25%"};
+  const g = (v,k) => v[k] == null ? "–" : nf(v[k]*100,0)+"%";
+  table("t-fvol", ["Filtro","Operazioni eseguite","Sharpe mediano","Configurazioni con Sharpe migliore","Drawdown mediano","Configurazioni con drawdown minore","Mese peggiore mediano"],
+    Object.entries(W.filtri).map(([k,v]) => [L[k], nf(v.quota_operazioni*100,0)+"%", nf(v.sharpe_mediano,2,true), g(v,"quota_sharpe_migliore"), nf(v.dd_mediano*100,0)+"%", g(v,"quota_dd_minore"), nf(v.peggiore_mediano*100,0)+"%"]));
+  const hb = W.vrp_per_hv, xs = ["≤ 10","10–15","15–20","20–25","25–30","> 30"];
+  mk("c-hv", {type:"bar", data:{labels:xs, datasets:[{label:"Premio ATM successivo", data:hb.map(b => +(b.vrp_atm*100).toFixed(2)), backgroundColor:hb.map(b => b.vrp_atm < 0 ? css("--s2") : css("--s1")), borderRadius:4, maxBarThickness:48}]},
+    options:{scales:{x:{title:{display:true, text:"HV21 all'ingresso (%)"}, grid:{display:false}}, y:{title:{display:true, text:"Punti di volatilità"}}}}});
+  table("t-hv", ["HV21 all'ingresso (%)","Sedute","IV ATM","Realizzata","ATM − real.","t","MF − real.","% &gt; 0","5° percentile","Minimo"],
+    hb.map((b,i) => [xs[i], ni(b.n), nf(b.iv*100), nf(b.rv*100), nf(b.vrp_atm*100,2,true), nf(b.t), nf(b.vrp_mf*100,2,true), nf(b.quota_pos*100,0), nf(b.p5*100,1), nf(b.minimo*100,0)]));
+  const sp = W.selezione["SP|0.16|-|45|hold"], f = W.filtri["hv21<=25"], d = W.distanza_strike;
+  $("x-fvol").innerHTML = `Il filtro non migliora il rendimento corretto per il rischio: con la soglia del 25% lo Sharpe mediano passa da ${nf(W.filtri.nessuno.sharpe_mediano,2,true)} a ${nf(f.sharpe_mediano,2,true)} e migliora solo nel ${nf(f.quota_sharpe_migliore*100,0)}% delle configurazioni. Il drawdown si riduce in misura vicina al minor numero di operazioni e il mese peggiore non cambia: per la short put delta 0,16 a 45 giorni resta ${nf(sp.nessuno.peggiore*100,1)}% del capitale a margine con e senza filtro. Le perdite del febbraio 2020 riguardano posizioni aperte con volatilità realizzata bassa: il filtro sospende dopo l'evento, non prima, e rinuncia alle operazioni meglio remunerate (rendimento medio per operazione ${nf(sp["solo_hv21>25"].rho*100,1)}% del margine con HV21 oltre il 25%, contro ${nf(sp.nessuno.rho*100,1)}%).`;
+  $("x-dist").innerHTML = `Il filtro è ridondante rispetto alla costruzione: gli strike sono scelti per delta sulla volatilità implicita, quindi la struttura si allarga da sola. La distanza dal forward della put delta 0,16 a 30 giorni è in media ${nf(d.terzili[0].dist*100,1)}% con IV bassa, ${nf(d.terzili[1].dist*100,1)}% con IV intermedia e ${nf(d.terzili[2].dist*100,1)}% con IV alta (correlazione ${nf(d.corr)}). Nella selezione del progetto la densità GJR-GARCH svolge la stessa funzione sul valore atteso. Una sospensione basata sulla volatilità realizzata equivale a ridurre l'esposizione, cosa ottenibile in modo più diretto con la quota di capitale a margine.`;
+}
 // ------------------------------------------------------------ confronto
 let sortKey = "sharpe", sortDir = -1;
 function allTable(){
   const x = +$("r-x").value, ff = $("s-tf").value, n = +$("s-tn").value;
   let rows = CFG.filter(c => !ff || c.fam === ff).map(c => { const s = stats(serie(c, x), SPX); return {c, sharpe:s.sharpe, ann:s.ann, dd:s.dd, beta:s.beta, talfa:s.talfa, win:c.t1.vincenti, usd:c.t0.media_usd + x*(c.t1.media_usd - c.t0.media_usd)}; });
   rows.sort((a,b) => sortDir*(a[sortKey]-b[sortKey]));
-  const H = [["Famiglia",null],["Giorni",null],["Delta",null],["Ala",null],["Gestione",null],["Sharpe","sharpe"],["Rend. annuo","ann"],["Rid. massima","dd"],["Beta","beta"],["t alfa","talfa"],["% utili","win"],["Media $","usd"]];
+  const H = [["Famiglia",null],["Giorni",null],["Delta",null],["Wing",null],["Gestione",null],["Sharpe","sharpe"],["Rend. annuo","ann"],["Drawdown","dd"],["Beta","beta"],["t alfa","talfa"],["% utili","win"],["Media $","usd"]];
   $("t-all").innerHTML = "<thead><tr>" + H.map(h => h[1] ? `<th class="sort" data-k="${h[1]}" tabindex="0">${h[0]}${sortKey === h[1] ? (sortDir < 0 ? " ↓" : " ↑") : ""}</th>` : `<th>${h[0]}</th>`).join("") + "</tr></thead><tbody>" +
     rows.slice(0, n).map(r => { const c = r.c; return `<tr><td>${FAM[c.fam]}</td><td>${c.D}</td><td>${c.fam === "STRD" || c.fam === "CAL" ? "ATM" : nf(c.par)}</td><td>${ALA[c.ala]}</td><td>${GEST[c.gest]}</td><td>${nf(r.sharpe,2,true)}</td><td>${nf(r.ann*100,1,true)}%</td><td>${nf(r.dd*100,0)}%</td><td>${nf(r.beta,2,true)}</td><td>${nf(r.talfa,2,true)}</td><td>${nf(r.win*100,0)}</td><td>${ni(r.usd)}</td></tr>`; }).join("") + "</tbody>";
   $("t-all").querySelectorAll("th.sort").forEach(th => { const go = () => { const k = th.dataset.k; if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } allTable(); }; th.onclick = go; th.onkeydown = e => { if(e.key === "Enter") go(); }; });
@@ -371,17 +396,17 @@ function allTable(){
 function confronto(){
   const T = D.test, edges = []; for(let v=-3; v<2.001; v+=0.25) edges.push(+v.toFixed(2));
   const hist = k => { const h = new Array(edges.length-1).fill(0); CFG.forEach(c => { const s = Math.max(-2.999, Math.min(1.999, c[k].sharpe)); h[Math.floor((s+3)/0.25)]++; }); return h; };
-  mk("c-sh", {type:"bar", data:{labels:edges.slice(0,-1).map(v => v+0.125), datasets:[{label:"Prezzo medio", data:hist("p0"), backgroundColor:css("--s1"), borderRadius:2}, {label:"Denaro-lettera", data:hist("p1"), backgroundColor:css("--s2"), borderRadius:2}]},
+  mk("c-sh", {type:"bar", data:{labels:edges.slice(0,-1).map(v => v+0.125), datasets:[{label:"Mid price", data:hist("p0"), backgroundColor:css("--s1"), borderRadius:2}, {label:"Bid-ask", data:hist("p1"), backgroundColor:css("--s2"), borderRadius:2}]},
     options:{scales:{x:{title:{display:true, text:"Indice di Sharpe annualizzato"}, grid:{display:false}, ticks:{callback(v){ const l = +this.getLabelForValue(v) - 0.125; return Number.isInteger(l) ? l : ""; }, autoSkip:false, maxRotation:0}}, y:{title:{display:true, text:"Configurazioni"}}},
       plugins:{tooltip:{callbacks:{title:i => `Sharpe da ${nf(+i[0].label-0.125)} a ${nf(+i[0].label+0.125)}`}}}}});
-  const S = [[nf(T.quota_sharpe_pos_mid*100,0)+"% → "+nf(T.quota_sharpe_pos_ba*100,0)+"%", "Quota con Sharpe positivo"], [nf(T.quota_talfa_neg2_ba*100,0)+"%", "Alfa significativamente negativo (denaro-lettera)"],
+  const S = [[nf(T.quota_sharpe_pos_mid*100,0)+"% → "+nf(T.quota_sharpe_pos_ba*100,0)+"%", "Quota con Sharpe positivo"], [nf(T.quota_talfa_neg2_ba*100,0)+"%", "Alfa significativamente negativo (bid-ask)"],
     [nf(T.sharpe_migliore), "Sharpe della configurazione migliore"], [nf(T.sharpe_atteso_massimo_sotto_h0), "Massimo atteso sotto l'ipotesi nulla"], [nf(T.corr_meta), "Correlazione di rango tra 2010–16 e 2017–23"], [nf(T.top20_h1_media_h1)+" → "+nf(T.top20_h1_media_h2), "Sharpe delle 20 migliori del primo periodo, nel secondo"]];
   $("m-stats").innerHTML = S.map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");
-  $("x-mt").innerHTML = `Su ${T.n_config} configurazioni, la quota con alfa positivo e t superiore a 2 è il ${nf(T.quota_talfa2_ba*100,1)}% ai prezzi denaro-lettera: il valore atteso per solo effetto del caso. L'ordinamento tra famiglie è stabile nel tempo; il livello dei risultati no. Lo Sharpe deflazionato della configurazione migliore è ${nf(T.dsr,3)}.`;
+  $("x-mt").innerHTML = `Su ${T.n_config} configurazioni, la quota con alfa positivo e t superiore a 2 è il ${nf(T.quota_talfa2_ba*100,1)}% ai prezzi bid-ask: il valore atteso per solo effetto del caso. L'ordinamento tra famiglie è stabile nel tempo; il livello dei risultati no. Lo Sharpe deflazionato della configurazione migliore è ${nf(T.dsr,3)}.`;
   const med = a => { const s = [...a].sort((x,y) => x-y), n = s.length; return n % 2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2; };
   const ord = [["SP","-"],["STRG","-"],["PCS","d05"],["PCS","w1"],["STRD","-"],["IC","d05"],["IC","w1"],["IFLY","-"],["CCS","d05"],["CCS","w1"],["CAL","-"],["DPS","-"],["LP","-"]];
-  table("t-fam", ["Famiglia (fino a scadenza)","Configurazioni","Sharpe, prezzo medio","Sharpe, denaro-lettera","Beta","t alfa, prezzo medio","t alfa, denaro-lettera","Differenziale / premio","% utili"],
-    ord.map(([f,a]) => { const x = CFG.filter(c => c.fam === f && c.ala === a && c.gest === "hold"); return [FAM[f] + (a !== "-" ? ", ala " + ALA[a].toLowerCase() : ""), x.length, nf(med(x.map(c => c.p0.sharpe)),2,true), nf(med(x.map(c => c.p1.sharpe)),2,true), nf(med(x.map(c => c.capm1.beta)),2,true), nf(med(x.map(c => c.capm0.t_alfa)),2,true), nf(med(x.map(c => c.capm1.t_alfa)),2,true), nf(med(x.map(c => c.spread_su_credito))*100,0)+"%", nf(med(x.map(c => c.t1.vincenti))*100,0)]; }));
+  table("t-fam", ["Famiglia (fino a scadenza)","Configurazioni","Sharpe, prezzo mid","Sharpe, bid-ask","Beta","t alfa, prezzo mid","t alfa, bid-ask","Spread / premio","% utili"],
+    ord.map(([f,a]) => { const x = CFG.filter(c => c.fam === f && c.ala === a && c.gest === "hold"); return [FAM[f] + (a !== "-" ? ", wing " + ALA[a].toLowerCase() : ""), x.length, nf(med(x.map(c => c.p0.sharpe)),2,true), nf(med(x.map(c => c.p1.sharpe)),2,true), nf(med(x.map(c => c.capm1.beta)),2,true), nf(med(x.map(c => c.capm0.t_alfa)),2,true), nf(med(x.map(c => c.capm1.t_alfa)),2,true), nf(med(x.map(c => c.spread_su_credito))*100,0)+"%", nf(med(x.map(c => c.t1.vincenti))*100,0)]; }));
 }
 function letteratura(){
   const o = O["30"], T = D.test, i = D.assicurazione.find(i => i.D === 30 && Math.abs(i.delta-0.1) < 1e-6);
@@ -390,8 +415,8 @@ function letteratura(){
      ["La distribuzione del premio è asimmetrica a sinistra", `Confermata: asimmetria ${nf(o.vrp_vol.asimmetria,1)}, minimo ${nf(o.vrp_vol.minimo*100,0)} punti`],
      ["Il premio è più debole nel periodo recente", `Coerente: t ${nf(o.per_periodo["2010-2014"].t_hac)} nel 2010–14, ${nf(o.per_periodo["2015-2019"].t_hac)} nel 2015–19, ${nf(o.per_periodo["2020-2023"].t_hac)} nel 2020–23`],
      ["La IV è una previsione non distorta", `Non rifiutata a 30 giorni per la IV ATM: pendenza ${nf(o.mz_atm.b,3)}, p ${nf(o.mz_atm.p_wald,3)}`],
-     ["Le put fuori dal denaro sono care", `Confermata: perdite pari a ${nf(i.rapporto)} dei premi per il delta 0,10 a 30 giorni`],
-     ["Costi ed esposizione azionaria assorbono il rendimento", `Confermata: alfa significativo nel ${nf(T.quota_talfa2_ba*100,1)}% delle configurazioni ai prezzi denaro-lettera`]]);
+     ["Le put out-of-the-money sono care", `Confermata: perdite pari a ${nf(i.rapporto)} dei premi per il delta 0,10 a 30 giorni`],
+     ["Costi ed esposizione azionaria assorbono il rendimento", `Confermata: alfa significativo nel ${nf(T.quota_talfa2_ba*100,1)}% delle configurazioni ai prezzi bid-ask`]]);
   $("refs").innerHTML = REFS.map(r => `<li>${r}</li>`).join("");
 }
 const REFS = [
@@ -429,7 +454,7 @@ const REFS = [
 "Santa-Clara, P. e Saretto, A. (2009). Option strategies: good deals and margin calls. <i>Journal of Financial Markets</i>, 12(3), 391–417.",
 "Todorov, V. (2010). Variance risk-premium dynamics: the role of jumps. <i>Review of Financial Studies</i>, 23(1), 345–383."];
 // ------------------------------------------------------------ avvio
-function all(){ base(); sintesi(); vrp(); confronto(); letteratura(); explorer(); }
+function all(){ base(); sintesi(); vrp(); confronto(); letteratura(); filtroVol(); explorer(); }
 opts("s-fam", ["PCS","IC","SP","STRG","STRD","IFLY","CCS","CAL","DPS","LP"], v => FAM[v], "PCS");
 $("s-tf").innerHTML = '<option value="">Tutte</option>' + Object.keys(FAM).map(k => `<option value="${k}">${FAM[k]}</option>`).join("");
 refreshSelectors(); $("s-d").value = "30"; $("s-par").value = "0.2"; $("s-ala").value = "d05";

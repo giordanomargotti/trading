@@ -1,28 +1,32 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
+\usepackage[english,provide=*]{babel}
 \usepackage{mathptmx,microtype}
-\usepackage[margin=2.4cm]{geometry}
-\usepackage{amsmath,booktabs}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,booktabs,graphicx,caption}
+\usepackage[hidelinks]{hyperref}
+\captionsetup{font=footnotesize,labelfont=bf,skip=3pt}
+\graphicspath{{figure/}}
 \pagestyle{empty}
 \setlength{\parskip}{0.4em}\setlength{\parindent}{0pt}
 \begin{document}
 \begin{center}
-{\Large\bfseries Volatility Risk Premium and Non-Directional Option Strategies\\[2pt] on the S\&P 500 Index: Evidence from 2010--2023 Option Chains}\\[8pt]
-Giordano Margotti\\[2pt]{\small November 2026}\\[10pt]
+{\Large\bfseries Volatility Risk Premium and Non-Directional Option Strategies\\[2pt] on the S\&P 500 Index: Evidence from 2010--2023 SPX Option Chains}\\[6pt]
+{\small November 2026}\\[8pt]
 {\bfseries Extended abstract}
 \end{center}
+{\let\thefootnote\relax\footnotetext{Authors: Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (\emph{finance-thinking} working group). Research document; not investment advice.}}
 
-\textbf{Question.} This paper tests whether the prices of European options on the S\&P 500 index contain a volatility risk premium and whether non-directional premium-selling strategies (iron condors, credit spreads, strangles and related structures) capture it net of costs.
+\textbf{Question.} This paper tests whether the prices of European options on the S\&P 500 index contain a volatility risk premium (VRP) and whether non-directional premium-selling strategies (iron condors, credit spreads, strangles and related structures) capture it net of costs.
 
-\textbf{Data and method.} End-of-day SPX option chains from January 2010 to December 2023: @@sedute@@ sessions and @@coppie@@ date--expiry pairs. Implied volatility is obtained from prices with the Black (1976) model on the forward implied by put-call parity; model-free implied variance follows the Cboe formula; realized variance is measured up to the expiry of the same option. The real-world forecast is a GJR-GARCH(1,1) with Student-$t$ innovations estimated with no look-ahead. The backtests cover @@ncfg@@ configurations of ten families, for @@ntrade@@ simulated trades, at mid and at bid-ask prices.
+\textbf{Data and method.} End-of-day option chains of SPX options (European-style, cash-settled index options listed on Cboe; source OptionsDX) from January 2010 to December 2023: @@sedute@@ sessions and @@coppie@@ date--expiry pairs. Implied volatility is obtained from prices with the Black (1976) model on the forward implied by put-call parity; model-free implied variance follows the Cboe formula; realized variance is measured up to the expiry of the same option. The real-world forecast is a GJR-GARCH(1,1) with Student-$t$ innovations estimated with no look-ahead. The backtests cover @@ncfg@@ configurations of ten families, for @@ntrade@@ simulated trades, at mid and at bid-ask prices.
 
-\textbf{Results.} (i) The 30-day model-free volatility exceeds realized volatility by @@mfvrp30@@ points on average ($t$ @@mfvrpt30@@); at-the-money volatility exceeds it by @@vrp30@@ points ($t$ @@vrpt30@@). The premium sits in the wings, not at the center of the surface. (ii) The at-the-money premium is significant in 2010--2014 (@@pa@@ points, $t$ @@pat@@) and zero in 2015--2019 and 2020--2023. (iii) The 30-day at-the-money implied volatility is an unbiased forecast of realized volatility (slope @@mzb30@@, joint test $p=$ @@mzp30@@) with a smaller error than GARCH and historical volatility. (iv) 0.10-delta, 30-day puts returned to their buyers a fraction of @@ins30_10@@ of the premium paid. (v) The median Sharpe ratio across configurations is @@shmid@@ at mid prices and @@shba@@ at bid-ask prices; the share with a significantly positive alpha against the index falls from @@amid@@\% to @@aba@@\%, the value expected by chance alone. (vi) Positive results are concentrated in structures that sell puts and carry positive equity beta; iron condors and straddles have a zero or negative net result; early-exit rules lower returns because they pay a second spread.
+\textbf{Results.} (i) The 30-day model-free volatility exceeds realized volatility by @@mfvrp30@@ points on average ($t$ @@mfvrpt30@@); at-the-money volatility exceeds it by @@vrp30@@ points ($t$ @@vrpt30@@). The premium sits in the wings, not at the center of the surface. (ii) The at-the-money premium is significant in 2010--2014 (@@pa@@ points, $t$ @@pat@@) and zero in 2015--2019 and 2020--2023. (iii) The 30-day at-the-money implied volatility is an unbiased forecast of realized volatility (slope @@mzb30@@, joint test $p=$ @@mzp30@@) with a smaller error than GARCH and historical volatility. (iv) 0.10-delta, 30-day puts returned to their buyers a fraction of @@ins30_10@@ of the premium paid. (v) The median Sharpe ratio across configurations is @@shmid@@ at mid prices and @@shba@@ at bid-ask prices; the share with a significantly positive alpha against the index falls from @@amid@@\% to @@aba@@\%, the value expected by chance alone. (vi) Positive results are concentrated in structures that sell puts and carry positive equity beta; iron condors and straddles have a zero or negative net result; early-exit rules lower returns because they pay a second spread. (vii) Suspending entries when realized volatility exceeds 25\% does not improve the Sharpe ratio (median from @@f0sh@@ to @@f25sh@@) and does not reduce the worst month: extreme losses originate in calm phases, and delta-selected strikes already widen with implied volatility (from @@dlo@@\% to @@dhi@@\% of the forward between the low and the high tercile).
 
 \begin{center}\small
 \begin{tabular}{lrr}\toprule
- & Mid prices & Bid-ask \\ \midrule
+ & Mid prices & Bid-ask prices \\ \midrule
 Median Sharpe ratio, @@ncfg@@ configurations & @@shmid@@ & @@shba@@ \\
 Share with positive Sharpe ratio (\%) & @@posmid@@ & @@posba@@ \\
 Share with positive alpha, $t>2$ (\%) & @@amid@@ & @@aba@@ \\
@@ -35,4 +39,19 @@ Iron condor $\Delta$0.16/0.05, 30 days: Sharpe & @@icsh0@@ & @@icsh1@@ \\
 \textbf{Conclusion.} The premium exists as compensation for tail risk and is consistent with a market that is informationally efficient at the center of the surface. The bid-ask spread, the embedded equity exposure and ex-post parameter selection explain almost all of the positive backtest results. The hypothesis that systematic capture of the premium tends, over the long run and net of costs, to a zero result is not rejected by the data.
 
 \textbf{Keywords:} volatility risk premium, index options, iron condor, put credit spread, GJR-GARCH, transaction costs, multiple testing.
+
+\newpage
+\begin{figure}[t]\centering
+\includegraphics[width=0.78\textwidth]{serie_en.pdf}
+\caption*{\textbf{Figure 1.} At-the-money IV on the expiry closest to 30 days and realized volatility to that expiry.}
+\vspace{3pt}
+\includegraphics[width=0.41\textwidth]{struttura_en.pdf}\hfill\includegraphics[width=0.41\textwidth]{hv_en.pdf}
+\caption*{\textbf{Figure 2.} Left: means by horizon of model-free IV, at-the-money IV and realized volatility. Right: mean subsequent at-the-money premium by level of historical volatility at entry.}
+\vspace{3pt}
+\includegraphics[width=0.47\textwidth]{sharpe_en.pdf}\hfill\includegraphics[width=0.33\textwidth]{meta_en.pdf}
+\caption*{\textbf{Figure 3.} Left: distribution of the Sharpe ratio across the @@ncfg@@ configurations at mid and bid-ask prices. Right: Sharpe ratio in 2010--2016 and in 2017--2023 for credit configurations.}
+\vspace{3pt}
+\includegraphics[width=0.66\textwidth]{curve_en.pdf}
+\caption*{\textbf{Figure 4.} Cumulative return on margin at bid-ask prices for five configurations and for the index.}
+\end{figure}
 \end{document}
