@@ -82,13 +82,13 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <section id="dati">
 <h2>Dati e metodo</h2>
 <p><strong>Fonte:</strong> <a href="https://www.optionsdx.com/">OptionsDX</a>, dataset <em>SPX Option Chains</em> con frequenza end-of-day (file mensili <code>spx_eod_AAAAMM</code>, gennaio 2010 – dicembre 2023), acquisito tramite il repository <code>finance-thinking/options_strategy</code>.</p>
-<p><strong>Strumento:</strong> opzioni sull'indice S&amp;P 500 quotate al Cboe Options Exchange (ticker SPX): opzioni su indice di stile europeo, regolate in contanti, moltiplicatore 100 $ per punto indice. Scadenze mensili standard del terzo venerdì (regolamento sul valore di apertura) e scadenze settimanali e di fine mese SPXW (regolamento sul valore di chiusura). Ogni grandezza è ricavata dai prezzi bid e ask.</p>
+<p><strong>Strumento:</strong> opzioni sull'indice S&amp;P 500 quotate al Cboe Options Exchange (ticker SPX): opzioni su indice di stile europeo, cash-settled, moltiplicatore 100 $ per punto indice. Scadenze mensili standard del terzo venerdì (AM-settled) e scadenze settimanali e di fine mese SPXW (PM-settled). Ogni grandezza è ricavata dai prezzi bid e ask.</p>
 <ul>
-<li><strong>Forward</strong> implicito nella parità put-call sullo strike in cui call e put hanno prezzo mid più vicino.</li>
+<li><strong>Forward</strong> implicito nella put-call parity sullo strike in cui call e put hanno prezzo mid più vicino.</li>
 <li><strong>Volatilità implicita</strong> per inversione della formula di Black (1976) sul prezzo mid; tempo in giorni di calendario su 365.</li>
 <li><strong>Varianza model-free</strong> con la formula dell'indice VIX applicata alla singola scadenza.</li>
 <li><strong>Varianza realizzata</strong>: somma dei quadrati dei rendimenti logaritmici giornalieri dalla seduta successiva fino alla scadenza della stessa opzione, annualizzata sullo stesso tempo di calendario.</li>
-<li><strong>Previsione</strong> GJR-GARCH(1,1) con innovazioni t di Student, finestra espandente, ristima ogni 21 sedute, nessuna informazione futura, nessun fattore correttivo.</li>
+<li><strong>Previsione</strong> GJR-GARCH(1,1) con innovazioni t di Student, expanding window, ristima ogni 21 sedute, nessuna informazione futura, nessun fattore correttivo.</li>
 <li><strong>Backtest</strong>: una posizione per seduta e per scadenza obiettivo; strike scelti per delta; risultato registrato al prezzo mid insieme al half-spread di ogni gamba, così che il costo di esecuzione sia un parametro; commissione di 1 $ per gamba.</li>
 </ul>
 <div class="note">Controlli di integrità superati: inversione della IV con errore massimo dell'ordine di 10⁻⁵ punti; IV di put e call coincidenti sul forward; delta call meno delta put pari a uno; costo di carry implicito coerente con i tassi anno per anno; ricalcolo manuale di singole operazioni sulla catena.</div>
@@ -130,8 +130,8 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 </section>
 
 <section id="esplora">
-<h2>Strategie: esploratore delle configurazioni</h2>
-<p>Ogni configurazione apre una posizione per seduta sulla scadenza obiettivo. La serie mensile ipotizza una scala a capitale costante e somma i rendimenti senza capitalizzazione.</p>
+<h2>Strategie: explorer delle configurazioni</h2>
+<p>Ogni configurazione apre una posizione per seduta sulla scadenza obiettivo. La serie mensile ipotizza un ladder a capitale costante e somma i rendimenti senza capitalizzazione.</p>
 <div class="panel">
 <div class="controls">
 <label>Famiglia<select id="s-fam"></select></label>
@@ -168,7 +168,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 </section>
 
 <section id="confronto">
-<h2>Confronto tra famiglie e test multipli</h2>
+<h2>Confronto tra famiglie e multiple testing</h2>
 <div class="grid2">
 <div class="panel"><div class="legend"><span><i style="background:var(--s1)"></i>Mid price</span><span><i style="background:var(--s2)"></i>Bid-ask</span></div>
 <figure><div class="chart"><canvas id="c-sh" role="img" aria-label="Distribuzione dello Sharpe"></canvas></div><figcaption>Distribuzione dell'indice di Sharpe su tutte le configurazioni.</figcaption></figure></div>
@@ -177,7 +177,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <h3>Mediane per famiglia</h3>
 <div class="tw"><table id="t-fam"></table></div>
 <h3>Tutte le configurazioni</h3>
-<p>Ordinabile per colonna; segue il costo di esecuzione impostato nell'esploratore.</p>
+<p>Ordinabile per colonna; segue il costo di esecuzione impostato nell'explorer.</p>
 <div class="controls"><label>Famiglia<select id="s-tf"></select></label><label>Righe<select id="s-tn"><option>25</option><option>60</option><option>500</option></select></label></div>
 <div class="tw"><table id="t-all"></table></div>
 </section>
@@ -208,7 +208,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <section id="letteratura">
 <h2>Letteratura: il premio esiste? Perché? I mercati sono efficienti?</h2>
 <h3>Evidenza sull'esistenza</h3>
-<p>La varianza attesa neutrale al rischio è replicabile con un portafoglio statico di opzioni (Britten-Jones e Neuberger, 2000; Jiang e Tian, 2005). Carr e Wu (2009) mostrano che per gli indici azionari la varianza implicita supera sistematicamente la realizzata. Bakshi e Kapadia (2003) trovano guadagni medi negativi per le opzioni comprate e coperte in delta; Coval e Shumway (2001) rendimenti fortemente negativi per gli straddle; Bondarenko (2014) perdite medie mensili di alcune decine di punti percentuali per le put out-of-the-money. Bollerslev, Tauchen e Zhou (2009) mostrano che la differenza tra varianza implicita e realizzata prevede i rendimenti azionari.</p>
+<p>La varianza attesa risk-neutral è replicabile con un portafoglio statico di opzioni (Britten-Jones e Neuberger, 2000; Jiang e Tian, 2005). Carr e Wu (2009) mostrano che per gli indici azionari la varianza implicita supera sistematicamente la realizzata. Bakshi e Kapadia (2003) trovano guadagni medi negativi per le opzioni comprate e coperte in delta; Coval e Shumway (2001) rendimenti fortemente negativi per gli straddle; Bondarenko (2014) perdite medie mensili di alcune decine di punti percentuali per le put out-of-the-money. Bollerslev, Tauchen e Zhou (2009) mostrano che la differenza tra varianza implicita e realizzata prevede i rendimenti azionari.</p>
 <h3>Perché esisterebbe</h3>
 <ul>
 <li><strong>Compenso per un rischio sistematico.</strong> La varianza sale quando i mercati scendono: chi vende quel titolo vende assicurazione. Bates (2000) documenta il timore di salti negativi dopo il 1987; Todorov (2010) e Bollerslev e Todorov (2011) attribuiscono la parte prevalente del premio al rischio di salto; Dew-Becker, Giglio, Le e Rodriguez (2017) lo localizzano sulla varianza realizzata a brevissimo termine.</li>
@@ -264,7 +264,7 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <li>Margine delle posizioni scoperte approssimato con il 20% del nozionale; le serie non includono il rendimento della liquidità a garanzia.</li>
 <li>La serie mensile non valuta le posizioni aperte ai prezzi di mercato: il drawdown massimo infra-mensile è sottostimata.</li>
 <li>Quattordici anni di mercato prevalentemente in rialzo, con un solo evento della dimensione del marzo 2020.</li>
-<li>Famiglie e parametri sono quelli già esplorati sullo stesso archivio: nessuna parte del campione è realmente fuori campione. La verifica non contaminata è la registrazione dei segnali prima dell'esito.</li>
+<li>Famiglie e parametri sono quelli già esplorati sullo stesso archivio: nessuna parte del campione è realmente out-of-sample. La verifica non contaminata è la registrazione dei segnali prima dell'esito.</li>
 <li>Un filtro di sospensione sulla volatilità realizzata è stato verificato e non migliora i risultati (sezione Strategie).</li>
 <li>Risultati su SPX. Per XSP i valori in dollari si dividono per dieci; le commissioni per contratto pesano dieci volte di più.</li>
 <li>Fonti non incluse: cartella Google Drive e repository <code>backtest_put_credit_spread</code>, non accessibili al momento dell'elaborazione.</li>
@@ -295,7 +295,7 @@ const ni = x => Math.round(x).toLocaleString("it-IT").replace("-", "−");
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const FAM = {SP:"Short put", STRG:"Short strangle", STRD:"Short straddle ATM", PCS:"Put credit spread", CCS:"Call credit spread", IC:"Iron condor", IFLY:"Iron butterfly", LP:"Long put", DPS:"Debit put spread", CAL:"Long calendar ATM"};
 const ALA = {"d05":"Delta 0,05", "w1":"1% dello spot", "-":"–"};
-const GEST = {hold:"Fino a scadenza", tp50:"Profitto 50%", tp50sl200:"Profitto 50% / perdita 200%"};
+const GEST = {hold:"Fino a scadenza", tp50:"Take profit 50%", tp50sl200:"Take profit 50% / stop loss 200%"};
 const V = D.vrp, O = V.obiettivi, CFG = D.config, SPX = D.spx.map(v => v/1e4);
 const byKey = Object.fromEntries(CFG.map(c => [c.key, c]));
 let charts = {};
@@ -325,7 +325,7 @@ function vrp(){
   mk("c-serie", {type:"line", data:{labels:s.date, datasets:[line("Realizzata", pct(s.rvol), S2, {borderWidth:1.5}), line("IV ATM", pct(s.iv_atm), S1, {borderWidth:1.5})]},
     options:{interaction:{mode:"index", intersect:false}, scales:{x:{ticks:{maxTicksLimit:8, callback(v){ return this.getLabelForValue(v).slice(0,4); }}, grid:{display:false}}, y:{title:{display:true, text:"Volatilità annualizzata (%)"}}}}});
   const Ds = ["7","14","21","30","45","60"];
-  table("t-oriz", ["Giorni","Sedute","IV ATM","Model-free","Realizzata","ATM − real.","t","% &gt; 0","MF − real.","t","Asimmetria","Minimo"],
+  table("t-oriz", ["Giorni","Sedute","IV ATM","Model-free","Realizzata","ATM − real.","t","% &gt; 0","MF − real.","t","Skewness","Minimo"],
     Ds.map(d => { const a = O[d]; return [d, ni(a.giorni), nf(a.iv_atm_media*100), nf(a.mfvol_media*100), nf(a.rvol_media*100), nf(a.vrp_vol.media*100,2,true), nf(a.vrp_vol.t_hac), nf(a.vrp_vol.quota_positiva*100,0), nf(a.vrp_mfvol.media*100,2,true), nf(a.vrp_mfvol.t_hac), nf(a.vrp_vol.asimmetria,1), nf(a.vrp_vol.minimo*100,0)]; }));
   mk("c-strut", {type:"line", data:{labels:Ds, datasets:[line("Model-free", Ds.map(d => +(V.struttura[d].mf*100).toFixed(2)), S3, {pointRadius:4}), line("IV ATM", Ds.map(d => +(V.struttura[d].iv*100).toFixed(2)), S1, {pointRadius:4}), line("Realizzata", Ds.map(d => +(V.struttura[d].rv*100).toFixed(2)), S2, {pointRadius:4})]},
     options:{plugins:{legend:{display:true, position:"bottom", labels:{boxWidth:14, boxHeight:2}}}, scales:{x:{title:{display:true, text:"Giorni alla scadenza"}, grid:{display:false}}, y:{title:{display:true, text:"%"}}}}});
@@ -438,7 +438,7 @@ function confronto(){
   const S = [[nf(T.quota_sharpe_pos_mid*100,0)+"% → "+nf(T.quota_sharpe_pos_ba*100,0)+"%", "Quota con Sharpe positivo"], [nf(T.quota_talfa_neg2_ba*100,0)+"%", "Alfa significativamente negativo (bid-ask)"],
     [nf(T.sharpe_migliore), "Sharpe della configurazione migliore"], [nf(T.sharpe_atteso_massimo_sotto_h0), "Massimo atteso sotto l'ipotesi nulla"], [nf(T.corr_meta), "Correlazione di rango tra 2010–16 e 2017–23"], [nf(T.top20_h1_media_h1)+" → "+nf(T.top20_h1_media_h2), "Sharpe delle 20 migliori del primo periodo, nel secondo"]];
   $("m-stats").innerHTML = S.map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");
-  $("x-mt").innerHTML = `Su ${T.n_config} configurazioni, la quota con alfa positivo e t superiore a 2 è il ${nf(T.quota_talfa2_ba*100,1)}% ai prezzi bid-ask: il valore atteso per solo effetto del caso. L'ordinamento tra famiglie è stabile nel tempo; il livello dei risultati no. Lo Sharpe deflazionato della configurazione migliore è ${nf(T.dsr,3)}.`;
+  $("x-mt").innerHTML = `Su ${T.n_config} configurazioni, la quota con alfa positivo e t superiore a 2 è il ${nf(T.quota_talfa2_ba*100,1)}% ai prezzi bid-ask: il valore atteso per solo effetto del caso. L'ordinamento tra famiglie è stabile nel tempo; il livello dei risultati no. Il deflated Sharpe ratio della configurazione migliore è ${nf(T.dsr,3)}.`;
   const med = a => { const s = [...a].sort((x,y) => x-y), n = s.length; return n % 2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2; };
   const ord = [["SP","-"],["STRG","-"],["PCS","d05"],["PCS","w1"],["STRD","-"],["IC","d05"],["IC","w1"],["IFLY","-"],["CCS","d05"],["CCS","w1"],["CAL","-"],["DPS","-"],["LP","-"]];
   table("t-fam", ["Famiglia (fino a scadenza)","Configurazioni","Sharpe, prezzo mid","Sharpe, bid-ask","Beta","t alfa, prezzo mid","t alfa, bid-ask","Spread / premio","% utili"],
@@ -448,7 +448,7 @@ function letteratura(){
   const o = O["30"], T = D.test, i = D.assicurazione.find(i => i.D === 30 && Math.abs(i.delta-0.1) < 1e-6);
   table("t-prevlett", ["Previsione della letteratura","Esito sui dati SPX 2010–2023"],
     [["Il premio model-free supera quello at-the-money", `Confermata: ${nf(o.vrp_mfvol.media*100,2,true)} punti contro ${nf(o.vrp_vol.media*100,2,true)} a 30 giorni`],
-     ["La distribuzione del premio è asimmetrica a sinistra", `Confermata: asimmetria ${nf(o.vrp_vol.asimmetria,1)}, minimo ${nf(o.vrp_vol.minimo*100,0)} punti`],
+     ["La distribuzione del premio è asimmetrica a sinistra", `Confermata: skewness ${nf(o.vrp_vol.asimmetria,1)}, minimo ${nf(o.vrp_vol.minimo*100,0)} punti`],
      ["Il premio è più debole nel periodo recente", `Coerente: t ${nf(o.per_periodo["2010-2014"].t_hac)} nel 2010–14, ${nf(o.per_periodo["2015-2019"].t_hac)} nel 2015–19, ${nf(o.per_periodo["2020-2023"].t_hac)} nel 2020–23`],
      ["La IV è una previsione non distorta", `Non rifiutata a 30 giorni per la IV ATM: pendenza ${nf(o.mz_atm.b,3)}, p ${nf(o.mz_atm.p_wald,3)}`],
      ["Le put out-of-the-money sono care", `Confermata: perdite pari a ${nf(i.rapporto)} dei premi per il delta 0,10 a 30 giorni`],
@@ -508,20 +508,20 @@ function codeInit(){
 function code(){
   const Z = D.code, I = Z.indice, T = Z.totale, C = Z.config, F = Z.famiglie;
   const sp = C["SP|0.16|-|45|hold"], pcs = C["PCS|0.20|d05|30|hold"], pcsl = C["PCS|0.20|d05|30|tp50sl200"], icw = C["IC|0.16|w1|30|hold"], lp = C["LP|0.10|-|30|hold"], cal = C["CAL|0.50|-|30|hold"];
-  $("d-stats").innerHTML = tiles([[nf(T.quota_jb_1*100,0)+"%", "Configurazioni con normalità mensile rifiutata (Jarque-Bera, 1%)"], [nf(T.quota_asim_op_negativa*100,0)+"%", "Configurazioni con asimmetria negativa per operazione"],
-    [nf(sp.op.curtosi_ecc,0)+" / "+nf(I.D45.curtosi_ecc,1), "Curtosi in eccesso: short put Δ0,16 a 45 giorni / S&amp;P 500 a 45 giorni"], [nf(I.D30.hill_sx,1), "Indice di coda delle perdite dell'S&amp;P 500 a 30 giorni (Hill)"]]);
-  table("t-code", ["Famiglia","Configurazioni","Asimmetria per operazione","Curtosi in eccesso per operazione","Perdite oltre 3σ (× normale)","ES 1% (× normale)","Asimmetria mensile","Curtosi in eccesso mensile","Normalità mensile rifiutata (JB 1%)"],
+  $("d-stats").innerHTML = tiles([[nf(T.quota_jb_1*100,0)+"%", "Configurazioni con normalità mensile rifiutata (Jarque-Bera, 1%)"], [nf(T.quota_asim_op_negativa*100,0)+"%", "Configurazioni con skewness negativa per operazione"],
+    [nf(sp.op.curtosi_ecc,0)+" / "+nf(I.D45.curtosi_ecc,1), "Excess kurtosis: short put Δ0,16 a 45 giorni / S&amp;P 500 a 45 giorni"], [nf(I.D30.hill_sx,1), "Indice di coda delle perdite dell'S&amp;P 500 a 30 giorni (Hill)"]]);
+  table("t-code", ["Famiglia","Configurazioni","Skewness per operazione","Excess kurtosis per operazione","Perdite oltre 3σ (× normale)","ES 1% (× normale)","Skewness mensile","Excess kurtosis mensile","Normalità mensile rifiutata (JB 1%)"],
     ORD_F.map(f => { const x = F[f]; return [FAM[f], x.n, nf(x.asim_op,2,true), nf(x.curt_op,1), nf(x.rapp_3s_sx,1), nf(x.rapp_es1,2), nf(x.asim_mese,2,true), nf(x.curt_mese,1), nf(x.quota_jb_1*100,0)+"%"]; })
     .concat([["S&amp;P 500, 30 giorni", "–", nf(I.D30.asimmetria,2,true), nf(I.D30.curtosi_ecc,1), nf(I.D30.rapp_3s_sx,1), nf(I.D30.rapp_es1,2), "–", "–", "–"],
              ["S&amp;P 500, mensile", "–", "–", "–", "–", "–", nf(I.mensile.asimmetria,2,true), nf(I.mensile.curtosi_ecc,1), I.mensile.jb_p < 0.01 ? "sì" : "no (p " + nf(I.mensile.jb_p,2) + ")"]]));
-  $("x-code").innerHTML = `Le strutture che vendono volatilità senza copertura hanno code sinistre molto più lunghe della normale e dell'indice: per la short put Δ0,16 a 45 giorni la curtosi in eccesso per operazione è ${nf(sp.op.curtosi_ecc,0)} contro ${nf(I.D45.curtosi_ecc,1)} dell'S&amp;P 500 sullo stesso orizzonte, e le perdite oltre 3 deviazioni standard sono ${nf(sp.op.rapp_3s_sx,1)} volte quelle di una normale. La coda non è più pesante di quella dell'indice in senso asintotico, perché oltre lo strike la perdita segue linearmente il prezzo: è il corpo della distribuzione a essere concentrato sul premio incassato, con una deviazione standard piccola, e le perdite rare risultano lontane molte deviazioni standard. Le strutture a rischio definito troncano la coda alla larghezza dello spread. Con ali a delta 0,05 la curtosi resta alta (put credit spread Δ0,20: ${nf(pcs.op.curtosi_ecc,1)}); con ali all'1% dello spot la perdita massima diventa frequente (${nf(icw.perdita_90.osservata*100,1)}% delle operazioni dell'iron condor Δ0,16 perde oltre il 90% del margine, contro ${nf(icw.perdita_90.normale*100,1)}% sotto la normale) e la curtosi scende a ${nf(icw.op.curtosi_ecc,2)}. L'uscita con perdita al 200% del premio porta la curtosi del put credit spread da ${nf(pcs.op.curtosi_ecc,1)} a ${nf(pcsl.op.curtosi_ecc,1)}. Le strutture che comprano volatilità hanno la forma opposta: asimmetria positiva e coda destra lunga (long put Δ0,10: asimmetria ${nf(lp.op.asimmetria,1,true)}). Il calendar ATM a 30/60 giorni è vicino alla normale (Jarque-Bera mensile, p = ${nf(cal.mese.jb_p,2)}).`;
+  $("x-code").innerHTML = `Le strutture che vendono volatilità senza copertura hanno code sinistre molto più lunghe della normale e dell'indice: per la short put Δ0,16 a 45 giorni l'excess kurtosis per operazione è ${nf(sp.op.curtosi_ecc,0)} contro ${nf(I.D45.curtosi_ecc,1)} dell'S&amp;P 500 sullo stesso orizzonte, e le perdite oltre 3 deviazioni standard sono ${nf(sp.op.rapp_3s_sx,1)} volte quelle di una normale. La coda non è più pesante di quella dell'indice in senso asintotico, perché oltre lo strike la perdita segue linearmente il prezzo: è il corpo della distribuzione a essere concentrato sul premio incassato, con una deviazione standard piccola, e le perdite rare risultano lontane molte deviazioni standard. Le strutture a rischio definito troncano la coda alla larghezza dello spread. Con wing a delta 0,05 l'excess kurtosis resta alta (put credit spread Δ0,20: ${nf(pcs.op.curtosi_ecc,1)}); con wing all'1% dello spot la perdita massima diventa frequente (${nf(icw.perdita_90.osservata*100,1)}% delle operazioni dell'iron condor Δ0,16 perde oltre il 90% del margine, contro ${nf(icw.perdita_90.normale*100,1)}% sotto la normale) e l'excess kurtosis scende a ${nf(icw.op.curtosi_ecc,2)}. Lo stop loss al 200% del premio porta l'excess kurtosis del put credit spread da ${nf(pcs.op.curtosi_ecc,1)} a ${nf(pcsl.op.curtosi_ecc,1)}. Le strutture che comprano volatilità hanno la forma opposta: skewness positiva e coda destra lunga (long put Δ0,10: skewness ${nf(lp.op.asimmetria,1,true)}). Il calendar ATM a 30/60 giorni è vicino alla normale (Jarque-Bera mensile, p = ${nf(cal.mese.jb_p,2)}).`;
   codeCfg();
 }
 function codeCfg(){
   const Z = D.code, k = $("s-dist").value, c = Z.config[k], h = c.isto, Dd = +k.split("|")[3], ind = Z.indice["D" + Dd];
-  const t = [[nf(c.op.asimmetria,2,true), "Asimmetria per operazione"], [nf(c.op.curtosi_ecc,1), "Curtosi in eccesso per operazione"], [nf(c.op.rapp_3s_sx,1)+" / "+nf(c.op.rapp_3s_dx,1), "Frequenza oltre 3σ, sinistra / destra (× normale)"],
+  const t = [[nf(c.op.asimmetria,2,true), "Skewness per operazione"], [nf(c.op.curtosi_ecc,1), "Excess kurtosis per operazione"], [nf(c.op.rapp_3s_sx,1)+" / "+nf(c.op.rapp_3s_dx,1), "Frequenza oltre 3σ, sinistra / destra (× normale)"],
     [nf(c.op.rapp_es1,2), "Expected shortfall 1% (× normale)"], [nf(c.op.cvar1*100,1)+"%", "CVaR 1% sul margine"], [nf(c.op.minimo*100,0)+"%", "Operazione peggiore sul margine"],
-    [nf(c.mese.curtosi_ecc,1), "Curtosi in eccesso mensile"], [c.mese.jb_p < 0.001 ? "&lt; 0,001" : nf(c.mese.jb_p,3), "p-value Jarque-Bera mensile"]];
+    [nf(c.mese.curtosi_ecc,1), "Excess kurtosis mensile"], [c.mese.jb_p < 0.001 ? "&lt; 0,001" : nf(c.mese.jb_p,3), "p-value Jarque-Bera mensile"]];
   if(c.perdita_90) t.push([nf(c.perdita_90.osservata*100,1)+"% / "+nf(c.perdita_90.normale*100,1)+"%", "Perdite oltre il 90% del margine: osservate / normale"]);
   $("d-cfg").innerHTML = tiles(t);
   const cen = h.n.map((_,i) => +(h.lo + 0.25 + 0.5*i).toFixed(2)), step = cen.length > 40 ? 5 : 2;

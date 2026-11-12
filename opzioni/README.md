@@ -1,6 +1,6 @@
 # Volatility risk premium e strategie in opzioni su S&P 500
 
-Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010 al 2023 (fonte: [OptionsDX](https://www.optionsdx.com/), dataset SPX Option Chains; opzioni su indice S&P 500 di stile europeo, regolate in contanti, quotate al Cboe): esistenza del volatility risk premium, backtest di dieci famiglie di strategie non direzionali, rassegna della letteratura.
+Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010 al 2023 (fonte: [OptionsDX](https://www.optionsdx.com/), dataset SPX Option Chains; opzioni su indice S&P 500 di stile europeo, cash-settled, quotate al Cboe): esistenza del volatility risk premium, backtest di dieci famiglie di strategie non direzionali, rassegna della letteratura.
 
 ## Contenuto
 
@@ -20,7 +20,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 - 434 configurazioni, 1.310.509 operazioni simulate. Sharpe mediano +0,39 ai prezzi mid e −0,40 ai prezzi bid-ask.
 - Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi mid, 2,5% ai prezzi bid-ask.
 - Filtro di sospensione sulla volatilità realizzata (HV21 oltre il 25%): Sharpe mediano da −0,30 a −0,34, mese peggiore invariato. Gli strike scelti per delta si allargano già con la volatilità implicita.
-- Distribuzione dei rendimenti: asimmetria per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: asimmetria −9,5 e curtosi in eccesso 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
+- Distribuzione dei rendimenti: skewness per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: skewness −9,5 ed excess kurtosis 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
 
 ## Riproduzione
 
