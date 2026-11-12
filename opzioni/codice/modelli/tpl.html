@@ -45,6 +45,7 @@ figure{margin:0} figcaption{font-size:13px; color:var(--muted); margin-top:6px; 
 table{border-collapse:collapse; width:100%; font-size:14px; font-variant-numeric:tabular-nums}
 th,td{padding:6px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
 th:first-child,td:first-child{text-align:left} th{font-weight:600; color:var(--ink2); font-size:13px}
+#t-mig td:nth-child(2),#t-mig th:nth-child(2){text-align:left} #t-mig tbody tr{cursor:pointer} #t-mig tbody tr:hover td{background:var(--mid)} #t-mig tbody tr.sel td{background:var(--mid); font-weight:600}
 th.sort{cursor:pointer} th.sort:hover{color:var(--accent)}
 .controls{display:flex; flex-wrap:wrap; gap:14px 18px; align-items:end; margin-bottom:8px}
 .controls label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--ink2); min-width:0; max-width:100%}
@@ -186,17 +187,23 @@ footer{margin-top:70px; font-size:13px; color:var(--muted); border-top:1px solid
 <h2>Distribuzione dei rendimenti e code</h2>
 <p>Chi vende volatilità incassa spesso poco e perde raramente molto: media e Sharpe non descrivono questo profilo. Qui si misura la forma della distribuzione dei rendimenti per operazione (sul margine, prezzi bid-ask, commissioni incluse) e della serie mensile a capitale costante. Il riferimento è una normale con la stessa media e la stessa varianza, insieme all'S&amp;P 500 sullo stesso orizzonte.</p>
 <div class="stats" id="d-stats"></div>
-<div class="panel">
-<div class="controls"><label>Configurazione<select id="s-dist"></select></label></div>
+<h3>Configurazioni a rendimento cumulato più alto</h3>
+<p>Per ogni famiglia, la configurazione con la somma più alta dei rendimenti mensili sul margine (ladder a capitale costante, prezzi bid-ask, 2010–2023). Un clic su una riga ne mostra le distribuzioni nei grafici qui sotto. La scelta è a posteriori sullo stesso campione e premia la leva: rendimenti e drawdown scalano con la quota di capitale impegnata a margine, e un mese peggiore oltre il −100% significa perdere più del capitale impegnato.</p>
+<div class="tw"><table id="t-mig"></table></div>
+<div class="panel" id="p-dist">
+<div class="controls"><label>Configurazione<select id="s-dist"></select></label><label>Asse dell'istogramma per operazione<select id="s-unit"><option value="pct">% del margine</option><option value="sd">Deviazioni standard dalla media</option></select></label></div>
 <div class="stats" id="d-cfg"></div>
 <div class="grid2">
 <figure><div class="legend"><span><i style="background:var(--s1)"></i>Operazioni</span><span><i style="background:var(--s2)"></i>Normale di pari media e varianza</span></div>
-<div class="chart"><canvas id="c-dist" role="img" aria-label="Istogramma dei rendimenti per operazione in deviazioni standard dalla media"></canvas></div>
-<figcaption>Rendimenti per operazione in deviazioni standard dalla media; numero di operazioni in scala logaritmica. La curva è il numero atteso sotto la normale.</figcaption></figure>
+<div class="chart"><canvas id="c-dist" role="img" aria-label="Istogramma dei rendimenti per operazione"></canvas></div>
+<figcaption>Rendimenti per operazione ai prezzi bid-ask; numero di operazioni in scala logaritmica. La curva è il numero atteso sotto la normale.</figcaption></figure>
+<figure><div class="legend"><span><i style="background:var(--s3)"></i>Mesi</span><span><i style="background:var(--s2)"></i>Normale di pari media e varianza</span></div>
+<div class="chart"><canvas id="c-mese" role="img" aria-label="Istogramma dei rendimenti mensili del ladder"></canvas></div>
+<figcaption>Rendimenti mensili del ladder a capitale costante ai prezzi bid-ask, 2010–2023.</figcaption></figure>
+</div>
 <figure><div class="legend"><span><i style="background:var(--s1)"></i>Configurazione</span><span><i style="background:var(--neutral)"></i>S&amp;P 500 sullo stesso orizzonte</span></div>
 <div class="chart"><canvas id="c-qq" role="img" aria-label="QQ plot dei rendimenti rispetto alla normale"></canvas></div>
 <figcaption>Quantili empirici standardizzati contro quantili della normale standard; la diagonale corrisponde alla normale.</figcaption></figure>
-</div>
 </div>
 <h3>Mediane per famiglia</h3>
 <p>Mediane su tutte le configurazioni di ciascuna famiglia, senza selezione a posteriori.</p>
@@ -484,13 +491,17 @@ const REFS = [
 "Todorov, V. (2010). Variance risk-premium dynamics: the role of jumps. <i>Review of Financial Studies</i>, 23(1), 345–383."];
 // ------------------------------------------------------------ distribuzioni
 const ORD_F = ["SP","STRG","STRD","PCS","IC","IFLY","CCS","CAL","DPS","LP"];
-const cfgLabel = k => { const [f,p,a,d,g] = k.split("|"), par = f === "STRD" || f === "CAL" ? "ATM" : (f === "IFLY" ? "ATM, wing Δ" + nf(+p) : "Δ" + nf(+p));
+const cfgLabel = k => { const [f,p,a,d,g] = k.split("|"), par = f === "STRD" || f === "CAL" ? "ATM" : (f === "IFLY" ? "ATM, wing delta " + nf(+p) : "Δ" + nf(+p));
   return `${FAM[f]}, ${par}${a !== "-" ? ", wing " + ALA[a].toLowerCase() : ""}, ${d} giorni, ${GEST[g].toLowerCase()}`; };
 const tiles = a => a.map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("");
+// funzione di ripartizione normale standard (Abramowitz e Stegun 7.1.26, errore inferiore a 1,5e-7)
+function Phi(x){ const z = Math.abs(x)/Math.SQRT2, t = 1/(1 + 0.3275911*z);
+  const e = 1 - (((((1.061405429*t - 1.453152027)*t) + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-z*z);
+  return x >= 0 ? 0.5*(1 + e) : 0.5*(1 - e); }
 function codeInit(){
   const keys = Object.keys(D.code.config);
   $("s-dist").innerHTML = ORD_F.map(f => `<optgroup label="${FAM[f]}">` + keys.filter(k => k.startsWith(f + "|")).map(k => `<option value="${k}">${cfgLabel(k)}</option>`).join("") + "</optgroup>").join("");
-  $("s-dist").value = "SP|0.16|-|45|hold"; $("s-dist").onchange = codeCfg;
+  $("s-dist").value = D.code.migliori.PCS.key; $("s-dist").onchange = codeCfg; $("s-unit").onchange = codeCfg;
 }
 function code(){
   const Z = D.code, I = Z.indice, T = Z.totale, C = Z.config, F = Z.famiglie;
@@ -501,6 +512,11 @@ function code(){
     ORD_F.map(f => { const x = F[f]; return [FAM[f], x.n, nf(x.asim_op,2,true), nf(x.curt_op,1), nf(x.rapp_3s_sx,1), nf(x.rapp_es1,2), nf(x.asim_mese,2,true), nf(x.curt_mese,1), nf(x.quota_jb_1*100,0)+"%"]; })
     .concat([["S&amp;P 500, 30 giorni", "–", nf(I.D30.asimmetria,2,true), nf(I.D30.curtosi_ecc,1), nf(I.D30.rapp_3s_sx,1), nf(I.D30.rapp_es1,2), "–", "–", "–"],
              ["S&amp;P 500, mensile", "–", "–", "–", "–", "–", nf(I.mensile.asimmetria,2,true), nf(I.mensile.curtosi_ecc,1), I.mensile.jb_p < 0.01 ? "sì" : "no (p " + nf(I.mensile.jb_p,2) + ")"]]));
+  const MG = Z.migliori;
+  $("t-mig").innerHTML = "<thead><tr>" + ["Famiglia","Configurazione","Cumulato","Media annua","Sharpe","Drawdown max","Mese peggiore","In utile","Skewness per operazione","Excess kurtosis per operazione"].map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" +
+    ORD_F.map(f => { const m = MG[f], c = byKey[m.key], o = C[m.key];
+      return `<tr data-k="${m.key}"><td>${FAM[f]}</td><td>${cfgLabel(m.key).split(", ").slice(1).join(", ")}</td><td>${nf(m.totale*100,0,true)}%</td><td>${nf(c.p1.media_annua*100,1,true)}%</td><td>${nf(c.p1.sharpe,2,true)}</td><td>${nf(c.p1.max_dd*100,0)}%</td><td>${nf(c.p1.mese_peggiore*100,0,true)}%</td><td>${nf(c.t1.vincenti*100,0)}%</td><td>${nf(o.op.asimmetria,2,true)}</td><td>${nf(o.op.curtosi_ecc,1)}</td></tr>`; }).join("") + "</tbody>";
+  $("t-mig").querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => { $("s-dist").value = tr.dataset.k; codeCfg(); $("p-dist").scrollIntoView({behavior:"smooth", block:"start"}); });
   $("x-code").innerHTML = `Le strutture che vendono volatilità senza copertura hanno code sinistre molto più lunghe della normale e dell'indice: per la short put Δ0,16 a 45 giorni l'excess kurtosis per operazione è ${nf(sp.op.curtosi_ecc,0)} contro ${nf(I.D45.curtosi_ecc,1)} dell'S&amp;P 500 sullo stesso orizzonte, e le perdite oltre 3 deviazioni standard sono ${nf(sp.op.rapp_3s_sx,1)} volte quelle di una normale. La coda non è più pesante di quella dell'indice in senso asintotico, perché oltre lo strike la perdita segue linearmente il prezzo: è il corpo della distribuzione a essere concentrato sul premio incassato, con una deviazione standard piccola, e le perdite rare risultano lontane molte deviazioni standard. Le strutture a rischio definito troncano la coda alla larghezza dello spread. Con wing a delta 0,05 l'excess kurtosis resta alta (put credit spread Δ0,20: ${nf(pcs.op.curtosi_ecc,1)}); con wing all'1% dello spot la perdita massima diventa frequente (${nf(icw.perdita_90.osservata*100,1)}% delle operazioni dell'iron condor Δ0,16 perde oltre il 90% del margine, contro ${nf(icw.perdita_90.normale*100,1)}% sotto la normale) e l'excess kurtosis scende a ${nf(icw.op.curtosi_ecc,2)}. Lo stop loss al 200% del premio porta l'excess kurtosis del put credit spread da ${nf(pcs.op.curtosi_ecc,1)} a ${nf(pcsl.op.curtosi_ecc,1)}. Le strutture che comprano volatilità hanno la forma opposta: skewness positiva e coda destra lunga (long put Δ0,10: skewness ${nf(lp.op.asimmetria,1,true)}). Il calendar ATM a 30/60 giorni è vicino alla normale (Jarque-Bera mensile, p = ${nf(cal.mese.jb_p,2)}).`;
   codeCfg();
 }
@@ -511,13 +527,27 @@ function codeCfg(){
     [nf(c.mese.curtosi_ecc,1), "Excess kurtosis mensile"], [c.mese.jb_p < 0.001 ? "&lt; 0,001" : nf(c.mese.jb_p,3), "p-value Jarque-Bera mensile"]];
   if(c.perdita_90) t.push([nf(c.perdita_90.osservata*100,1)+"% / "+nf(c.perdita_90.normale*100,1)+"%", "Perdite oltre il 90% del margine: osservate / normale"]);
   $("d-cfg").innerHTML = tiles(t);
-  const cen = h.n.map((_,i) => +(h.lo + 0.25 + 0.5*i).toFixed(2)), step = cen.length > 40 ? 5 : 2;
+  $("t-mig").querySelectorAll("tbody tr").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === k));
+  const pct = $("s-unit").value === "pct", m = c.op.media, sd = c.op.sd;
+  const cen = h.n.map((_,i) => { const z = h.lo + 0.25 + 0.5*i; return pct ? +((m + sd*z)*100).toFixed(1) : +z.toFixed(2); });
+  const half = pct ? sd*25 : 0.25, unit = pct ? "%" : " σ";
   mk("c-dist", {type:"bar", data:{labels:cen, datasets:[
       {type:"bar", label:"Operazioni", data:h.n.map(v => v > 0 ? v : null), backgroundColor:css("--s1"), barPercentage:1, categoryPercentage:1, order:2},
       {type:"line", label:"Normale", data:h.normale.map(v => v >= 0.01 ? v : null), borderColor:css("--s2"), backgroundColor:css("--s2"), borderWidth:2, pointRadius:0, order:1}]},
-    options:{scales:{x:{title:{display:true, text:"Deviazioni standard dalla media"}, grid:{display:false}, ticks:{autoSkip:false, maxRotation:0, callback(v){ const l = +this.getLabelForValue(v) - 0.25; return Number.isInteger(l) && l % step === 0 ? l : ""; }}},
+    options:{scales:{x:{title:{display:true, text: pct ? "Rendimento per operazione (% del margine)" : "Deviazioni standard dalla media"}, grid:{display:false}, ticks:{autoSkip:true, maxTicksLimit:8, maxRotation:0, callback(v){ return nf(+this.getLabelForValue(v), pct ? 0 : 1); }}},
       y:{type:"logarithmic", min:0.5, title:{display:true, text:"Operazioni (scala logaritmica)"}, ticks:{callback(v){ return [1,10,100,1000].includes(v) ? ni(v) : ""; }}}},
-      plugins:{tooltip:{callbacks:{title:i => `da ${nf(+i[0].label-0.25,2)} a ${nf(+i[0].label+0.25,2)} σ`, label:i => i.datasetIndex === 0 ? `Operazioni: ${ni(i.raw)}` : `Normale: ${nf(i.raw, i.raw < 10 ? 2 : 0)}`}}}}});
+      plugins:{tooltip:{callbacks:{title:i => `da ${nf(+i[0].label-half, pct ? 1 : 2)} a ${nf(+i[0].label+half, pct ? 1 : 2)}${unit}`, label:i => i.datasetIndex === 0 ? `Operazioni: ${ni(i.raw)}` : `Normale: ${nf(i.raw, i.raw < 10 ? 2 : 0)}`}}}}});
+  // rendimenti mensili del ladder ai prezzi bid-ask, istogramma a 24 classi e conteggi attesi sotto la normale
+  const R = byKey[k].s1.map(v => v/100), nR = R.length, mu = R.reduce((a,b) => a+b, 0)/nR;
+  const sdR = Math.sqrt(R.reduce((a,b) => a + (b-mu)**2, 0)/(nR-1)), lo = Math.min(...R), w = (Math.max(...R) - lo)/24 || 1;
+  const cnt = Array(24).fill(0); R.forEach(v => { cnt[Math.min(23, Math.floor((v - lo)/w))]++; });
+  const cm = cnt.map((_,i) => +(lo + w*(i + 0.5)).toFixed(2)), att = cnt.map((_,i) => nR*(Phi((lo + w*(i+1) - mu)/sdR) - Phi((lo + w*i - mu)/sdR)));
+  mk("c-mese", {type:"bar", data:{labels:cm, datasets:[
+      {type:"bar", label:"Mesi", data:cnt, backgroundColor:css("--s3"), barPercentage:1, categoryPercentage:1, order:2},
+      {type:"line", label:"Normale", data:att, borderColor:css("--s2"), backgroundColor:css("--s2"), borderWidth:2, pointRadius:0, order:1}]},
+    options:{scales:{x:{title:{display:true, text:"Rendimento mensile del ladder (%)"}, grid:{display:false}, ticks:{autoSkip:true, maxTicksLimit:8, maxRotation:0, callback(v){ return nf(+this.getLabelForValue(v), 0); }}},
+      y:{title:{display:true, text:"Mesi"}, beginAtZero:true}},
+      plugins:{tooltip:{callbacks:{title:i => `da ${nf(+i[0].label - w/2, 1)}% a ${nf(+i[0].label + w/2, 1)}%`, label:i => i.datasetIndex === 0 ? `Mesi: ${i.raw}` : `Normale: ${nf(i.raw, 1)}`}}}}});
   const pts = q => Z.qn.map((x,i) => ({x:+x.toFixed(3), y:q[i]}));
   const ds = [{label:"Configurazione", data:pts(h.qq), borderColor:css("--s1"), backgroundColor:css("--s1"), showLine:true, borderWidth:2, pointRadius:2.5}];
   if(ind) ds.push({label:`S&P 500, ${Dd} giorni`, data:pts(ind.isto.qq), borderColor:css("--neutral"), backgroundColor:css("--neutral"), showLine:true, borderWidth:1.5, pointRadius:2, borderDash:[5,4]});

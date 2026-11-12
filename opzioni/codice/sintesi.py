@@ -5,6 +5,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 out = sys.argv[1]
 from lib import rendimenti_mensili_spx
+from paper_num import FAM, etichetta
+from scipy import stats
 V = json.load(open(out + '/vrp.json')); B = json.load(open(out + '/bt.json'))
 u = pd.read_parquet(out + '/sottostante.parquet').close
 rbm = rendimenti_mensili_spx(u)
@@ -40,14 +42,16 @@ L = {'it': dict(iv='IV ATM', rv='Volatilità realizzata fino a scadenza', vol='V
                 sh='Indice di Sharpe annualizzato', ncfg='Numero di configurazioni', mid='Mid price', ba='Bid-ask', hvx='Volatilità storica a 21 sedute all\'ingresso (%)', cum='Rendimento cumulato sul margine (somma aritmetica)',
                 h1='Sharpe 2010-2016', h2='Sharpe 2017-2023', ratio='Perdita a scadenza / premio incassato', delta='Delta della short put', gg='giorni',
                 spx='S&P 500 (solo prezzo)', zx='Rendimento in deviazioni standard dalla media', cnt='Operazioni (scala logaritmica)',
-                norm='Normale di pari media e varianza', qqx='Quantili della normale standard', qqy='Quantili empirici standardizzati'),
+                norm='Normale di pari media e varianza', qqx='Quantili della normale standard', qqy='Quantili empirici standardizzati',
+                mx='Rendimento per operazione (% del margine)', mm='Rendimento mensile del ladder (%)', mesi='Mesi', cumul='cumulato'),
      'en': dict(iv='ATM IV', rv='Realized volatility to expiry', vol='Annualized volatility (%)', vrp='ATM IV − realized volatility (points)',
                 freq='Number of sessions', anno='Year', oriz='Days to expiry', mf='Model-free implied volatility', bis='45° line', mz='Regression line',
                 ivx='ATM IV at entry (%)', rvy='Subsequent realized volatility (%)', quint='Quintile of IV − GARCH at entry', vrpm='Mean subsequent VRP (points)',
                 sh='Annualized Sharpe ratio', ncfg='Number of configurations', mid='Mid price', ba='Bid-ask', hvx='21-session historical volatility at entry (%)', cum='Cumulative return on margin (arithmetic sum)',
                 h1='Sharpe 2010-2016', h2='Sharpe 2017-2023', ratio='Loss at expiry / premium collected', delta='Delta of the short put', gg='days',
                 spx='S&P 500 (price only)', zx='Return in standard deviations from the mean', cnt='Trades (log scale)',
-                norm='Normal with equal mean and variance', qqx='Standard normal quantiles', qqy='Standardized empirical quantiles')}
+                norm='Normal with equal mean and variance', qqx='Standard normal quantiles', qqy='Standardized empirical quantiles',
+                mx='Return per trade (% of margin)', mm='Monthly ladder return (%)', mesi='Months', cumul='cumulative')}
 o30 = V['obiettivi']['30']; s = V['serie30']; d = pd.to_datetime(s['date'])
 by = {c['key']: c for c in cfg}
 names = {'it': {'SP': 'Short put', 'PCS': 'Put credit spread', 'CCS': 'Call credit spread', 'IC': 'Iron condor', 'STRD': 'Short straddle', 'STRG': 'Short strangle'},
@@ -121,4 +125,32 @@ for lang, T in L.items():
         ax.plot(qn, q, 'o-', ms=2.5, lw=0.9, color=C[[0, 1, 2, 4, 5][j]], label=tit)
     ax.plot([-3.5, 3.5], [-3.5, 3.5], color='#52514e', lw=0.8, ls='--'); ax.set_xlabel(T['qqx']); ax.set_ylabel(T['qqy'])
     ax.set_ylim(-16, 16); ax.legend(fontsize=6.5, loc='upper left'); save('qq')
+    # configurazioni a miglior rendimento cumulato (ladder, prezzi bid-ask): put credit spread, iron condor, short put, long put
+    MG = Dz['migliori']; CF = {c['key']: c for c in B['config']}; quattro = ['PCS', 'IC', 'SP', 'LP']
+    def isto_operazioni(ax, k):
+        o = Dz['config'][k]; h = o['isto']; m, sd = o['op']['media'], o['op']['sd']
+        cen = (m + sd * (h['lo'] + 0.25 + 0.5 * np.arange(len(h['n'])))) * 100; nrm = np.array(h['normale'])
+        ax.bar(cen, h['n'], width=50 * sd, color=C[0], linewidth=0)
+        ok = nrm >= 0.01; ax.plot(cen[ok], nrm[ok], color=C[1], lw=1.1)
+        ax.set_yscale('log'); ax.set_ylim(0.6, None); ax.tick_params(labelsize=7)
+    sep = ',' if lang == 'it' else '.'
+    fig, axs = plt.subplots(4, 2, figsize=(6.6, 8.4))
+    for r, fam in enumerate(quattro):
+        k = MG[fam]['key']; p1 = CF[k]['p1']
+        isto_operazioni(axs[r, 0], k); axs[r, 0].set_title(etichetta(k, lang), fontsize=7.5, loc='left')
+        R = np.array(B['serie'][k + '|1']) / 1e4 * 100; ed = np.linspace(R.min(), R.max(), 25); cc = (ed[:-1] + ed[1:]) / 2
+        att = len(R) * np.diff(stats.norm.cdf((ed - R.mean()) / R.std(ddof=1)))
+        ax = axs[r, 1]; ax.bar(cc, np.histogram(R, bins=ed)[0], width=ed[1] - ed[0], color=C[2], linewidth=0)
+        ax.plot(cc, att, color=C[1], lw=1.1); ax.tick_params(labelsize=7)
+        ax.set_title(f"{T['cumul']} {MG[fam]['totale'] * 100:+.0f}%, Sharpe {p1['sharpe']:.2f}".replace('.', sep), fontsize=7.5, loc='left')
+        axs[r, 0].set_ylabel(T['cnt'], fontsize=7); ax.set_ylabel(T['mesi'], fontsize=7)
+    axs[3, 0].set_xlabel(T['mx'], fontsize=8); axs[3, 1].set_xlabel(T['mm'], fontsize=8)
+    fig.legend(handles=[plt.Line2D([], [], color=C[1], lw=1.1)], labels=[T['norm']], loc='upper center', fontsize=7.5)
+    plt.tight_layout(rect=(0, 0, 1, 0.975)); plt.savefig(f'{out}/fig/migliori_{lang}.pdf'); plt.close()
+    fig, axs = plt.subplots(1, 4, figsize=(6.6, 1.95))
+    for ax, fam in zip(axs, quattro):
+        isto_operazioni(ax, MG[fam]['key']); ax.tick_params(labelsize=6)
+        ax.set_title(f"{FAM[lang][fam]}\n{T['cumul']} {MG[fam]['totale'] * 100:+.0f}%", fontsize=7)
+    axs[0].set_ylabel(T['cnt'], fontsize=6.5); fig.supxlabel(T['mx'], fontsize=7)
+    plt.tight_layout(); plt.savefig(f'{out}/fig/migliori_abs_{lang}.pdf'); plt.close()
 print('figure scritte')

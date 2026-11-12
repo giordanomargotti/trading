@@ -269,6 +269,22 @@ Le strutture a rischio definito troncano la coda alla larghezza dello spread, ma
 \caption{Grafico quantile--quantile dei rendimenti per operazione standardizzati contro la normale standard; la diagonale tratteggiata corrisponde alla normale.}\label{fig:qq}
 \end{figure}
 
+La tabella~\ref{tab:migliori} riporta, per ogni famiglia, la configurazione con il rendimento cumulato più alto ai prezzi bid-ask (somma dei rendimenti mensili sul margine del \emph{ladder}); la figura~\ref{fig:migliori} ne mostra le distribuzioni per operazione e mensili per put credit spread, iron condor, short put e long put. Il criterio premia la leva sul margine. Il put credit spread migliore (@@mpcs_cfg@@) cumula @@mpcs_tot@@\% con uno Sharpe di @@mpcs_sh@@, ma il mese peggiore vale @@mpcs_wm@@\% del capitale impegnato a margine, una perdita superiore al capitale stesso, e il \emph{drawdown} massimo è @@mpcs_dd@@\%. L'iron condor migliore (@@mic_cfg@@) cumula @@mic_tot@@\% (Sharpe @@mic_sh@@). La short put migliore (@@msp_cfg@@) cumula @@msp_tot@@\% con Sharpe @@msp_sh@@, \emph{skewness} per operazione @@msp_sk@@ ed \emph{excess kurtosis} @@msp_ku@@; l'operazione peggiore vale @@msp_min@@\% del margine. Anche la long put migliore (@@mlp_cfg@@) perde (@@mlp_tot@@\%), con \emph{skewness} per operazione @@mlp_sk@@: è in utile il @@mlp_vinc@@\% delle operazioni e la migliore rende il @@mlp_max@@\% del premio. Le quattro distribuzioni sono lontane dalla normale. Per le strutture che vendono volatilità una massa di rendimenti si concentra vicino al guadagno massimo e la coda sinistra arriva alla perdita massima; la long put ha la forma speculare. La scelta è fatta a posteriori sullo stesso campione e sconta il problema di \emph{multiple testing} della sezione~\ref{sec:rob}; rendimenti e \emph{drawdown} scalano linearmente con la quota di capitale impegnata a margine.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Configurazione a rendimento cumulato più alto per ogni famiglia: somma dei rendimenti mensili sul margine del \emph{ladder} a capitale costante ai prezzi bid-ask, 2010--2023. Media annua, Sharpe, \emph{drawdown} massimo e mese peggiore si riferiscono alla stessa serie mensile; quota di operazioni in utile, \emph{skewness} ed \emph{excess kurtosis} per operazione e per mese.}\label{tab:migliori}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{\emph{Ladder} mensile} & \multicolumn{3}{c}{Per operazione} & \multicolumn{2}{c}{Mensile} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}\cmidrule(lr){11-12}
+Famiglia & Configurazione & Cumul. \% & Media \% & Sharpe & DD max \% & Peggiore \% & In utile \% & Skew. & Exc. kurt. & Skew. & Exc. kurt. \\ \midrule
+@@TAB_MIG@@
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[p]\centering
+\includegraphics[width=\textwidth]{migliori_it.pdf}
+\caption{Configurazioni a rendimento cumulato più alto per put credit spread, iron condor, short put e long put. A sinistra: rendimento per operazione sul margine ai prezzi bid-ask, numero di operazioni in scala logaritmica. A destra: rendimenti mensili del \emph{ladder} a capitale costante. Le curve sono i conteggi attesi sotto una normale con la stessa media e la stessa varianza.}\label{fig:migliori}
+\end{figure}
+
 Ne seguono due conseguenze. Gli ordinamenti basati su media e deviazione standard, Sharpe compreso, sopravvalutano le strutture che vendono volatilità: la vendita di opzioni \emph{out-of-the-money} è l'esempio classico di come un rendimento con \emph{skewness} negativa possa aumentare lo Sharpe senza aggiungere valore (Goetzmann et al., 2007). Il \emph{deflated Sharpe ratio} della sezione~\ref{sec:rob} corregge per \emph{skewness} e curtosi della serie mensile. Nella procedura di selezione del progetto, un criterio che divide il valore atteso per una potenza della deviazione standard eredita lo stesso limite: il rischio di coda va misurato direttamente, con l'\emph{expected shortfall} o con la probabilità della perdita massima sotto la densità GJR-GARCH, e tenuto separato dal filtro sul valore atteso.
 
 \subsection{Regole di uscita}

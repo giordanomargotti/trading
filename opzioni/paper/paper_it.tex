@@ -335,6 +335,31 @@ Le strutture a rischio definito troncano la coda alla larghezza dello spread, ma
 \caption{Grafico quantile--quantile dei rendimenti per operazione standardizzati contro la normale standard; la diagonale tratteggiata corrisponde alla normale.}\label{fig:qq}
 \end{figure}
 
+La tabella~\ref{tab:migliori} riporta, per ogni famiglia, la configurazione con il rendimento cumulato più alto ai prezzi bid-ask (somma dei rendimenti mensili sul margine del \emph{ladder}); la figura~\ref{fig:migliori} ne mostra le distribuzioni per operazione e mensili per put credit spread, iron condor, short put e long put. Il criterio premia la leva sul margine. Il put credit spread migliore ($\Delta$0{,}30/0{,}05, 7 gg, a scadenza) cumula +798\% con uno Sharpe di +0{,}43, ma il mese peggiore vale $-$147\% del capitale impegnato a margine, una perdita superiore al capitale stesso, e il \emph{drawdown} massimo è 369\%. L'iron condor migliore ($\Delta$0{,}30/0{,}05, 45 gg, take profit 50\%) cumula +105\% (Sharpe +0{,}25). La short put migliore ($\Delta$0{,}30, 30 gg, a scadenza) cumula +298\% con Sharpe +0{,}85, \emph{skewness} per operazione $-$6{,}7 ed \emph{excess kurtosis} 69; l'operazione peggiore vale $-$148\% del margine. Anche la long put migliore ($\Delta$0{,}30, 45 gg, a scadenza) perde ($-$4409\%), con \emph{skewness} per operazione +7{,}0: è in utile il 12\% delle operazioni e la migliore rende il +2872\% del premio. Le quattro distribuzioni sono lontane dalla normale. Per le strutture che vendono volatilità una massa di rendimenti si concentra vicino al guadagno massimo e la coda sinistra arriva alla perdita massima; la long put ha la forma speculare. La scelta è fatta a posteriori sullo stesso campione e sconta il problema di \emph{multiple testing} della sezione~\ref{sec:rob}; rendimenti e \emph{drawdown} scalano linearmente con la quota di capitale impegnata a margine.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Configurazione a rendimento cumulato più alto per ogni famiglia: somma dei rendimenti mensili sul margine del \emph{ladder} a capitale costante ai prezzi bid-ask, 2010--2023. Media annua, Sharpe, \emph{drawdown} massimo e mese peggiore si riferiscono alla stessa serie mensile; quota di operazioni in utile, \emph{skewness} ed \emph{excess kurtosis} per operazione e per mese.}\label{tab:migliori}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{\emph{Ladder} mensile} & \multicolumn{3}{c}{Per operazione} & \multicolumn{2}{c}{Mensile} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}\cmidrule(lr){11-12}
+Famiglia & Configurazione & Cumul. \% & Media \% & Sharpe & DD max \% & Peggiore \% & In utile \% & Skew. & Exc. kurt. & Skew. & Exc. kurt. \\ \midrule
+Short put & $\Delta$0{,}30, 30 gg, a scadenza & +298 & +21{,}3 & +0{,}85 & 72 & $-$71 & 86 & $-$6{,}72 & 69{,}1 & $-$6{,}70 & 61{,}4 \\
+Short strangle & $\Delta$0{,}16, 7 gg, a scadenza & +182 & +13{,}0 & +0{,}80 & 53 & $-$22 & 78 & $-$4{,}09 & 27{,}8 & $-$1{,}93 & 5{,}7 \\
+Short straddle ATM & ATM, 45 gg, a scadenza & +129 & +9{,}2 & +0{,}37 & 98 & $-$53 & 58 & $-$2{,}24 & 14{,}0 & $-$2{,}51 & 16{,}6 \\
+Put credit spread & $\Delta$0{,}30/0{,}05, 7 gg, a scadenza & +798 & +57{,}0 & +0{,}43 & 369 & $-$147 & 82 & $-$2{,}89 & 8{,}1 & $-$1{,}43 & 2{,}2 \\
+Iron condor & $\Delta$0{,}30/0{,}05, 45 gg, take profit 50\% & +105 & +7{,}5 & +0{,}25 & 123 & $-$57 & 73 & $-$2{,}47 & 7{,}7 & $-$2{,}42 & 11{,}2 \\
+Iron butterfly & ATM/$\Delta$0{,}05, 45 gg, take profit 50\% & +11 & +0{,}8 & +0{,}02 & 198 & $-$60 & 56 & $-$1{,}11 & 2{,}0 & $-$1{,}12 & 3{,}3 \\
+Call credit spread & $\Delta$0{,}16/0{,}05, 45 gg, take profit 50\% e stop loss 200\% & $-$330 & $-$23{,}5 & $-$1{,}13 & 330 & $-$22 & 75 & $-$1{,}37 & 0{,}3 & $-$1{,}11 & 0{,}9 \\
+Long calendar ATM & ATM, 30/60 gg, a scadenza & $-$2138 & $-$152{,}7 & $-$1{,}58 & 2138 & $-$89 & 36 & +0{,}49 & $-$0{,}1 & $-$0{,}22 & 0{,}2 \\
+Debit put spread & $\Delta$0{,}30, 45 gg, a scadenza & $-$4016 & $-$286{,}9 & $-$0{,}91 & 4324 & $-$83 & 13 & +3{,}10 & 8{,}9 & +2{,}69 & 7{,}4 \\
+Long put & $\Delta$0{,}30, 45 gg, a scadenza & $-$4409 & $-$314{,}9 & $-$0{,}86 & 4502 & $-$81 & 12 & +6{,}97 & 65{,}1 & +6{,}23 & 53{,}2 \\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[p]\centering
+\includegraphics[width=\textwidth]{migliori_it.pdf}
+\caption{Configurazioni a rendimento cumulato più alto per put credit spread, iron condor, short put e long put. A sinistra: rendimento per operazione sul margine ai prezzi bid-ask, numero di operazioni in scala logaritmica. A destra: rendimenti mensili del \emph{ladder} a capitale costante. Le curve sono i conteggi attesi sotto una normale con la stessa media e la stessa varianza.}\label{fig:migliori}
+\end{figure}
+
 Ne seguono due conseguenze. Gli ordinamenti basati su media e deviazione standard, Sharpe compreso, sopravvalutano le strutture che vendono volatilità: la vendita di opzioni \emph{out-of-the-money} è l'esempio classico di come un rendimento con \emph{skewness} negativa possa aumentare lo Sharpe senza aggiungere valore (Goetzmann et al., 2007). Il \emph{deflated Sharpe ratio} della sezione~\ref{sec:rob} corregge per \emph{skewness} e curtosi della serie mensile. Nella procedura di selezione del progetto, un criterio che divide il valore atteso per una potenza della deviazione standard eredita lo stesso limite: il rischio di coda va misurato direttamente, con l'\emph{expected shortfall} o con la probabilità della perdita massima sotto la densità GJR-GARCH, e tenuto separato dal filtro sul valore atteso.
 
 \subsection{Regole di uscita}

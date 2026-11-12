@@ -21,6 +21,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 - Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi mid, 2,5% ai prezzi bid-ask.
 - Filtro di sospensione sulla volatilità realizzata (HV21 oltre il 25%): Sharpe mediano da −0,30 a −0,34, mese peggiore invariato. Gli strike scelti per delta si allargano già con la volatilità implicita.
 - Distribuzione dei rendimenti: skewness per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: skewness −9,5 ed excess kurtosis 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
+- Configurazioni a rendimento cumulato più alto per famiglia (ladder, prezzi bid-ask): put credit spread Δ0,30/0,05 a 7 giorni +798% (Sharpe 0,43, mese peggiore −147% del capitale impegnato), short put Δ0,30 a 30 giorni +298% (Sharpe 0,85), iron condor Δ0,30/0,05 a 45 giorni con take profit 50% +105%, long put Δ0,30 a 45 giorni −4.409%. Nessuna ha distribuzione normale.
 
 ## Riproduzione
 

@@ -269,6 +269,22 @@ Defined-risk structures truncate the tail at the width of the spread, but trunca
 \caption{Quantile--quantile plot of standardized per-trade returns against the standard normal; the dashed diagonal corresponds to the normal.}\label{fig:qq}
 \end{figure}
 
+Table~\ref{tab:migliori} reports, for each family, the configuration with the highest cumulative return at bid-ask prices (sum of the monthly returns on margin of the ladder), and Figure~\ref{fig:migliori} shows the per-trade and monthly distributions for the put credit spread, the iron condor, the short put and the long put. The criterion rewards leverage on margin. The best put credit spread (@@mpcs_cfg@@) accumulates @@mpcs_tot@@\% with a Sharpe ratio of @@mpcs_sh@@, but its worst month is @@mpcs_wm@@\% of the capital committed as margin, a loss larger than the capital itself, and its maximum drawdown is @@mpcs_dd@@\%. The best iron condor (@@mic_cfg@@) accumulates @@mic_tot@@\% (Sharpe ratio @@mic_sh@@). The best short put (@@msp_cfg@@) accumulates @@msp_tot@@\% with a Sharpe ratio of @@msp_sh@@, per-trade skewness @@msp_sk@@ and excess kurtosis @@msp_ku@@; its worst trade is @@msp_min@@\% of margin. Even the best long put (@@mlp_cfg@@) loses (@@mlp_tot@@\%), with per-trade skewness @@mlp_sk@@: @@mlp_vinc@@\% of trades are profitable and the best one returns @@mlp_max@@\% of the premium. All four distributions are far from normal. For the structures that sell volatility a mass of returns sits close to the maximum gain and the left tail reaches the maximum loss; the long put has the mirror image. The selection is made ex post on the same sample and carries the multiple testing problem of Section~\ref{sec:rob}; returns and drawdowns scale linearly with the share of capital committed as margin.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Configuration with the highest cumulative return in each family: sum of the monthly returns on margin of the constant-capital ladder at bid-ask prices, 2010--2023. Annual mean, Sharpe ratio, maximum drawdown and worst month refer to the same monthly series; win rate, skewness and excess kurtosis per trade and per month.}\label{tab:migliori}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{Monthly ladder} & \multicolumn{3}{c}{Per trade} & \multicolumn{2}{c}{Monthly} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}\cmidrule(lr){11-12}
+Family & Configuration & Cum. \% & Mean \% & Sharpe & Max DD \% & Worst \% & Win \% & Skew. & Ex. kurt. & Skew. & Ex. kurt. \\ \midrule
+@@TAB_MIG@@
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[p]\centering
+\includegraphics[width=\textwidth]{migliori_en.pdf}
+\caption{Configurations with the highest cumulative return for the put credit spread, the iron condor, the short put and the long put. Left: return per trade on margin at bid-ask prices, number of trades on a logarithmic scale. Right: monthly returns of the constant-capital ladder. The curves are the counts expected under a normal distribution with the same mean and variance.}\label{fig:migliori}
+\end{figure}
+
 Two consequences follow. Rankings based on mean and standard deviation, the Sharpe ratio included, overstate the quality of short-volatility structures: selling out-of-the-money options is the standard example of how a negatively skewed return can raise the Sharpe ratio without adding value (Goetzmann et al., 2007). The deflated Sharpe ratio of Section~\ref{sec:rob} corrects for the skewness and kurtosis of the monthly series. In the project's selection procedure, a criterion that divides expected value by a power of the standard deviation inherits the same limitation: tail risk should be measured directly, through the expected shortfall or the probability of the maximum loss under the GJR-GARCH density, and kept separate from the expected-value filter.
 
 \subsection{Exit rules}

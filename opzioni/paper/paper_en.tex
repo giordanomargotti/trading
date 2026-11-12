@@ -335,6 +335,31 @@ Defined-risk structures truncate the tail at the width of the spread, but trunca
 \caption{Quantile--quantile plot of standardized per-trade returns against the standard normal; the dashed diagonal corresponds to the normal.}\label{fig:qq}
 \end{figure}
 
+Table~\ref{tab:migliori} reports, for each family, the configuration with the highest cumulative return at bid-ask prices (sum of the monthly returns on margin of the ladder), and Figure~\ref{fig:migliori} shows the per-trade and monthly distributions for the put credit spread, the iron condor, the short put and the long put. The criterion rewards leverage on margin. The best put credit spread ($\Delta$0.30/0.05, 7 d, held to expiry) accumulates +798\% with a Sharpe ratio of +0.43, but its worst month is $-$147\% of the capital committed as margin, a loss larger than the capital itself, and its maximum drawdown is 369\%. The best iron condor ($\Delta$0.30/0.05, 45 d, 50\% take profit) accumulates +105\% (Sharpe ratio +0.25). The best short put ($\Delta$0.30, 30 d, held to expiry) accumulates +298\% with a Sharpe ratio of +0.85, per-trade skewness $-$6.7 and excess kurtosis 69; its worst trade is $-$148\% of margin. Even the best long put ($\Delta$0.30, 45 d, held to expiry) loses ($-$4409\%), with per-trade skewness +7.0: 12\% of trades are profitable and the best one returns +2872\% of the premium. All four distributions are far from normal. For the structures that sell volatility a mass of returns sits close to the maximum gain and the left tail reaches the maximum loss; the long put has the mirror image. The selection is made ex post on the same sample and carries the multiple testing problem of Section~\ref{sec:rob}; returns and drawdowns scale linearly with the share of capital committed as margin.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Configuration with the highest cumulative return in each family: sum of the monthly returns on margin of the constant-capital ladder at bid-ask prices, 2010--2023. Annual mean, Sharpe ratio, maximum drawdown and worst month refer to the same monthly series; win rate, skewness and excess kurtosis per trade and per month.}\label{tab:migliori}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrrrr}\toprule
+ & & \multicolumn{5}{c}{Monthly ladder} & \multicolumn{3}{c}{Per trade} & \multicolumn{2}{c}{Monthly} \\ \cmidrule(lr){3-7}\cmidrule(lr){8-10}\cmidrule(lr){11-12}
+Family & Configuration & Cum. \% & Mean \% & Sharpe & Max DD \% & Worst \% & Win \% & Skew. & Ex. kurt. & Skew. & Ex. kurt. \\ \midrule
+Short put & $\Delta$0.30, 30 d, held to expiry & +298 & +21.3 & +0.85 & 72 & $-$71 & 86 & $-$6.72 & 69.1 & $-$6.70 & 61.4 \\
+Short strangle & $\Delta$0.16, 7 d, held to expiry & +182 & +13.0 & +0.80 & 53 & $-$22 & 78 & $-$4.09 & 27.8 & $-$1.93 & 5.7 \\
+Short ATM straddle & ATM, 45 d, held to expiry & +129 & +9.2 & +0.37 & 98 & $-$53 & 58 & $-$2.24 & 14.0 & $-$2.51 & 16.6 \\
+Put credit spread & $\Delta$0.30/0.05, 7 d, held to expiry & +798 & +57.0 & +0.43 & 369 & $-$147 & 82 & $-$2.89 & 8.1 & $-$1.43 & 2.2 \\
+Iron condor & $\Delta$0.30/0.05, 45 d, 50\% take profit & +105 & +7.5 & +0.25 & 123 & $-$57 & 73 & $-$2.47 & 7.7 & $-$2.42 & 11.2 \\
+Iron butterfly & ATM/$\Delta$0.05, 45 d, 50\% take profit & +11 & +0.8 & +0.02 & 198 & $-$60 & 56 & $-$1.11 & 2.0 & $-$1.12 & 3.3 \\
+Call credit spread & $\Delta$0.16/0.05, 45 d, 50\% take profit and 200\% stop loss & $-$330 & $-$23.5 & $-$1.13 & 330 & $-$22 & 75 & $-$1.37 & 0.3 & $-$1.11 & 0.9 \\
+Long ATM calendar & ATM, 30/60 d, held to expiry & $-$2138 & $-$152.7 & $-$1.58 & 2138 & $-$89 & 36 & +0.49 & $-$0.1 & $-$0.22 & 0.2 \\
+Debit put spread & $\Delta$0.30, 45 d, held to expiry & $-$4016 & $-$286.9 & $-$0.91 & 4324 & $-$83 & 13 & +3.10 & 8.9 & +2.69 & 7.4 \\
+Long put & $\Delta$0.30, 45 d, held to expiry & $-$4409 & $-$314.9 & $-$0.86 & 4502 & $-$81 & 12 & +6.97 & 65.1 & +6.23 & 53.2 \\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[p]\centering
+\includegraphics[width=\textwidth]{migliori_en.pdf}
+\caption{Configurations with the highest cumulative return for the put credit spread, the iron condor, the short put and the long put. Left: return per trade on margin at bid-ask prices, number of trades on a logarithmic scale. Right: monthly returns of the constant-capital ladder. The curves are the counts expected under a normal distribution with the same mean and variance.}\label{fig:migliori}
+\end{figure}
+
 Two consequences follow. Rankings based on mean and standard deviation, the Sharpe ratio included, overstate the quality of short-volatility structures: selling out-of-the-money options is the standard example of how a negatively skewed return can raise the Sharpe ratio without adding value (Goetzmann et al., 2007). The deflated Sharpe ratio of Section~\ref{sec:rob} corrects for the skewness and kurtosis of the monthly series. In the project's selection procedure, a criterion that divides expected value by a power of the standard deviation inherits the same limitation: tail risk should be measured directly, through the expected shortfall or the probability of the maximum loss under the GJR-GARCH density, and kept separate from the expected-value filter.
 
 \subsection{Exit rules}

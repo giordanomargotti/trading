@@ -97,6 +97,15 @@ for (fam, par, ala, D, gest), g in tr.groupby(['fam', 'par', 'ala', 'D', 'gest']
         o['perdita_90'] = dict(osservata=float((x <= -0.9).mean()), normale=float(stats.norm.cdf((-0.9 - m) / sd)))
     C[key] = o
 
+# configurazione a miglior rendimento cumulato per famiglia: somma dei rendimenti mensili del ladder ai prezzi bid-ask.
+# Selezione a posteriori sullo stesso campione: premia la leva sul margine e sconta il problema di multiple testing.
+MIG = {}
+for c in B['config']:
+    k = c['key']; fam = k.split('|')[0]
+    tot = float(np.sum(B['serie'][k + '|1']) / 1e4)
+    if fam not in MIG or tot > MIG[fam]['totale']:
+        MIG[fam] = dict(key=k, totale=tot, totale_mid=float(np.sum(B['serie'][k + '|0']) / 1e4))
+
 IND = {}
 for D in (7, 14, 30, 45):
     r = indice_su_orizzonte(u, D)
@@ -121,7 +130,7 @@ TOT = dict(n=len(C), quota_jb_1=float(np.mean([o['mese']['jb_p'] < 0.01 for o in
            quota_curt_mese_sopra_spx=float(np.mean([o['mese']['curtosi_ecc'] > IND['mensile']['curtosi_ecc'] for o in C.values()])),
            quota_asim_op_negativa=float(np.mean([o['op']['asimmetria'] < 0 for o in C.values()])))
 
-json.dump(dict(config=C, indice=IND, famiglie=F, totale=TOT, pq=PQ, qn=[float(stats.norm.ppf(p)) for p in PQ], p3=P3, es1_normale=ES1_NORM,
+json.dump(dict(config=C, indice=IND, famiglie=F, totale=TOT, migliori=MIG, pq=PQ, qn=[float(stats.norm.ppf(p)) for p in PQ], p3=P3, es1_normale=ES1_NORM,
                k_hill=K_HILL), open(out + '/distribuzioni.json', 'w'), separators=(',', ':'))
 
 # riepilogo a schermo: configurazioni della tabella di selezione del paper e indice
@@ -141,3 +150,4 @@ print(pd.DataFrame({k: {c: v[c] for c in v if c != 'isto'} for k, v in IND.items
     ['n', 'asimmetria', 'curtosi_ecc', 'rapp_3s_sx', 'rapp_3s_dx', 'rapp_es1', 'cvar1', 'minimo', 'hill_sx', 'hill_min', 'hill_max']].round(3).to_string())
 print(pd.DataFrame(F).T.round(3).to_string())
 print(TOT)
+print({f: (m['key'], round(m['totale'], 3)) for f, m in MIG.items()})

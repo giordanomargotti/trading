@@ -12,6 +12,28 @@ def integer(n, lang):
 _F = {'SP': 'Short put', 'STRG': 'Short strangle', 'STRD': 'Short straddle ATM', 'PCS': 'Put credit spread', 'CCS': 'Call credit spread', 'IC': 'Iron condor',
       'IFLY': 'Iron butterfly', 'LP': 'Long put', 'DPS': 'Debit put spread', 'CAL': 'Long calendar ATM'}
 FAM = {'it': _F, 'en': dict(_F, STRD='Short ATM straddle', CAL='Long ATM calendar')}
+GEST_TXT = {'it': {'hold': 'a scadenza', 'tp50': 'take profit 50%', 'tp50sl200': 'take profit 50% e stop loss 200%'},
+            'en': {'hold': 'held to expiry', 'tp50': '50% take profit', 'tp50sl200': '50% take profit and 200% stop loss'}}
+
+def etichetta(key, lang, tex=False, nome=True):
+    """Descrizione di una configurazione (famiglia, delta o ATM, wing, giorni, gestione) per tabelle, testo e figure.
+    Il calendar vende la scadenza D e compra quella a circa 2D giorni."""
+    fam, par, ala, D, gest = key.split('|'); p = float(par)
+    d = r'$\Delta$' if tex else 'Δ'
+    if fam in ('STRD', 'CAL'):
+        ps = ''                                     # il nome della famiglia contiene già ATM
+    elif fam == 'IFLY':
+        ps = f'ATM/{d}{p:.2f}'
+    else:
+        ps = f'{d}{p:.2f}' + ('/0.05' if ala == 'd05' else (', wing 1%' if ala == 'w1' else ''))
+    gg = 'gg' if lang == 'it' else 'd'
+    dur = f'{D}/{2 * int(D)} {gg}' if fam == 'CAL' else f'{D} {gg}'
+    s = ', '.join(x for x in (ps, dur, GEST_TXT[lang][gest]) if x)
+    if tex:
+        s = s.replace('%', r'\%')
+    if lang == 'it':
+        s = s.replace('0.', '0{,}' if tex else '0,')
+    return (FAM[lang][fam] + ' ' + s) if nome else s
 def numbers(S, lang):
     V = S['vrp']; T = S['test']; o = V['obiettivi']; K = {}
     f = lambda x, d=2, sign=False: fmt(x, d, lang, sign)
@@ -78,7 +100,7 @@ def numbers(S, lang):
     for i, nm in enumerate(('dlo', 'dmi', 'dhi')):
         K[nm] = f(ds['terzili'][i]['dist'] * 100, 1); K[nm + 'iv'] = f(ds['terzili'][i]['iv'] * 100, 1)
     K['dcorr'] = f(ds['corr'], 2)
-    K.update(numeri_code(S, lang))
+    K.update(numeri_code(S, lang)); K.update(numeri_migliori(S, lang))
     hb = W['vrp_per_hv']; K['hvlo'] = f(hb[0]['vrp_atm'] * 100, 2, True); K['hvhi'] = f(hb[-1]['vrp_atm'] * 100, 2, True); K['hvmid'] = f(hb[4]['vrp_atm'] * 100, 2, True)
     return K
 def tab_fvol(S, lang):
@@ -188,4 +210,30 @@ def tab_code(S, lang):
     rows.append(r'\midrule')
     rows.append(' & '.join([r'S\&P 500', '30 ' + gg, f(i30['asimmetria'], 2), f(i30['curtosi_ecc'], 1), f(i30['rapp_3s_sx'], 1), f(i30['rapp_es1'], 2), f(i30['minimo'] * 100, 0),
                             f(im['asimmetria'], 2), f(im['curtosi_ecc'], 1), pj(im['jb_p'])]) + r' \\')
+    return '\n'.join(rows)
+
+ORD_FAM = ['SP', 'STRG', 'STRD', 'PCS', 'IC', 'IFLY', 'CCS', 'CAL', 'DPS', 'LP']
+
+def numeri_migliori(S, lang):
+    """Numeri del testo sulle configurazioni a miglior rendimento cumulato (put credit spread, iron condor, short put, long put)."""
+    f = lambda x, d=2, sign=False: fmt(x, d, lang, sign)
+    MG = S['code']['migliori']; by = {c['key']: c for c in S['config']}; Z = S['code']['config']; K = {}
+    for fam, p in (('PCS', 'mpcs'), ('IC', 'mic'), ('SP', 'msp'), ('LP', 'mlp')):
+        k = MG[fam]['key']; c = by[k]; o = Z[k]
+        K.update({p + '_cfg': etichetta(k, lang, tex=True, nome=False), p + '_tot': f(MG[fam]['totale'] * 100, 0, True), p + '_ann': f(c['p1']['media_annua'] * 100, 1, True),
+                  p + '_sh': f(c['p1']['sharpe'], 2, True), p + '_dd': f(c['p1']['max_dd'] * 100, 0), p + '_wm': f(c['p1']['mese_peggiore'] * 100, 0, True),
+                  p + '_sk': f(o['op']['asimmetria'], 1, True), p + '_ku': f(o['op']['curtosi_ecc'], 0), p + '_min': f(o['op']['minimo'] * 100, 0, True),
+                  p + '_max': f(o['op']['massimo'] * 100, 0, True), p + '_vinc': f(c['t1']['vincenti'] * 100, 0)})
+    return K
+
+def tab_migliori(S, lang):
+    """Configurazione a miglior rendimento cumulato (ladder, prezzi bid-ask) per ogni famiglia."""
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    MG = S['code']['migliori']; by = {c['key']: c for c in S['config']}; Z = S['code']['config']
+    rows = []
+    for fam in ORD_FAM:
+        k = MG[fam]['key']; c = by[k]; o = Z[k]
+        rows.append(' & '.join([FAM[lang][fam], etichetta(k, lang, tex=True, nome=False), f(MG[fam]['totale'] * 100, 0, True), f(c['p1']['media_annua'] * 100, 1, True),
+                                f(c['p1']['sharpe'], 2, True), f(c['p1']['max_dd'] * 100, 0), f(c['p1']['mese_peggiore'] * 100, 0, True), f(c['t1']['vincenti'] * 100, 0),
+                                f(o['op']['asimmetria'], 2, True), f(o['op']['curtosi_ecc'], 1), f(o['mese']['asimmetria'], 2, True), f(o['mese']['curtosi_ecc'], 1)]) + r' \\')
     return '\n'.join(rows)
