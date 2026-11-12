@@ -1,0 +1,38 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[italian,provide=*]{babel}
+\usepackage{mathptmx,microtype}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,booktabs}
+\pagestyle{empty}
+\setlength{\parskip}{0.4em}\setlength{\parindent}{0pt}
+\begin{document}
+\begin{center}
+{\Large\bfseries Premio per il rischio di volatilità e strategie non direzionali\\[2pt] in opzioni sull'indice S\&P 500: evidenza dalle catene 2010--2023}\\[8pt]
+Giordano Margotti\\[2pt]{\small Novembre 2026}\\[10pt]
+{\bfseries Sintesi}
+\end{center}
+
+\textbf{Domanda.} Il lavoro verifica se nei prezzi delle opzioni europee sull'indice S\&P 500 esista un premio per il rischio di volatilità e se le strategie non direzionali di vendita di premio (iron condor, credit spread, strangle e strutture affini) riescano a incassarlo al netto dei costi.
+
+\textbf{Dati e metodo.} Catene di fine giornata delle opzioni SPX dal gennaio 2010 al dicembre 2023: @@sedute@@ sedute e @@coppie@@ coppie data--scadenza. La volatilità implicita è ricavata dai prezzi con il modello di Black (1976) sul forward implicito nella parità put-call; la varianza implicita \emph{model-free} segue la formula del Cboe; la varianza realizzata è misurata fino alla scadenza della stessa opzione. La previsione sotto la misura reale è un GJR-GARCH(1,1) con innovazioni $t$ di Student stimato senza informazioni future. I backtest coprono @@ncfg@@ configurazioni di dieci famiglie, per @@ntrade@@ operazioni simulate, ai prezzi medi e ai prezzi denaro-lettera.
+
+\textbf{Risultati.} (i) La volatilità \emph{model-free} a 30 giorni supera la realizzata di @@mfvrp30@@ punti in media ($t$ @@mfvrpt30@@); la volatilità \emph{at-the-money} la supera di @@vrp30@@ punti ($t$ @@vrpt30@@). Il premio risiede nelle ali, non nel centro della superficie. (ii) Il premio \emph{at-the-money} è significativo nel 2010--2014 (@@pa@@ punti, $t$ @@pat@@) e nullo nel 2015--2019 e nel 2020--2023. (iii) La volatilità implicita \emph{at-the-money} a 30 giorni è una previsione non distorta della realizzata (pendenza @@mzb30@@, test congiunto $p=$ @@mzp30@@) e ha errore inferiore al GARCH e alla volatilità storica. (iv) Le put con delta 0{,}10 a 30 giorni hanno restituito ai compratori una quota pari a @@ins30_10@@ del premio pagato. (v) Lo Sharpe mediano delle configurazioni è @@shmid@@ ai prezzi medi e @@shba@@ ai prezzi denaro-lettera; la quota con alfa significativamente positivo rispetto all'indice scende dal @@amid@@\% al @@aba@@\%, valore atteso per solo effetto del caso. (vi) I risultati positivi sono concentrati nelle strutture che vendono put e hanno beta azionario positivo; iron condor e straddle hanno risultato netto nullo o negativo; le regole di uscita anticipata riducono il rendimento perché pagano un secondo differenziale.
+
+\begin{center}\small
+\begin{tabular}{lrr}\toprule
+ & Prezzi medi & Denaro-lettera \\ \midrule
+Sharpe mediano, @@ncfg@@ configurazioni & @@shmid@@ & @@shba@@ \\
+Quota con Sharpe positivo (\%) & @@posmid@@ & @@posba@@ \\
+Quota con alfa positivo, $t>2$ (\%) & @@amid@@ & @@aba@@ \\
+Put venduta $\Delta$0{,}16, 45 giorni: Sharpe & @@spsh0@@ & @@spsh1@@ \\
+Put credit spread $\Delta$0{,}20/0{,}05, 30 giorni: Sharpe & @@pcssh0@@ & @@pcssh1@@ \\
+Iron condor $\Delta$0{,}16/0{,}05, 30 giorni: Sharpe & @@icsh0@@ & @@icsh1@@ \\
+\bottomrule\end{tabular}
+\end{center}
+
+\textbf{Conclusione.} Il premio esiste come compenso per il rischio di coda ed è coerente con un mercato efficiente sul piano informativo nel centro della superficie. Il differenziale denaro-lettera, l'esposizione azionaria implicita e la selezione a posteriori dei parametri spiegano la quasi totalità dei risultati positivi dei backtest. L'ipotesi che l'incasso sistematico del premio tenda, nel lungo periodo e al netto dei costi, a un risultato nullo non è rifiutata dai dati.
+
+\textbf{Parole chiave:} premio per il rischio di volatilità, opzioni su indice, iron condor, put credit spread, GJR-GARCH, costi di transazione, test multipli.
+\end{document}

@@ -1,0 +1,48 @@
+# Premio di volatilità e strategie in opzioni su S&P 500
+
+Risultati della ricerca sulle catene di fine giornata delle opzioni SPX dal 2010 al 2023: esistenza del premio per il rischio di volatilità, backtest di dieci famiglie di strategie non direzionali, rassegna della letteratura.
+
+## Contenuto
+
+| Percorso | Contenuto |
+|---|---|
+| `index.html` | sito interattivo autonomo: si apre con un doppio clic, senza server e senza rete |
+| `paper/paper_it.pdf`, `paper/paper_en.pdf` | documento completo in italiano e in inglese (sorgenti `.tex` accanto) |
+| `paper/abstract_it.pdf`, `paper/abstract_en.pdf` | sintesi di una pagina (sorgenti `.tex` accanto) |
+| `paper/figure/` | figure in PDF, nelle due lingue |
+| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), parametri GARCH, controlli di qualità |
+| `codice/` | pipeline Python completa e modelli dei documenti |
+
+## Risultati principali
+
+- Volatilità implicita model-free a 30 giorni meno realizzata: +3,45 punti (t 6,48). Volatilità at-the-money meno realizzata: +0,72 punti (t 1,36). Il premio è nelle ali.
+- Premio at-the-money significativo nel 2010–2014, nullo nel 2015–2019 e nel 2020–2023.
+- 434 configurazioni, 1.310.509 operazioni simulate. Sharpe mediano +0,39 ai prezzi medi e −0,40 ai prezzi denaro-lettera.
+- Configurazioni con alfa positivo significativo rispetto all'indice: 16,4% ai prezzi medi, 2,5% ai prezzi denaro-lettera.
+
+## Riproduzione
+
+Dati di partenza: archivi `spx_eod_*.7z` del repository `finance-thinking/options_strategy`, branch `strategies_backtest`, cartella `data/option_chain_data/SPX_OPTION_DATA_ZIP`.
+
+```bash
+pip install numpy pandas scipy pyarrow py7zr arch matplotlib
+S=codice; mkdir -p pq raw out/fig
+python $S/converti.py <cartella degli archivi 7z> pq raw      # 7z -> Parquet mensili
+python $S/prepara.py pq out                                   # catena compatta, serie del sottostante
+for y in $(seq 2010 2023); do python $S/arricchisci.py out $S $y; done   # forward, IV, delta
+python $S/pannello.py out                                     # IV ATM, varianza model-free, varianza realizzata
+python $S/garch.py out                                        # GJR-GARCH-t senza informazioni future
+python $S/vrp.py out $S                                       # statistiche sul premio
+python $S/bt.py out && python $S/cal.py out                   # backtest
+python $S/stat_bt.py out $S && python $S/sintesi.py out       # sintesi, figure
+python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
+python $S/costruisci_sito.py $S/modelli/tpl.html out/sito.json <chart.umd.min.js> index.html
+```
+
+Tempo complessivo: circa mezz'ora; memoria necessaria circa 6 GB.
+
+## Fonti non incluse
+
+La cartella Google Drive e il repository `AlexCrescentini/backtest_put_credit_spread` non erano accessibili al momento dell'elaborazione.
+
+Documento di ricerca. Non costituisce consulenza in materia di investimenti.
