@@ -33,7 +33,7 @@ The first two are not expected returns in a strict sense. Time decay is the pric
 \item whether the non-directional strategies examined by the project capture it, once the bid-ask spread, commissions, margin and the number of configurations tried are taken into account.
 \end{enumerate}
 
-The contribution is empirical. All statistics are computed on end-of-day quotes of SPX options from January 4, 2010 to December 29, 2023, with a deliberately simple and reproducible design: implied volatility obtained from prices with the Black (1976) model on the forward implied by put-call parity, model-free implied variance with the Cboe formula, realized variance up to the expiry of the same option, and a GJR-GARCH(1,1) forecast with Student-$t$ innovations estimated on an expanding window with no look-ahead. Code and results are published in the repository together with an interactive site for exploring every configuration.
+The contribution is empirical. All statistics are computed on end-of-day quotes of SPX options from January 4, 2010 to December 29, 2023, with a deliberately simple and reproducible design: implied volatility obtained from prices with the Black (1976) model on the forward implied by put-call parity, model-free implied variance with the Cboe formula, realized variance up to the expiry of the same option, and a GJR-GARCH(1,1) forecast with Student-$t$ innovations estimated on an expanding window with no look-ahead. Code and results are published in the repository.
 
 The document is organized as follows. Section~\ref{sec:lett} summarizes the literature on the existence, causes and persistence of the premium. Section~\ref{sec:dati} describes data and method. Section~\ref{sec:vrp} presents the evidence on the premium; Section~\ref{sec:strat} the strategy backtests; Section~\ref{sec:rob} the robustness checks and the multiple-testing correction. Section~\ref{sec:codice} documents the checks on the pre-existing code. Sections~\ref{sec:limiti} and~\ref{sec:concl} discuss limitations and conclusions.
 
@@ -329,11 +329,42 @@ The filter is also redundant given how the strategies are built. Strikes are cho
 
 The operational conclusion is that a suspension based on realized volatility is not necessary and does not protect against extreme events, which by definition arrive from calm conditions. It is equivalent to a reduction in exposure, obtainable more directly through the share of capital committed to margin; protection against the tails rests on the defined risk of the structures and on sizing.
 
+\subsection{Strikes chosen from the GARCH density}\label{sec:gstrike}
+
+In all the backtests above the strikes are fixed by market delta. This subsection tests the alternative in which the model, not the market, sets the width: the put strike is the level that the GJR-GARCH density assigns a probability $p$ of finishing in the money, and the call strike the level with probability $p$ on the upside; the wings of the put credit spread and of the iron condor sit at a probability of 5\%. The density is obtained by simulating the model of Section~\ref{sec:dati} (20,000 paths, standardized Student-$t$ innovations) from the variance forecast and the parameters available at the close of the entry session. Three assumptions are explicit: the density is centred on the implied forward of the entry session; the drift is zero, so that the rule favours neither puts nor calls; the horizon is counted in trading sessions to expiry. The comparison is paired: for each family, level ($p$ or delta of 0.10, 0.16, 0.20, 0.30) and expiry (7, 14, 30, 45 days) the two rules are evaluated on the sessions in which both produce a trade, from January 2012, with positions held to expiry and the same prices, margin and commissions. Short call and long call are added to the families of Section~\ref{sec:strat}. As a check, the delta rule recomputed here reproduces exactly the @@gs_ctrl@@ corresponding trades of the main backtest.
+
+The two rules select different strikes because the option market prices the two tails differently from the model. A put with a GARCH probability of 16\% of finishing in the money has an average market delta of @@gs_p16_dm@@: the market charges for downside protection more than the model's probability implies, so the GARCH rule sells puts closer to the money (for the 45-day short put, @@gs_sp_dist_g@@\% below the forward instead of @@gs_sp_dist_d@@\%). On the call side the opposite holds (market delta @@gs_c16_dm@@). Realized frequencies (Figure~\ref{fig:gstrike}, left) show that on the put side the GARCH density is close to calibrated and slightly conservative: strikes with a target of 16\% finished in the money @@gs_p16_itm_g@@\% of the time, against @@gs_p16_itm_d@@\% for the 0.16-delta puts. On the call side both rules underestimate: @@gs_c16_itm_g@@\% for GARCH and @@gs_c16_itm_d@@\% for delta, the consequence of a zero drift in a sample in which the index rose strongly.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Strikes chosen by market delta or by GARCH probability: medians over 16 configurations per family (four levels, four expiries), same sessions for the two rules, 2012--2023, held to expiry. Sharpe ratio of the monthly ladder at mid and at bid-ask prices; share of configurations in which the GARCH rule has a higher Sharpe ratio (bid-ask), a lower maximum drawdown, and a monthly return difference significant at 5\% (Newey--West).}\label{tab:gsfam}
+\begin{tabular}{lrrrrrrrr}\toprule
+ & & \multicolumn{2}{c}{Sharpe, mid} & \multicolumn{2}{c}{Sharpe, bid-ask} & \multicolumn{3}{c}{GARCH rule, \% of configurations} \\ \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-9}
+Family & N & Delta & GARCH & Delta & GARCH & Higher Sharpe & Lower DD & Signif. diff. \\ \midrule
+@@TAB_GS_FAM@@
+\bottomrule\end{tabular}\end{table}
+
+The GARCH rule has a higher Sharpe ratio in @@gs_best@@\% of the @@gs_n@@ configurations (Table~\ref{tab:gsfam}; Figure~\ref{fig:gstrike}, right). For the short put it is better in @@gs_sp_q@@\% of cases, but the gain is small (median Sharpe ratio @@gs_sp_sg@@ against @@gs_sp_sd@@) and comes from selling closer to the money: for the 0.16 level at 45 days the annual return on margin rises from @@gs_sp_ann_d@@\% to @@gs_sp_ann_g@@\% and the maximum drawdown from @@gs_sp_ddd@@\% to @@gs_sp_ddg@@\%, and in no configuration is the drawdown lower. It is more exposure to the same premium, not a better selection. For the put credit spread the GARCH rule is worse in every configuration (median @@gs_pcs_sg@@ against @@gs_pcs_sd@@): both legs move towards the money, the credit rises from @@gs_pcs_cm_d@@\% to @@gs_pcs_cm_g@@\% of margin for the 0.20 level at 30 days, and the drawdown doubles (@@gs_pcs_ddg@@\% against @@gs_pcs_ddd@@\%). The iron condor follows the put side. For the short call the GARCH rule sells slightly further out and loses less, without becoming profitable (median @@gs_sc_sg@@ against @@gs_sc_sd@@). The long put loses with both rules; the long call, the only long structure with a positive Sharpe ratio in a rising sample, is worse with the GARCH rule in most cases. Table~\ref{tab:gscfg} reports one configuration per family.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Delta rule and GARCH rule on the same sessions, bid-ask prices, 2012--2023. Distance of the main strike from the forward, its market delta, share of expiries with the main leg in the money (either short leg for the iron condor), share of profitable trades, annual mean, Sharpe ratio, maximum drawdown and worst month of the monthly ladder on margin; $t$ statistic (Newey--West) of the monthly return difference, GARCH minus delta.}\label{tab:gscfg}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllrrrrrrrrr}\toprule
+Family & Level, expiry & Rule & Dist. \% & Delta & ITM \% & Win \% & Mean \% & Sharpe & Max DD \% & Worst \% & $t$ diff. \\ \midrule
+@@TAB_GS_CFG@@
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[ht]\centering
+\includegraphics[width=\textwidth]{garch_strike_en.pdf}
+\caption{Left: share of expiries in which the strike finished in the money, by target level, for short put and short call under the two rules (average over the four expiries). Right: Sharpe ratio at bid-ask prices of the @@gs_n@@ configurations under the delta rule and under the GARCH rule.}\label{fig:gstrike}
+\end{figure}
+
+The result does not support replacing the delta rule with the GARCH probability to set the width of the structures. The model's probabilities are reasonable on the put side, but choosing the strike with them amounts to selling the options that the market prices as riskier than the model does, which increases premium and tail exposure together. These @@gs_n@@ paired configurations are additional to the @@ncfg@@ of Section~\ref{sec:rob} and are subject to the same caveats on ex post selection; the test concerns strike placement only, and does not cover the use of the expected value under the GARCH density as an entry filter.
+
 \section{Robustness and multiple testing}\label{sec:rob}
 
 \subsection{Execution cost}
 
-Across @@ncfg@@ configurations the median Sharpe ratio is @@shmid@@ at mid prices and @@shba@@ at bid-ask prices; the share of configurations with a positive Sharpe ratio falls from @@posmid@@\% to @@posba@@\% (Figure~\ref{fig:sharpe}). The actual execution price lies between the two extremes: closing quotes overstate the spread typical of the middle of the session, but a mid-price order on a multi-leg structure has no guarantee of execution. The site lets the share of spread paid be set and recomputes every statistic.
+Across @@ncfg@@ configurations the median Sharpe ratio is @@shmid@@ at mid prices and @@shba@@ at bid-ask prices; the share of configurations with a positive Sharpe ratio falls from @@posmid@@\% to @@posba@@\% (Figure~\ref{fig:sharpe}). The actual execution price lies between the two extremes: closing quotes overstate the spread typical of the middle of the session, but a mid-price order on a multi-leg structure has no guarantee of execution.
 
 \begin{figure}[ht]\centering
 \includegraphics[width=0.54\textwidth]{sharpe_en.pdf}\hfill

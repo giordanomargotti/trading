@@ -6,11 +6,9 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 
 | Percorso | Contenuto |
 |---|---|
-| `index.html` | sito interattivo autonomo: si apre con un doppio clic, senza server e senza rete |
 | `paper/paper_it.pdf`, `paper/paper_en.pdf` | documento completo in italiano e in inglese (sorgenti `.tex` accanto) |
-| `paper/abstract_it.pdf`, `paper/abstract_en.pdf` | sintesi di due pagine con grafici (sorgenti `.tex` accanto) |
 | `paper/figure/` | figure in PDF, nelle due lingue |
-| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
+| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `garch_strike.json` (strike scelti dalla densità GARCH), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
 | `codice/` | pipeline Python completa e modelli dei documenti |
 
 ## Risultati principali
@@ -22,6 +20,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 - Filtro di sospensione sulla volatilità realizzata (HV21 oltre il 25%): Sharpe mediano da −0,30 a −0,34, mese peggiore invariato. Gli strike scelti per delta si allargano già con la volatilità implicita.
 - Distribuzione dei rendimenti: skewness per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: skewness −9,5 ed excess kurtosis 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
 - Configurazioni a rendimento cumulato più alto per famiglia (ladder, prezzi bid-ask): put credit spread Δ0,30/0,05 a 7 giorni +798% (Sharpe 0,43, mese peggiore −147% del capitale impegnato), short put Δ0,30 a 30 giorni +298% (Sharpe 0,85), iron condor Δ0,30/0,05 a 45 giorni con take profit 50% +105%, long put Δ0,30 a 45 giorni −4.409%. Nessuna ha distribuzione normale.
+- Strike scelti dalla densità GARCH invece che dal delta (96 configurazioni appaiate, 2012–2023): Sharpe più alto solo nel 32% dei casi. Short put: Sharpe mediano 0,90 contro 0,84 ma drawdown mai più basso; put credit spread: peggiore in 16 configurazioni su 16.
 
 ## Riproduzione
 
@@ -39,9 +38,10 @@ python $S/vrp.py out $S                                       # statistiche sul 
 python $S/bt.py out && python $S/cal.py out                   # backtest
 python $S/stat_bt.py out $S && python $S/filtro_vol.py out $S # sintesi, filtro sulla volatilità realizzata
 python $S/distribuzioni.py out $S                             # distribuzione dei rendimenti e code
-python $S/sintesi.py out                                      # dati del sito, figure
+python $S/distanza_strike.py out                             # distanza degli strike per livello di IV (controllo)
+python $S/bt_garch.py out $S && python $S/fig_garch.py out    # strike scelti dalla densità GARCH
+python $S/sintesi.py out                                      # sito.json (dati per tabelle e figure), figure
 python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
-python $S/costruisci_sito.py $S/modelli/tpl.html out/sito.json <chart.umd.min.js> index.html
 ```
 
 Tempo complessivo: circa mezz'ora; memoria necessaria circa 6 GB.

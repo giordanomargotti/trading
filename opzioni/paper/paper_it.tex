@@ -33,7 +33,7 @@ Le prime due fonti non sono rendimenti attesi in senso proprio. Il decadimento t
 \item le strategie non direzionali esaminate dal progetto riescono a incassarlo, tenuto conto dello spread bid-ask, delle commissioni, del margine e del numero di configurazioni provate.
 \end{enumerate}
 
-Il contributo del documento è empirico. Tutte le statistiche sono calcolate sulle quotazioni di fine giornata delle opzioni SPX dal 4 gennaio 2010 al 29 dicembre 2023, con un impianto volutamente semplice e riproducibile: volatilità implicita ricavata dai prezzi con il modello di Black (1976) sul forward implicito nella \emph{put-call parity}, varianza implicita \emph{model-free} con la formula del Cboe, varianza realizzata fino alla scadenza della stessa opzione, previsione GJR-GARCH(1,1) con innovazioni $t$ di Student stimata su \emph{expanding window} senza uso di informazioni future. Il codice e i risultati sono pubblicati nel repository insieme a un sito interattivo che consente di esplorare ogni configurazione.
+Il contributo del documento è empirico. Tutte le statistiche sono calcolate sulle quotazioni di fine giornata delle opzioni SPX dal 4 gennaio 2010 al 29 dicembre 2023, con un impianto volutamente semplice e riproducibile: volatilità implicita ricavata dai prezzi con il modello di Black (1976) sul forward implicito nella \emph{put-call parity}, varianza implicita \emph{model-free} con la formula del Cboe, varianza realizzata fino alla scadenza della stessa opzione, previsione GJR-GARCH(1,1) con innovazioni $t$ di Student stimata su \emph{expanding window} senza uso di informazioni future. Il codice e i risultati sono pubblicati nel repository.
 
 Il documento è organizzato come segue. La Sezione~\ref{sec:lett} riassume la letteratura sull'esistenza, sulle cause e sulla persistenza del premio. La Sezione~\ref{sec:dati} descrive dati e metodo. La Sezione~\ref{sec:vrp} presenta l'evidenza sul premio; la Sezione~\ref{sec:strat} i backtest delle strategie; la Sezione~\ref{sec:rob} i controlli di robustezza e la correzione per \emph{multiple testing}. La Sezione~\ref{sec:codice} documenta le verifiche sul codice preesistente. Le Sezioni~\ref{sec:limiti} e~\ref{sec:concl} discutono limiti e conclusioni.
 
@@ -345,12 +345,12 @@ La tabella~\ref{tab:migliori} riporta, per ogni famiglia, la configurazione con 
 Famiglia & Configurazione & Cumul. \% & Media \% & Sharpe & DD max \% & Peggiore \% & In utile \% & Skew. & Exc. kurt. & Skew. & Exc. kurt. \\ \midrule
 Short put & $\Delta$0{,}30, 30 gg, a scadenza & +298 & +21{,}3 & +0{,}85 & 72 & $-$71 & 86 & $-$6{,}72 & 69{,}1 & $-$6{,}70 & 61{,}4 \\
 Short strangle & $\Delta$0{,}16, 7 gg, a scadenza & +182 & +13{,}0 & +0{,}80 & 53 & $-$22 & 78 & $-$4{,}09 & 27{,}8 & $-$1{,}93 & 5{,}7 \\
-Short straddle ATM & ATM, 45 gg, a scadenza & +129 & +9{,}2 & +0{,}37 & 98 & $-$53 & 58 & $-$2{,}24 & 14{,}0 & $-$2{,}51 & 16{,}6 \\
+Short straddle ATM & 45 gg, a scadenza & +129 & +9{,}2 & +0{,}37 & 98 & $-$53 & 58 & $-$2{,}24 & 14{,}0 & $-$2{,}51 & 16{,}6 \\
 Put credit spread & $\Delta$0{,}30/0{,}05, 7 gg, a scadenza & +798 & +57{,}0 & +0{,}43 & 369 & $-$147 & 82 & $-$2{,}89 & 8{,}1 & $-$1{,}43 & 2{,}2 \\
 Iron condor & $\Delta$0{,}30/0{,}05, 45 gg, take profit 50\% & +105 & +7{,}5 & +0{,}25 & 123 & $-$57 & 73 & $-$2{,}47 & 7{,}7 & $-$2{,}42 & 11{,}2 \\
 Iron butterfly & ATM/$\Delta$0{,}05, 45 gg, take profit 50\% & +11 & +0{,}8 & +0{,}02 & 198 & $-$60 & 56 & $-$1{,}11 & 2{,}0 & $-$1{,}12 & 3{,}3 \\
 Call credit spread & $\Delta$0{,}16/0{,}05, 45 gg, take profit 50\% e stop loss 200\% & $-$330 & $-$23{,}5 & $-$1{,}13 & 330 & $-$22 & 75 & $-$1{,}37 & 0{,}3 & $-$1{,}11 & 0{,}9 \\
-Long calendar ATM & ATM, 30/60 gg, a scadenza & $-$2138 & $-$152{,}7 & $-$1{,}58 & 2138 & $-$89 & 36 & +0{,}49 & $-$0{,}1 & $-$0{,}22 & 0{,}2 \\
+Long calendar ATM & 30/60 gg, a scadenza & $-$2138 & $-$152{,}7 & $-$1{,}58 & 2138 & $-$89 & 36 & +0{,}49 & $-$0{,}1 & $-$0{,}22 & 0{,}2 \\
 Debit put spread & $\Delta$0{,}30, 45 gg, a scadenza & $-$4016 & $-$286{,}9 & $-$0{,}91 & 4324 & $-$83 & 13 & +3{,}10 & 8{,}9 & +2{,}69 & 7{,}4 \\
 Long put & $\Delta$0{,}30, 45 gg, a scadenza & $-$4409 & $-$314{,}9 & $-$0{,}86 & 4502 & $-$81 & 12 & +6{,}97 & 65{,}1 & +6{,}23 & 53{,}2 \\
 \bottomrule\end{tabular}}\end{table}
@@ -421,11 +421,58 @@ Il filtro è inoltre ridondante rispetto alla costruzione delle strategie. Gli s
 
 La conclusione operativa è che una sospensione basata sulla volatilità realizzata non è necessaria e non protegge dagli eventi estremi, che per definizione sopraggiungono da condizioni di calma. Equivale a una riduzione dell'esposizione, ottenibile in modo più diretto con la quota di capitale impegnata a margine; la protezione dalle code è affidata al rischio definito delle strutture e al dimensionamento.
 
+\subsection{Strike scelti dalla densità GARCH}\label{sec:gstrike}
+
+In tutti i backtest precedenti gli strike sono fissati dal delta di mercato. Questa sottosezione verifica l'alternativa in cui è il modello, e non il mercato, a stabilire l'ampiezza: lo strike della put è il livello a cui la densità GJR-GARCH assegna una probabilità $p$ di finire \emph{in the money}, lo strike della call il livello con probabilità $p$ al rialzo; le \emph{wing} di put credit spread e iron condor sono a una probabilità del 5\%. La densità si ottiene simulando il modello della sezione~\ref{sec:dati} (20.000 traiettorie, innovazioni $t$ di Student standardizzate) a partire dalla previsione di varianza e dai parametri disponibili alla chiusura della seduta di ingresso. Tre ipotesi sono esplicite: la densità è centrata sul forward implicito della seduta di ingresso; la deriva è nulla, così che la regola non favorisca né le put né le call; l'orizzonte è contato in sedute di borsa fino alla scadenza. Il confronto è appaiato: per ogni famiglia, livello ($p$ o delta pari a 0{,}10, 0{,}16, 0{,}20, 0{,}30) e scadenza (7, 14, 30, 45 giorni) le due regole sono valutate sulle sedute in cui entrambe producono un'operazione, dal gennaio 2012, con posizioni tenute a scadenza e con gli stessi prezzi, margini e commissioni. Alle famiglie della sezione~\ref{sec:strat} si aggiungono short call e long call. Come controllo, la regola delta ricalcolata qui riproduce esattamente le 156.714 operazioni corrispondenti del backtest principale.
+
+Le due regole scelgono strike diversi perché il mercato delle opzioni prezza le due code in modo diverso dal modello. Una put con probabilità GARCH del 16\% di finire \emph{in the money} ha in media un delta di mercato di 0{,}23: il mercato fa pagare la protezione al ribasso più di quanto implichi la probabilità del modello, e la regola GARCH vende quindi put più vicine al prezzo corrente (per la short put a 45 giorni, il 4{,}2\% sotto il forward invece del 6{,}7\%). Sul lato call vale il contrario (delta di mercato 0{,}14). Le frequenze realizzate (figura~\ref{fig:gstrike}, a sinistra) mostrano che sul lato put la densità GARCH è vicina alla calibrazione e leggermente prudente: gli strike con obiettivo 16\% sono finiti \emph{in the money} nel 13{,}0\% dei casi, contro il 7{,}8\% delle put con delta 0{,}16. Sul lato call entrambe le regole sottostimano: 21{,}9\% per il GARCH e 24{,}4\% per il delta, conseguenza di una deriva nulla in un campione in cui l'indice è salito molto.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Strike scelti con il delta di mercato o con la probabilità GARCH: mediane su 16 configurazioni per famiglia (quattro livelli, quattro scadenze), stesse sedute per le due regole, 2012--2023, posizioni tenute a scadenza. Sharpe del \emph{ladder} mensile ai prezzi mid e bid-ask; quota di configurazioni in cui la regola GARCH ha Sharpe più alto (bid-ask), \emph{drawdown} massimo più basso e differenza dei rendimenti mensili significativa al 5\% (Newey--West).}\label{tab:gsfam}
+\begin{tabular}{lrrrrrrrr}\toprule
+ & & \multicolumn{2}{c}{Sharpe, mid} & \multicolumn{2}{c}{Sharpe, bid-ask} & \multicolumn{3}{c}{Regola GARCH, \% delle configurazioni} \\ \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-9}
+Famiglia & N & Delta & GARCH & Delta & GARCH & Sharpe più alto & DD più basso & Diff. signif. \\ \midrule
+Short put & 16 & +0{,}90 & +0{,}95 & +0{,}84 & +0{,}90 & 81 & 0 & 100 \\
+Short call & 16 & $-$0{,}51 & $-$0{,}47 & $-$0{,}61 & $-$0{,}59 & 62 & 81 & 0 \\
+Put credit spread & 16 & +0{,}83 & +0{,}71 & +0{,}69 & +0{,}54 & 0 & 0 & 0 \\
+Iron condor & 16 & +0{,}22 & +0{,}22 & $-$0{,}06 & $-$0{,}15 & 12 & 0 & 19 \\
+Long put & 16 & $-$0{,}85 & $-$0{,}88 & $-$0{,}93 & $-$0{,}94 & 25 & 100 & 38 \\
+Long call & 16 & +0{,}45 & +0{,}33 & +0{,}38 & +0{,}26 & 12 & 6 & 19 \\
+\bottomrule\end{tabular}\end{table}
+
+La regola GARCH ha uno Sharpe più alto nel 32\% delle 96 configurazioni (tabella~\ref{tab:gsfam}; figura~\ref{fig:gstrike}, a destra). Per la short put è migliore nell'81\% dei casi, ma il guadagno è piccolo (Sharpe mediano +0{,}90 contro +0{,}84) e deriva dal vendere più vicino al prezzo corrente: per il livello 0{,}16 a 45 giorni il rendimento annuo sul margine sale dal 13{,}1\% al 18{,}7\% e il \emph{drawdown} massimo dal 57\% al 66\%, e in nessuna configurazione il \emph{drawdown} è più basso. È maggiore esposizione allo stesso premio, non una selezione migliore. Per il put credit spread la regola GARCH è peggiore in tutte le configurazioni (mediana +0{,}54 contro +0{,}69): entrambe le gambe si avvicinano al prezzo corrente, il credito sale dal 7{,}4\% al 14{,}1\% del margine per il livello 0{,}20 a 30 giorni e il \emph{drawdown} raddoppia (196\% contro 97\%). L'iron condor segue il lato put. Per la short call la regola GARCH vende leggermente più lontano e perde meno, senza diventare profittevole (mediana $-$0{,}59 contro $-$0{,}61). La long put perde con entrambe le regole; la long call, l'unica struttura in acquisto con Sharpe positivo in un campione al rialzo, è peggiore con la regola GARCH nella maggior parte dei casi. La tabella~\ref{tab:gscfg} riporta una configurazione per famiglia.
+
+\begin{table}[ht]\centering\footnotesize
+\caption{Regola delta e regola GARCH sulle stesse sedute, prezzi bid-ask, 2012--2023. Distanza dello strike principale dal forward, suo delta di mercato, quota di scadenze con la gamba principale \emph{in the money} (una delle due gambe vendute per l'iron condor), quota di operazioni in utile, media annua, Sharpe, \emph{drawdown} massimo e mese peggiore del \emph{ladder} mensile sul margine; statistica $t$ (Newey--West) della differenza dei rendimenti mensili, GARCH meno delta.}\label{tab:gscfg}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lllrrrrrrrrr}\toprule
+Famiglia & Livello, scadenza & Regola & Dist. \% & Delta & ITM \% & In utile \% & Media \% & Sharpe & DD max \% & Peggiore \% & $t$ diff. \\ \midrule
+Short put & 0{,}16, 45 gg & delta & 6{,}7 & 0{,}16 & 6{,}3 & 95 & +13{,}1 & +0{,}90 & 57 & $-$44 &  \\
+ &  & GARCH & 4{,}2 & 0{,}24 & 11{,}9 & 90 & +18{,}7 & +0{,}97 & 66 & $-$50 & +2{,}5 \\
+Short call & 0{,}16, 30 gg & delta & 3{,}5 & 0{,}16 & 26{,}7 & 77 & $-$5{,}5 & $-$0{,}60 & 74 & $-$12 &  \\
+ &  & GARCH & 3{,}9 & 0{,}14 & 22{,}6 & 80 & $-$4{,}1 & $-$0{,}47 & 54 & $-$10 & +1{,}3 \\
+Put credit spread & 0{,}20, 30 gg & delta & 4{,}3 & 0{,}20 & 10{,}0 & 92 & +34{,}6 & +0{,}96 & 97 & $-$74 &  \\
+ &  & GARCH & 2{,}7 & 0{,}28 & 15{,}5 & 86 & +41{,}7 & +0{,}64 & 196 & $-$78 & +0{,}6 \\
+Iron condor & 0{,}16, 30 gg & delta & 5{,}2 & 0{,}16 & 33{,}4 & 74 & +6{,}9 & +0{,}19 & 182 & $-$66 &  \\
+ &  & GARCH & 3{,}4 & 0{,}24 & 35{,}1 & 72 & +4{,}9 & +0{,}08 & 274 & $-$68 & $-$0{,}1 \\
+Long put & 0{,}10, 30 gg & delta & 7{,}5 & 0{,}10 & 3{,}1 & 3 & $-$757{,}1 & $-$0{,}70 & 9086 & $-$130 &  \\
+ &  & GARCH & 5{,}0 & 0{,}17 & 7{,}8 & 7 & $-$654{,}3 & $-$0{,}88 & 7852 & $-$130 & +0{,}9 \\
+Long call & 0{,}16, 30 gg & delta & 3{,}5 & 0{,}16 & 26{,}7 & 23 & +315{,}6 & +0{,}41 & 1097 & $-$118 &  \\
+ &  & GARCH & 3{,}9 & 0{,}14 & 22{,}6 & 20 & +286{,}7 & +0{,}27 & 1319 & $-$132 & $-$0{,}3 \\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{figure}[ht]\centering
+\includegraphics[width=\textwidth]{garch_strike_it.pdf}
+\caption{A sinistra: quota di scadenze in cui lo strike è finito \emph{in the money}, per livello obiettivo, per short put e short call con le due regole (media sulle quattro scadenze). A destra: Sharpe ai prezzi bid-ask delle 96 configurazioni con la regola delta e con la regola GARCH.}\label{fig:gstrike}
+\end{figure}
+
+Il risultato non sostiene la sostituzione della regola a delta con la probabilità GARCH per fissare l'ampiezza delle strutture. Le probabilità del modello sono ragionevoli sul lato put, ma scegliere lo strike con queste probabilità equivale a vendere le opzioni che il mercato prezza come più rischiose di quanto faccia il modello: premio ed esposizione alla coda aumentano insieme. Queste 96 configurazioni appaiate si aggiungono alle 434 della sezione~\ref{sec:rob} e sono soggette alle stesse cautele sulla selezione a posteriori; la verifica riguarda soltanto il posizionamento degli strike e non l'uso del valore atteso sotto la densità GARCH come filtro di ingresso.
+
 \section{Robustezza e multiple testing}\label{sec:rob}
 
 \subsection{Il costo di esecuzione}
 
-Su 434 configurazioni lo Sharpe mediano è +0{,}39 ai prezzi mid e $-$0{,}40 ai prezzi bid-ask; la quota di configurazioni con Sharpe positivo scende dal 64\% al 38\% (Figura~\ref{fig:sharpe}). Il prezzo effettivo di esecuzione è compreso tra i due estremi: le quotazioni di chiusura sovrastimano lo spread tipico delle ore centrali, ma un ordine al prezzo mid su una struttura a più gambe non ha garanzia di esecuzione. Il sito consente di fissare la quota di spread pagata e ricalcola ogni statistica.
+Su 434 configurazioni lo Sharpe mediano è +0{,}39 ai prezzi mid e $-$0{,}40 ai prezzi bid-ask; la quota di configurazioni con Sharpe positivo scende dal 64\% al 38\% (Figura~\ref{fig:sharpe}). Il prezzo effettivo di esecuzione è compreso tra i due estremi: le quotazioni di chiusura sovrastimano lo spread tipico delle ore centrali, ma un ordine al prezzo mid su una struttura a più gambe non ha garanzia di esecuzione.
 
 \begin{figure}[ht]\centering
 \includegraphics[width=0.54\textwidth]{sharpe_it.pdf}\hfill

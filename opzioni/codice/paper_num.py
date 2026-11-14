@@ -237,3 +237,57 @@ def tab_migliori(S, lang):
                                 f(c['p1']['sharpe'], 2, True), f(c['p1']['max_dd'] * 100, 0), f(c['p1']['mese_peggiore'] * 100, 0, True), f(c['t1']['vincenti'] * 100, 0),
                                 f(o['op']['asimmetria'], 2, True), f(o['op']['curtosi_ecc'], 1), f(o['mese']['asimmetria'], 2, True), f(o['mese']['curtosi_ecc'], 1)]) + r' \\')
     return '\n'.join(rows)
+
+# ---------------------------------------------------------------- strike scelti dalla densità GARCH (bt_garch.py)
+FAM_GS = {'SP': 'Short put', 'SC': 'Short call', 'PCS': 'Put credit spread', 'IC': 'Iron condor', 'LP': 'Long put', 'LC': 'Long call'}
+RAPPR_GS = ['SP|0.16|45', 'SC|0.16|30', 'PCS|0.20|30', 'IC|0.16|30', 'LP|0.10|30', 'LC|0.16|30']
+
+def carica_gs(out):
+    return json.load(open(out + '/garch_strike.json'))
+
+def numeri_gs(G, lang):
+    """Numeri del testo della sezione sugli strike scelti dalla densità GARCH."""
+    f = lambda x, d=2, sign=False: fmt(x, d, lang, sign)
+    C = G['config']; F = G['famiglie']; cal = G['calibrazione']; T = G['totale']; K = {}
+    K.update(gs_n=str(T['n']), gs_op=integer(T['operazioni'], lang), gs_best=f(T['quota_garch_migliore'] * 100, 0), gs_sig=f(T['quota_diff_signif'] * 100, 0),
+             gs_ctrl=integer(G['controllo']['confrontate'], lang),
+             gs_p16_itm_d=f(cal['SP|0.16']['delta'] * 100, 1), gs_p16_itm_g=f(cal['SP|0.16']['garch'] * 100, 1), gs_p16_dm=f(cal['SP|0.16']['delta_mercato_garch'], 2),
+             gs_c16_itm_d=f(cal['SC|0.16']['delta'] * 100, 1), gs_c16_itm_g=f(cal['SC|0.16']['garch'] * 100, 1), gs_c16_dm=f(cal['SC|0.16']['delta_mercato_garch'], 2))
+    for fam in FAM_GS:
+        x = F[fam]; p = 'gs_' + fam.lower()
+        K.update({p + '_sd': f(x['sharpe_delta'], 2, True), p + '_sg': f(x['sharpe_garch'], 2, True), p + '_q': f(x['quota_garch_migliore'] * 100, 0),
+                  p + '_dd': f(x['quota_dd_minore'] * 100, 0)})
+    sp, pcs = C['SP|0.16|45'], C['PCS|0.20|30']
+    K.update(gs_sp_dist_d=f(sp['delta']['dist_put'] * 100, 1), gs_sp_dist_g=f(sp['garch']['dist_put'] * 100, 1), gs_sp_ann_d=f(sp['delta']['media_annua'] * 100, 1),
+             gs_sp_ann_g=f(sp['garch']['media_annua'] * 100, 1), gs_sp_shd=f(sp['delta']['sharpe'], 2), gs_sp_shg=f(sp['garch']['sharpe'], 2),
+             gs_sp_ddd=f(sp['delta']['max_dd'] * 100, 0), gs_sp_ddg=f(sp['garch']['max_dd'] * 100, 0), gs_sp_t=f(sp['diff']['t'], 1),
+             gs_pcs_shd=f(pcs['delta']['sharpe'], 2), gs_pcs_shg=f(pcs['garch']['sharpe'], 2), gs_pcs_ddd=f(pcs['delta']['max_dd'] * 100, 0),
+             gs_pcs_ddg=f(pcs['garch']['max_dd'] * 100, 0), gs_pcs_cm_d=f(pcs['delta']['credito_su_margine'] * 100, 1), gs_pcs_cm_g=f(pcs['garch']['credito_su_margine'] * 100, 1))
+    return K
+
+def tab_gs_fam(G, lang):
+    """Mediane per famiglia: Sharpe con le due regole, quota di configurazioni in cui la regola GARCH è migliore."""
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    rows = []
+    for fam, nome in FAM_GS.items():
+        x = G['famiglie'][fam]
+        rows.append(' & '.join([nome, str(int(x['n'])), f(x['sharpe_mid_delta'], 2, True), f(x['sharpe_mid_garch'], 2, True), f(x['sharpe_delta'], 2, True), f(x['sharpe_garch'], 2, True),
+                                f(x['quota_garch_migliore'] * 100, 0), f(x['quota_dd_minore'] * 100, 0), f(x['quota_diff_signif'] * 100, 0)]) + r' \\')
+    return '\n'.join(rows)
+
+def tab_gs_cfg(G, lang):
+    """Configurazioni rappresentative: due righe per configurazione (regola delta e regola GARCH) sulle stesse sedute."""
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    gg = 'gg' if lang == 'it' else 'd'
+    rows = []
+    for key in RAPPR_GS:
+        fam, par, D = key.split('|'); o = C = G['config'][key]
+        lab = f'{float(par):.2f}, {D} {gg}'
+        if lang == 'it': lab = lab.replace('0.', '0{,}')
+        for regola, nome in (('delta', 'delta'), ('garch', 'GARCH')):
+            x = o[regola]; put = fam in ('SP', 'PCS', 'IC', 'LP')
+            dist = x['dist_put'] if put else x['dist_call']; dm = x['delta_put'] if put else x['delta_call']
+            rows.append(' & '.join([FAM_GS[fam] if regola == 'delta' else '', lab if regola == 'delta' else '', nome, f(dist * 100, 1), f(dm, 2), f(x['itm'] * 100, 1),
+                                    f(x['vincenti'] * 100, 0), f(x['media_annua'] * 100, 1, True), f(x['sharpe'], 2, True), f(x['max_dd'] * 100, 0), f(x['mese_peggiore'] * 100, 0, True),
+                                    f(o['diff']['t'], 1, True) if regola == 'garch' else '']) + r' \\')
+    return '\n'.join(rows)
