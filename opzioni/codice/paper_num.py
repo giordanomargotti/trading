@@ -291,3 +291,74 @@ def tab_gs_cfg(G, lang):
                                     f(x['vincenti'] * 100, 0), f(x['media_annua'] * 100, 1, True), f(x['sharpe'], 2, True), f(x['max_dd'] * 100, 0), f(x['mese_peggiore'] * 100, 0, True),
                                     f(o['diff']['t'], 1, True) if regola == 'garch' else '']) + r' \\')
     return '\n'.join(rows)
+
+# ---------------------------------------------------------------- combinazione scelta per massimo valore atteso (bt_ev.py)
+def carica_ev(out):
+    return json.load(open(out + '/garch_ev.json'))
+
+def numeri_ev(G, lang):
+    """Numeri del testo della sezione sulla combinazione a valore atteso massimo. Le affermazioni qualitative del testo
+    (ordinamenti, segni, significatività) sono verificate qui: se i dati cambiano, la compilazione si ferma."""
+    f = lambda x, d=2, sign=False: fmt(x, d, lang, sign)
+    F = G['famiglie']; C = G['config']; T = G['totale']; cal = G['calibrazione']; rp = T['rapporto_pcs']
+    sc = (7, 14, 30, 45)
+    t = {fam: [C[f'{fam}|{D}']['diff_t'] for D in sc] for fam in FAM_GS}
+    assert F['PCS']['sopra_max_delta'] == 4 and F['SP']['sharpe_ev_med'] > F['SP']['sharpe_delta_med']
+    assert all(abs(v) < 1.96 for v in t['SP'] + t['PCS']) and all(v < -1.96 for v in t['SC'])
+    assert F['SC']['sharpe_ev_med'] < F['SC']['sharpe_delta_med'] and F['LP']['sharpe_ev_med'] > F['LP']['sharpe_delta_med']
+    assert C['LP|30']['delta_rif_stesse_sedute']['sharpe'] < C['LP|30']['delta_rif']['sharpe']
+    assert np.all(np.diff(cal['SC']['rho']) < 0) and np.argmin(cal['LP']['rho']) == 4 and np.all(np.diff(cal['LC']['rho']) > 0)
+    assert T['diff_signif_pos'] == sum(v > 1.96 for v in t['LP'])
+    K = dict(ev_op=integer(T['operazioni'], lang), ev_n=str(T['n_config']), ev_excl=str(T['escluse']['ic_margine_non_positivo']),
+             ev_rp_med=f(rp['mediana'] * 100, 1), ev_rp_1=f(rp['quota_sopra_1'] * 100, 2), ev_rp_max=f(rp['massimo'], 0),
+             ev_sopra_med=str(T['sopra_mediana_delta']), ev_sopra_max=str(T['sopra_max_delta']), ev_sig=str(T['diff_signif']), ev_sigpos=str(T['diff_signif_pos']),
+             ev_sp_d=f(F['SP']['delta_put'], 2), ev_sp_q=f(F['SP']['quota'] * 100, 0), ev_pcs_d=f(F['PCS']['delta_put'], 2), ev_pcs_wd=f(F['PCS']['delta_wing'], 2),
+             ev_pcs_wlon=f(F['PCS']['wing_lontana'] * 100, 0), ev_pcs_lmin=f(min(C[f'PCS|{D}']['larghezza_pct'] for D in sc), 1),
+             ev_pcs_lmax=f(max(C[f'PCS|{D}']['larghezza_pct'] for D in sc), 1), ev_sc_d=f(F['SC']['delta_call'], 2), ev_sc_vic=f(F['SC']['vicina_forward'] * 100, 0),
+             ev_ic_dc=f(F['IC']['delta_call'], 2), ev_lp_d=f(F['LP']['delta_put'], 2), ev_lp_q=f(F['LP']['quota'] * 100, 0), ev_lc_d=f(F['LC']['delta_call'], 2),
+             ev_lp_ss=f(C['LP|30']['delta_rif_stesse_sedute']['sharpe'], 2, True), ev_lp_all=f(C['LP|30']['delta_rif']['sharpe'], 2, True),
+             ev_sp_q1=f(cal['SP']['rho'][0] * 100, 1), ev_sp_q5=f(cal['SP']['rho'][4] * 100, 1), ev_sp_e5=f(cal['SP']['er'][4] * 100, 1),
+             ev_sp_corr=f(F['SP']['corr'], 2), ev_pcs_corr=f(F['PCS']['corr'], 2), ev_sc_er=f(F['SC']['er'] * 100, 1), ev_sc_rho=f(F['SC']['rho'] * 100, 1, True),
+             ev_sc_q5=f(cal['SC']['rho'][4] * 100, 1, True), ev_ic_er=f(F['IC']['er'] * 100, 1), ev_ic_rho=f(F['IC']['rho'] * 100, 1, True),
+             ev_lp_er=f(F['LP']['er'] * 100, 1), ev_lp_rho=f(F['LP']['rho'] * 100, 1, True), ev_lp_q5=f(cal['LP']['rho'][4] * 100, 1, True),
+             ev_lp_e5=f(cal['LP']['er'][4] * 100, 1), ev_lc_er=f(F['LC']['er'] * 100, 1), ev_lc_rho=f(F['LC']['rho'] * 100, 1, True),
+             ev_lc_q1=f(cal['LC']['rho'][0] * 100, 1, True), ev_lc_q5=f(cal['LC']['rho'][4] * 100, 1, True),
+             ev_lp30_rho=f(C['LP|30']['rho'] * 100, 1, True), ev_lp30_rhod=f(C['LP|30']['delta_rif']['rho'] * 100, 1, True))
+    for fam in FAM_GS:
+        p = 'ev_' + fam.lower()
+        K.update({p + '_sh': f(F[fam]['sharpe_ev_med'], 2, True), p + '_shd': f(F[fam]['sharpe_delta_med'], 2, True), p + '_shx': f(F[fam]['sharpe_delta_max'], 2, True),
+                  p + '_tmin': f(min(t[fam]), 1, True), p + '_tmax': f(max(t[fam]), 1, True)})
+    return K
+
+def _delta_ev(o, fam, lang):
+    f = lambda x, d=2: fmt(x, d, lang)
+    if fam == 'IC': return f(o['delta_put']) + '/' + f(o['delta_call'])
+    return f(o['delta_put'] if fam in ('SP', 'PCS', 'LP') else o['delta_call'])
+
+def tab_ev_fam(G, lang):
+    """Per famiglia: quota di sedute con operazione, gamba principale, larghezza, rendimento atteso e realizzato, Sharpe
+    della regola EV (mediana delle quattro scadenze) e della regola delta (mediana e massimo dei sedici casi)."""
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    rows = []
+    for fam, nome in FAM_GS.items():
+        o = G['famiglie'][fam]
+        rows.append(' & '.join([nome, f(o['quota'] * 100, 0), _delta_ev(o, fam, lang), f(o['larghezza_pct'], 1) if fam in ('PCS', 'IC') else '--',
+                                f(o['er'] * 100, 1, True), f(o['rho'] * 100, 1, True), f(o['sharpe_ev_mid_med'], 2, True), f(o['sharpe_ev_med'], 2, True),
+                                f(o['sharpe_delta_med'], 2, True), f(o['sharpe_delta_max'], 2, True), str(o['sopra_mediana_delta'])]) + r' \\')
+    return '\n'.join(rows)
+
+def tab_ev_cfg(G, lang):
+    """Configurazioni rappresentative: regola EV, regola delta di riferimento su tutte le sedute e sulle sole sedute
+    in cui la regola EV apre un'operazione."""
+    f = lambda x, d=2, s=False: fmt(x, d, lang, s)
+    gg = 'gg' if lang == 'it' else 'd'
+    rows = []
+    for key in RAPPR_GS:
+        fam, par, D = key.split('|'); o = G['config'][f'{fam}|{D}']; lv = f(float(par), 2)
+        r1 = 'Delta ' + lv; r2 = 'Delta ' + lv + (', sedute EV' if lang == 'it' else ', EV sessions')
+        stat = lambda x: [f(x['vincenti'] * 100, 0), f(x['media_annua'] * 100, 1, True), f(x['sharpe'], 2, True), f(x['max_dd'] * 100, 0), f(x['mese_peggiore'] * 100, 0, True)]
+        rows.append(' & '.join([FAM_GS[fam] + f', {D} {gg}', 'EV', integer(o['operazioni'], lang), _delta_ev(o, fam, lang),
+                                f(o['larghezza_pct'], 1) if fam in ('PCS', 'IC') else '--', f(o['er'] * 100, 1, True), f(o['rho'] * 100, 1, True)] + stat(o) + [f(o['diff_t'], 1, True)]) + r' \\')
+        for nome, x in ((r1, o['delta_rif']), (r2, o['delta_rif_stesse_sedute'])):
+            rows.append(' & '.join(['', nome, integer(x['operazioni'], lang), lv, '--', '--', f(x['rho'] * 100, 1, True)] + stat(x) + ['']) + r' \\')
+    return '\n'.join(rows)

@@ -24,6 +24,7 @@ import sys, glob, json, numpy as np, pandas as pd
 from scipy import stats
 sys.path.insert(0, sys.argv[2])
 from lib import hac_mean, rendimenti_operazioni, scala_mensile, statistiche_mensili
+from densita_garch import simula, orizzonti, sedute as sedute_borsa
 
 out = sys.argv[1]
 FEE = 1.0
@@ -47,32 +48,10 @@ for D in (7, 14, 30, 45):
 
 # ---------------------------------------------------------------- quantili della densità GARCH per (data, sedute a scadenza)
 def sedute(t, E):
-    """Sedute di borsa dopo t fino alla scadenza E compresa."""
-    return int(np.searchsorted(ud, np.datetime64(E), side='right') - np.searchsorted(ud, np.datetime64(t), side='right'))
+    return sedute_borsa(ud, t, E)
 
-need = {}
-for E, v in want.items():
-    if ud[-1] < np.datetime64(E): continue
-    for t, D in v:
-        h = sedute(t, E)
-        if h >= 1: need.setdefault(pd.Timestamp(t), set()).add(h)
-Q = {}                                   # (data, h) -> quantili del rendimento logaritmico cumulato in % ai livelli QL
-gg = g.dropna(subset=['s2next'])
-stima = pp.index.values
-blocco = np.searchsorted(stima, gg.index.values, side='right') - 1
-rng = np.random.default_rng(SEED)
-HMAX = max(max(v) for v in need.values())
-for b in np.unique(blocco):
-    om, al, ga, be, nu = pp.iloc[b][['omega', 'alpha', 'gamma', 'beta', 'nu']]
-    Z = rng.standard_t(nu, size=(HMAX, NSIM)) * np.sqrt((nu - 2) / nu)        # innovazioni con varianza unitaria
-    for t in gg.index[blocco == b]:
-        hs = need.get(t)
-        if not hs: continue
-        s2 = np.full(NSIM, gg.at[t, 's2next']); cum = np.zeros(NSIM)
-        for k in range(max(hs)):
-            r = np.sqrt(s2) * Z[k]; cum += r
-            if k + 1 in hs: Q[(t, k + 1)] = np.quantile(cum, QL)
-            s2 = om + (al + ga * (r < 0)) * r * r + be * s2
+# (data, h) -> quantili del rendimento logaritmico cumulato in % ai livelli QL
+Q = simula(g, pp, orizzonti(want, ud), lambda t, h, cum: np.quantile(cum, QL), NSIM, SEED)
 print('densità simulate', len(Q), flush=True)
 iq = {round(p, 2): i for i, p in enumerate(QL)}
 

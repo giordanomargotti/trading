@@ -8,7 +8,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 |---|---|
 | `paper/paper_it.pdf`, `paper/paper_en.pdf` | documento completo in italiano e in inglese (sorgenti `.tex` accanto) |
 | `paper/figure/` | figure in PDF, nelle due lingue |
-| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `garch_strike.json` (strike scelti dalla densità GARCH), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
+| `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `garch_strike.json` (strike scelti dalla densità GARCH), `garch_ev.json` (combinazione scelta per valore atteso massimo), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
 | `codice/` | pipeline Python completa e modelli dei documenti |
 
 ## Risultati principali
@@ -21,6 +21,7 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 - Distribuzione dei rendimenti: skewness per operazione negativa nel 96% delle configurazioni, normalità della serie mensile rifiutata (Jarque-Bera, 1%) nel 92%. Short put delta 0,16 a 45 giorni: skewness −9,5 ed excess kurtosis 108 per operazione, contro −1,1 e 4,8 dell'indice sullo stesso orizzonte.
 - Configurazioni a rendimento cumulato più alto per famiglia (ladder, prezzi bid-ask): put credit spread Δ0,30/0,05 a 7 giorni +798% (Sharpe 0,43, mese peggiore −147% del capitale impegnato), short put Δ0,30 a 30 giorni +298% (Sharpe 0,85), iron condor Δ0,30/0,05 a 45 giorni con take profit 50% +105%, long put Δ0,30 a 45 giorni −4.409%. Nessuna ha distribuzione normale.
 - Strike scelti dalla densità GARCH invece che dal delta (96 configurazioni appaiate, 2012–2023): Sharpe più alto solo nel 32% dei casi. Short put: Sharpe mediano 0,90 contro 0,84 ma drawdown mai più basso; put credit spread: peggiore in 16 configurazioni su 16.
+- Combinazione scelta per valore atteso massimo sotto la densità GARCH (24 configurazioni, 2012–2023): put credit spread con Sharpe più alto di ogni livello di delta a tutte le scadenze (mediana 0,82 contro 0,70) ma differenza non significativa; short call peggiore (−0,94 contro −0,60, t tra −3,0 e −2,8). Valori attesi calibrati sul lato put, non sul lato call (densità senza deriva) né per le opzioni comprate.
 
 ## Riproduzione
 
@@ -40,6 +41,7 @@ python $S/stat_bt.py out $S && python $S/filtro_vol.py out $S # sintesi, filtro 
 python $S/distribuzioni.py out $S                             # distribuzione dei rendimenti e code
 python $S/distanza_strike.py out                             # distanza degli strike per livello di IV (controllo)
 python $S/bt_garch.py out $S && python $S/fig_garch.py out    # strike scelti dalla densità GARCH
+python $S/bt_ev.py out $S && python $S/fig_ev.py out          # combinazione scelta per valore atteso massimo GARCH
 python $S/sintesi.py out                                      # sito.json (dati per tabelle e figure), figure
 python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
 ```

@@ -5,13 +5,15 @@ import paper_num as P
 out, tpl, dst = sys.argv[1], sys.argv[2], sys.argv[3]
 S = P.load(out)
 G = P.carica_gs(out)
+GE = P.carica_ev(out)
 os.makedirs(dst + '/figure', exist_ok=True)
 for f in glob.glob(out + '/fig/*.pdf'): shutil.copy(f, dst + '/figure/')
 for lang in ('it', 'en'):
     K = P.numbers(S, lang)
     K.update(TAB_ORIZ=P.tab_orizzonti(S, lang), TAB_MZ=P.tab_mz(S, lang), TAB_ANNI=P.tab_anni(S, lang), TAB_FAM=P.tab_famiglie(S, lang),
-             TAB_SEL=P.tab_selezione(S, lang), TAB_INS=P.tab_ins(S, lang), TAB_FILT=P.tab_filtri(S, lang), TAB_FVOL=P.tab_fvol(S, lang), TAB_HV=P.tab_hv(S, lang), TAB_CODE=P.tab_code(S, lang), TAB_MIG=P.tab_migliori(S, lang), TAB_GS_FAM=P.tab_gs_fam(G, lang), TAB_GS_CFG=P.tab_gs_cfg(G, lang))
-    K.update(P.numeri_gs(G, lang))
+             TAB_SEL=P.tab_selezione(S, lang), TAB_INS=P.tab_ins(S, lang), TAB_FILT=P.tab_filtri(S, lang), TAB_FVOL=P.tab_fvol(S, lang), TAB_HV=P.tab_hv(S, lang), TAB_CODE=P.tab_code(S, lang), TAB_MIG=P.tab_migliori(S, lang), TAB_GS_FAM=P.tab_gs_fam(G, lang), TAB_GS_CFG=P.tab_gs_cfg(G, lang),
+             TAB_EV_FAM=P.tab_ev_fam(GE, lang), TAB_EV_CFG=P.tab_ev_cfg(GE, lang))
+    K.update(P.numeri_gs(G, lang)); K.update(P.numeri_ev(GE, lang))
     for src, name in ((f'tpl_{lang}.tex', f'paper_{lang}.tex'),):
         s = open(f'{tpl}/{src}', encoding='utf-8').read()
         miss = set()
