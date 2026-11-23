@@ -1,7 +1,8 @@
 """Distanza dal forward della put con delta 0,16 a 30 giorni in funzione della volatilità implicita ATM all'ingresso.
 Mostra che gli strike scelti per delta si allargano da soli quando la volatilità implicita sale.
 Scrive la chiave distanza_strike in filtro_vol.json (terzili di IV, correlazione, retta dei minimi quadrati).
-Uso: python distanza_strike.py <cartella out>"""
+Uso: python distanza_strike.py <cartella out> [--scrivi]
+(con --scrivi aggiorna filtro_vol.json; da lanciare dopo filtro_vol.py, che riscrive il file: i paper leggono questa chiave)"""
 import sys, glob, json, numpy as np, pandas as pd
 out = sys.argv[1]
 s = pd.read_parquet(out + '/serie_30.parquet')[['E', 'iv_atm']].reset_index()

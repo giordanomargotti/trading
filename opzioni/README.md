@@ -10,6 +10,9 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 | `paper/figure/` | figure in PDF, nelle due lingue |
 | `dati/` | risultati: `vrp.json`, `sito.json` (configurazioni e serie mensili), `garch_strike.json` (strike scelti dalla densità GARCH), `garch_ev.json` (combinazione scelta per valore atteso massimo), `distribuzioni.json` (forma della distribuzione dei rendimenti), parametri GARCH, controlli di qualità |
 | `codice/` | pipeline Python completa e modelli dei documenti |
+| `option_chain/` | option chain di partenza: 22 archivi `spx_eod_*.7z` del dataset SPX Option Chains di OptionsDX, end-of-day 2010–2023, 693 MB; impronte SHA-256 in `SHA256SUMS` |
+| `intermedi/` | file intermedi in Parquet: operazioni simulate una per una (`operazioni.parquet` backtest principale, `operazioni_garch.parquet` strike scelti per probabilità GARCH, `operazioni_ev.parquet` combinazione scelta per valore atteso), pannello giornaliero di volatilità implicita e realizzata (`pannello.parquet`), serie per scadenza obiettivo (`serie_*.parquet`), sottostante (`sottostante.parquet`), previsioni GARCH (`garch.parquet`) |
+| `materiale/overleaf/` | PDF del progetto Overleaf da cui è partito il lavoro |
 
 ## Risultati principali
 
@@ -25,12 +28,12 @@ Risultati della ricerca sulle option chain end-of-day delle opzioni SPX dal 2010
 
 ## Riproduzione
 
-Dati di partenza: archivi `spx_eod_*.7z` del repository `finance-thinking/options_strategy`, branch `strategies_backtest`, cartella `data/option_chain_data/SPX_OPTION_DATA_ZIP`.
+Dati di partenza: gli archivi in `option_chain/` (controllo di integrità: `cd option_chain && sha256sum -c SHA256SUMS`). Sono gli stessi file del repository `finance-thinking/options_strategy`, branch `strategies_backtest`, cartella `data/option_chain_data/SPX_OPTION_DATA_ZIP`. I file più pesanti generati lungo la pipeline (Parquet mensili, 648 MB; catena arricchita, circa 550 MB) non sono inclusi: si rigenerano dagli archivi con i primi tre passi.
 
 ```bash
 pip install numpy pandas scipy pyarrow py7zr arch matplotlib
 S=codice; mkdir -p pq raw out/fig
-python $S/converti.py <cartella degli archivi 7z> pq raw      # 7z -> Parquet mensili
+python $S/converti.py option_chain pq raw                     # 7z -> Parquet mensili
 python $S/prepara.py pq out                                   # catena compatta, serie del sottostante
 for y in $(seq 2010 2023); do python $S/arricchisci.py out $S $y; done   # forward, IV, delta
 python $S/pannello.py out                                     # IV ATM, varianza model-free, varianza realizzata
@@ -39,14 +42,25 @@ python $S/vrp.py out $S                                       # statistiche sul 
 python $S/bt.py out && python $S/cal.py out                   # backtest
 python $S/stat_bt.py out $S && python $S/filtro_vol.py out $S # sintesi, filtro sulla volatilità realizzata
 python $S/distribuzioni.py out $S                             # distribuzione dei rendimenti e code
-python $S/distanza_strike.py out                             # distanza degli strike per livello di IV (controllo)
+python $S/distanza_strike.py out --scrivi                    # distanza degli strike per livello di IV, in filtro_vol.json
 python $S/bt_garch.py out $S && python $S/fig_garch.py out    # strike scelti dalla densità GARCH
 python $S/bt_ev.py out $S && python $S/fig_ev.py out          # combinazione scelta per valore atteso massimo GARCH
 python $S/sintesi.py out                                      # sito.json (dati per tabelle e figure), figure
-python $S/costruisci_paper.py out $S/modelli build            # quattro documenti LaTeX e PDF
+python $S/costruisci_paper.py out $S/modelli build            # i due paper in LaTeX e PDF
 ```
 
 Tempo complessivo: circa mezz'ora; memoria necessaria circa 6 GB.
+
+## Scaricare il branch
+
+Gli archivi delle option chain portano il branch a circa 0,7 GB. Per scaricare solo codice, risultati e paper:
+
+```bash
+git clone --branch option-trading --single-branch --filter=blob:none --sparse https://github.com/giordanomargotti/trading
+cd trading && git sparse-checkout set opzioni/codice opzioni/dati opzioni/paper
+```
+
+Chi lavora solo sull'app del branch `main` può clonare quel branch da solo con `git clone --branch main --single-branch`, senza scaricare questi file.
 
 ## Autori
 
@@ -54,6 +68,8 @@ Giordano Margotti, Alex Crescentini, Alessandro Celani, Giulio Sciacchitano (gru
 
 ## Fonti non incluse
 
-La option chain XSP (IVolatility, 2014–2026) del repository `AlexCrescentini/backtest_put_credit_spread` è archiviata con Git LFS e non è inclusa nell'archivio ZIP esaminato. Il materiale della cartella Google Drive del progetto (script, snapshot giornalieri, documenti) non è integrato in questa versione.
+La option chain XSP (IVolatility, 2014–2026) del repository `AlexCrescentini/backtest_put_credit_spread` è archiviata con Git LFS e non è inclusa nell'archivio ZIP esaminato; il codice di quel repository non è incluso in attesa del consenso dell'autore. Il materiale della cartella Google Drive del progetto (script, snapshot giornalieri, documenti) non è ancora integrato.
+
+I dati OptionsDX restano soggetti alle condizioni d'uso del fornitore.
 
 Documento di ricerca. Non costituisce consulenza in materia di investimenti.
